@@ -58,9 +58,5 @@ module GitRead
         uint32be  :entries_count
         uint8     :padding
     end
-
-    def GitRead.test
-        pp "Meuh"
-    end
 end
 
