@@ -1,11 +1,11 @@
 #require 'dir'
 require 'rubygems'
-require 'lib/packfile'
 require 'net/http/server'
 require 'launchy'
 require 'pp'
-
 require 'zlib'
+
+require_relative 'lib/packfile'
 
 GitRead::test()
 

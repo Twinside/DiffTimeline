@@ -8,15 +8,15 @@ module GitRead
 
     # Class representing a binary pack
     class PackFileIndex < BinData::Record
-    uint32be :head1
-    uint32be :head2
-    array    :fanout, :type => :uint32be, :initial_length => 254
-    uint32be :compcount
-    array    :shas, :type => :bin_sha,   :initial_length => :compcount
-    array    :crcs, :type => :uint32be, :initial_length => :compcount
-    array    :offsets, :type => :uint32be, :initial_length => :compcount
-    bin_sha   :packChecksum
-    bin_sha   :indexChecksum
+        uint32be :head1
+        uint32be :head2
+        array    :fanout, :type => :uint32be, :initial_length => 254
+        uint32be :compcount
+        array    :shas, :type => :bin_sha,   :initial_length => :compcount
+        array    :crcs, :type => :uint32be, :initial_length => :compcount
+        array    :offsets, :type => :uint32be, :initial_length => :compcount
+        bin_sha  :packChecksum
+        bin_sha  :indexChecksum
     end
 
     class PackFileEntryHeader < BinData::Record
@@ -52,16 +52,14 @@ module GitRead
         # array :data, :type => :uint8, :initial_length => lambda {}
     end
 
-    class PackFile < BinData::Record
+    class PackFileHeader < BinData::Record
         string    :pack_str, :read_length => 4
         uint32be  :pack_version
         uint32be  :entries_count
         uint8     :padding
-
-        array     :file_entries, :type => :pack_file_entry, :initial_length => :entries_count
     end
 
-    def test
+    def GitRead.test
         pp "Meuh"
     end
 end
