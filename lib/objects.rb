@@ -1,11 +1,6 @@
+require_relative 'sha_ref'
 
 module GitRead
-    def GitRead.unpackBlob(path)
-        open(path, 'rb') do |file| 
-            Zlib::Inflate.inflate(file.read)
-        end
-    end
-    
     class Blob
         def initialize(data)
             idx = data.index("\x00")
@@ -20,7 +15,7 @@ module GitRead
     class Commit
         def initialize(data)
             @message = ''
-            @parent = ''
+            @parents = ''
             @author = ''
             @commiter = ''
             data.each_line do |line|
@@ -28,7 +23,7 @@ module GitRead
                 when /^commit/
                     nil
                 when /^parent (.*)/
-                    @parent = Regexp.last_match(1)
+                    @parents << ShaRef.new(Regexp.last_match(1))
                 when /^author (.*)/
                     @author = Regexp.last_match(1)
                 when /^commiter (.*)/
@@ -53,6 +48,7 @@ module GitRead
             parseTree(data, 0)
         end
 
+    private
         def parseTree(data, generalIdx)
             while !data.empty?
                 rights = data.slice(0 .. 5)

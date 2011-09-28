@@ -10,13 +10,50 @@ module GitRead
     class PackFileIndex < BinData::Record
         uint32be :head1
         uint32be :head2
-        array    :fanout, :type => :uint32be, :initial_length => 254
+        array    :fanout, :type => :uint32be, :initial_length => 255
         uint32be :compcount
         array    :shas, :type => :bin_sha,   :initial_length => :compcount
         array    :crcs, :type => :uint32be, :initial_length => :compcount
         array    :offsets, :type => :uint32be, :initial_length => :compcount
         bin_sha  :packChecksum
         bin_sha  :indexChecksum
+
+        # return the index of the specified sha in the
+        # corresponding pack file or nil if not found.
+        def offset_of(sha)
+            # we access the bounds of the index file
+            # by checking data from the fanout table.
+            begining = 0
+            ending = compcount
+            
+            if sha.raw[0] > 0
+                begining = fanout[ sha.raw[0] - 1]
+            end
+
+            if sha.raw[0] < 255
+                ending = fanout[ sha.raw[0] ]
+            end
+
+            find_between(sha, begining, ending)
+        end
+
+    private
+        def find_between(sha, beg, ending)
+            if ending < beg
+                return nil
+            end
+            middle = beg + (ending - beg) / 2
+
+            if shas[middle] == sha.raw
+                return offsets[middle]
+            end
+
+            if shas[middle] < sha.raw
+                find_between(sha, beg, middle - 1)
+            else
+                find_between(sha, middle + 1, beg)
+            end
+        end
     end
 
     class PackFileEntryHeader < BinData::Record
