@@ -44,14 +44,14 @@ module GitRead
             end
             middle = beg + (ending - beg) / 2
 
-            if shas[middle] == sha.raw
+            if shas[middle].bits == sha.raw
                 return offsets[middle]
             end
 
-            if shas[middle] < sha.raw
-                find_between(sha, beg, middle - 1)
+            if sha.is_greater_than(shas[middle].bits)
+                return find_between(sha, middle + 1, ending)
             else
-                find_between(sha, middle + 1, beg)
+                return find_between(sha, beg, middle - 1)
             end
         end
     end

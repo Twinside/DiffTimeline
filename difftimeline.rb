@@ -16,7 +16,17 @@ def unpackPackIndex(filename)
         GitRead::PackFileIndex.read(file)
     end
 end
-pp unpackPackIndex('C:/Users/Vince/Desktop/Webrexp/.git/objects/pack/pack-87211975add2b739089b468a6447f5b37efe3ae4.idx')
+#pp unpackPackIndex('C:/Users/Vince/Desktop/Webrexp/.git/objects/pack/pack-87211975add2b739089b468a6447f5b37efe3ae4.idx')
+
+repository = GitRead::Repository.new('C:/Users/Vince/Desktop/Webrexp')
+head = repository.head_sha
+
+current = repository.access_object(head)
+while current.class == GitRead::Commit && current.parents.size > 0
+    pp current
+    current = repository.access_object( current.parents[0] )
+end
+pp current
 
 # Serious race condition, but it will be ok to test
 #Launchy.open('http://127.0.0.1:8080')

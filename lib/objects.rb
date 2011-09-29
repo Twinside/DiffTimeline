@@ -13,9 +13,13 @@ module GitRead
     end
 
     class Commit
+        def parents
+            @parents
+        end
+
         def initialize(data)
             @message = ''
-            @parents = ''
+            @parents = []
             @author = ''
             @commiter = ''
             data.each_line do |line|

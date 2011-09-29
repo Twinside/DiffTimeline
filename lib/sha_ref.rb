@@ -5,8 +5,8 @@ module GitRead
                 @sha = stringify(shaInfo)
                 @raw_array = shaInfo
             else
-                @sha = shaInfo
-                @raw_array = transform_to_array(shaInfo)
+                @sha = shaInfo.chomp
+                @raw_array = transform_to_array(@sha)
             end
         end
 
@@ -16,6 +16,20 @@ module GitRead
 
         def raw
             @raw_array
+        end
+
+        def is_greater_than(arr)
+            i = 0
+            while i < 20
+                if @raw_array[i] < arr[i]
+                    return false
+                elseif @raw_array[i] > arr[i]
+                    return true
+                end
+                i += 1
+            end
+
+            false
         end
 
     private
