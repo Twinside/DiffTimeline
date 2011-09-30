@@ -17,7 +17,7 @@ module GitRead
         def access_object(sha)
             loose_file = @base + 'objects/' + sha.loose_path
             if File.exist?(loose_file)
-                access_loose_object(loose_file)
+                access_loose_object(sha, loose_file)
             else
                 access_packed_object(sha)
             end
@@ -43,14 +43,40 @@ module GitRead
     private
         # A loose object is an object stored in a single file
         # in the '.git/objects' subdirectory.
-        def access_loose_object(filename)
+        def access_loose_object(sha, filename)
             open(filename, 'rb') do |file| 
-                GitRead.readObject(Zlib::Inflate.inflate(file.read))
+                GitRead.read_loose_object(sha, Zlib::Inflate.inflate(file.read))
             end
         end
 
         def access_packed_object(sha)
-           foundRef = find_packed_ref(sha) 
+           foundRef = find_packed_ref(sha)
+           if !foundRef
+               return "not_found"
+           end
+
+           packfilename = @base + 'objects/pack/' + @packFilesList[ foundRef[1] ]
+           ret = nil
+           header_size = 4 + 4 + 4 + 1
+           open(packfilename, 'rb') do |pack_file|
+               header = GitRead::PackFileHeader.read(pack_file.read(header_size))
+
+               if !header || !header.valid?
+                   return nil
+               end
+
+               pack_file.seek(0, IO::SEEK_END)
+               file_size = pack_file.pos
+
+               pack_file.seek(foundRef[0], IO::SEEK_SET)
+               pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
+               readSize = [pack_entry_header.uncompressed_size, file_size - foundRef[0]].min
+
+               inflated_data = Zlib::Inflate.inflate(pack_file.read(readSize))
+               ret = GitRead.read_pack_object(sha, pack_entry_header.obj_type, inflated_data)
+           end
+
+           ret
         end
 
         def find_packed_ref(sha)
@@ -73,8 +99,8 @@ module GitRead
 
                 @loadedIndexFiles << pack
                 offset = pack.offset_of(sha)
-                return [offset, @leftPackToLoad.size - 1] if offset
                 @leftPackToLoad = @leftPackToLoad.slice(1, @leftPackToLoad.size)
+                return [offset, @leftPackToLoad.size - 1] if offset
             end
 
             return nil

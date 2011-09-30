@@ -1,17 +1,21 @@
 module GitRead
     class ShaRef
         def initialize(shaInfo)
-            if shaInfo.class == Array
-                @sha = stringify(shaInfo)
-                @raw_array = shaInfo
-            else
+            if shaInfo.class == String
                 @sha = shaInfo.chomp
                 @raw_array = transform_to_array(@sha)
+            else # assume array like
+                @sha = stringify(shaInfo)
+                @raw_array = shaInfo
             end
         end
 
         def loose_path
-            @sha.insert(2, '/')
+            @sha.clone.insert(2, '/')
+        end
+
+        def to_s
+            @sha
         end
 
         def raw
@@ -23,7 +27,7 @@ module GitRead
             while i < 20
                 if @raw_array[i] < arr[i]
                     return false
-                elseif @raw_array[i] > arr[i]
+                elsif @raw_array[i] > arr[i]
                     return true
                 end
                 i += 1
@@ -34,7 +38,7 @@ module GitRead
 
     private
         def stringify(arr)
-            "%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X%2X" % arr
+            "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x" % arr
         end
 
         def transform_to_array(txt_sha)

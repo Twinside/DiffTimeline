@@ -23,10 +23,10 @@ head = repository.head_sha
 
 current = repository.access_object(head)
 while current.class == GitRead::Commit && current.parents.size > 0
-    pp current
+    puts current.to_s
     current = repository.access_object( current.parents[0] )
 end
-pp current
+puts current.to_s
 
 # Serious race condition, but it will be ok to test
 #Launchy.open('http://127.0.0.1:8080')

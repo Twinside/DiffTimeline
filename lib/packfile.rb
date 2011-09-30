@@ -70,6 +70,21 @@ module GitRead
         bit1 :d_end,     :initial_value => 0, :onlyif => :c_end?
         bit7 :d_size,    :initial_value => 0, :onlyif => :c_end?
 
+        def uncompressed_size
+            (d_size << 18) | (c_size << 11) | (b_size << 4) | a_size 
+        end
+
+        def obj_type
+            type
+        end
+
+        OBJ_COMMIT = 1
+        OBJ_TREE   = 2
+        OBJ_BLOB   = 3
+        OBJ_TAG    = 4
+        OBJ_OFS_DELTA = 6
+        OBJ_REF_DELTA = 7
+
         def a_end?
             a_end != 0
         end
@@ -81,12 +96,6 @@ module GitRead
         def c_end?
             c_end != 0
         end
-
-        def uncompressed_size
-            (d_size << 18) | (c_size << 11) | (b_size << 4) | a_size 
-        end
-        # next line is wrong, it is the size of the expended data.
-        # array :data, :type => :uint8, :initial_length => lambda {}
     end
 
     class PackFileHeader < BinData::Record
@@ -94,6 +103,10 @@ module GitRead
         uint32be  :pack_version
         uint32be  :entries_count
         uint8     :padding
+
+        def valid?
+            pack_str == "PACK" && pack_version == 2
+        end
     end
 end
 
