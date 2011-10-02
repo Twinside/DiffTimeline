@@ -7,21 +7,13 @@ require_relative 'lib/packfile'
 require_relative 'lib/objects'
 require_relative 'lib/repository'
 
-def unpackPackIndex(filename)
-    open(filename, 'rb') do |file|
-        #unpacked = Zlib::Inflate.inflate(file.read)
-        #BinData::trace_reading do
-            #return GitRead::PackFileIndex.read(file)
-        #end
-        GitRead::PackFileIndex.read(file)
-    end
-end
-#pp unpackPackIndex('C:/Users/Vince/Desktop/Webrexp/.git/objects/pack/pack-87211975add2b739089b468a6447f5b37efe3ae4.idx')
-
 repository = GitRead::Repository.new('C:/Users/Vince/Desktop/Webrexp')
 head = repository.head_sha
 
 current = repository.access_object(head)
+
+puts repository.access_object(current.tree).access_path(repository, 'Text/Webrexp/IOMock.hs').data
+
 while current.class == GitRead::Commit && current.parents.size > 0
     puts current.to_s
     current = repository.access_object( current.parents[0] )

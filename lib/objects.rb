@@ -1,3 +1,4 @@
+require 'pathname'
 require_relative 'sha_ref'
 
 module GitRead
@@ -17,6 +18,10 @@ module GitRead
                 @data = data
             end
         end
+
+        def data
+            @data
+        end
     end
 
     class Commit
@@ -27,6 +32,7 @@ module GitRead
             @parents = []
             @author = ''
             @committer = ''
+            @tree = nil
 
             case kind
             when :textual
@@ -42,6 +48,10 @@ module GitRead
                 parse_commit(data)
             end
 
+        end
+
+        def tree
+            @tree
         end
 
         def to_s
@@ -87,20 +97,52 @@ module GitRead
 
                 # we drop the blob info
                 data = data.slice(idx + 1 .. data.length)
-                parseTree(data, 0)
+                parse_tree(data, 0)
             when :binary
-                parseTree(data, 0)
+                parse_tree(data, 0)
             end
         end
 
+        def access_path(repo, path)
+            access_inner_path(repo, Pathname.new(path).each_filename)
+        end
+
+    protected
+        RIGHTS_IDX = 0
+        NAME_IDX = 1
+        SHA_IDX = 2
+
+        def access_inner_path(repo, path_enum)
+            child_val = ''
+            begin
+                child_val = path_enum.next
+            rescue StopIteration
+                return self
+            end
+
+            found_iteration = @listing.index { |info| info[NAME_IDX] == child_val }
+            return nil if !found_iteration
+
+            child_object = repo.access_object(@listing[found_iteration][SHA_IDX])
+            pp child_object.class
+            if child_object.class != self.class
+                return child_object 
+            end
+
+            child_object.access_inner_path(repo, path_enum)
+        end
+
     private
-        def parseTree(data, generalIdx)
+        def parse_tree(data, generalIdx)
             while !data.empty?
-                rights = data.slice(0 .. 5)
+                /^(?<rights>\d+)/ =~ data
+
                 idx = data.index("\x00")
-                filename = data.slice(7 .. idx - 1)
+                filename = data.slice(rights.length + 1 .. idx - 1)
                 sha = data.slice(idx + 1 .. idx + 20).unpack('C20')
-                @listing << [rights, filename, sha]
+                @listing << [rights, filename, ShaRef.new(sha)]
+
+                # cut away what we read
                 data = data.slice!(idx + 21, data.length)
             end
         end
