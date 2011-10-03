@@ -24,8 +24,11 @@ module GitRead
         end
     end
 
+    # Represent a git commit, with the parents, the
+    # message, committer and author info and (even more
+    # importantly) the GitRead::Tree object of the data.
     class Commit
-        # we dont care about kind
+        # kind either :textual or :binary
         def initialize(sha, data, kind)
             @sha = sha
             @message = ''
@@ -83,6 +86,8 @@ module GitRead
         end
     end
 
+    # Tree class, storing list of other object with
+    # a (rights, name, sha) storage.
     class Tree
         def initialize(sha, data, kind)
             @listing = []
@@ -103,6 +108,8 @@ module GitRead
             end
         end
 
+        # Access a git object in the tree (if any) with the
+        # given repository and path.
         def access_path(repo, path)
             access_inner_path(repo, Pathname.new(path).each_filename)
         end
@@ -120,6 +127,7 @@ module GitRead
                 return self
             end
 
+            # linear search, find a way to do a binary search here (abstract it)
             found_iteration = @listing.index { |info| info[NAME_IDX] == child_val }
             return nil if !found_iteration
 
