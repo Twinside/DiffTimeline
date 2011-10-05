@@ -70,10 +70,21 @@ module GitRead
 
                pack_file.seek(foundRef[0], IO::SEEK_SET)
                pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
-               readSize = [pack_entry_header.uncompressed_size, file_size - foundRef[0]].min
 
-               inflated_data = Zlib::Inflate.inflate(pack_file.read(readSize))
-               ret = GitRead.read_pack_object(sha, pack_entry_header.obj_type, inflated_data)
+
+
+               if pack_entry_header.delta?
+                   read_size = pack_entry_header.uncompressed_size
+                   object_data = pack_file.read(read_size)
+                   pp inflated_data
+               else
+                   read_size = [pack_entry_header.uncompressed_size,
+                            file_size - foundRef[0]].min
+                   read_data = pack_file.read(read_size)
+                   object_data = Zlib::Inflate.inflate(read_data)
+               end
+
+               ret = GitRead.read_pack_object(sha, pack_entry_header.obj_type, object_data)
            end
 
            ret

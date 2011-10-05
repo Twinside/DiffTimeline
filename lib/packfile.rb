@@ -56,6 +56,30 @@ module GitRead
         end
     end
 
+#case Constants.OBJ_OFS_DELTA: {
+	#c = ib[p++] & 0xff;
+	#long base = c & 127;
+	#while ((c & 128) != 0) {
+		#base += 1;
+		#c = ib[p++] & 0xff;
+		#base <<= 7;
+		#base += (c & 127);
+	#}
+	#base = pos - base;
+	#delta = new Delta(delta, pos, (int) sz, p, base);
+	#if (sz != delta.deltaSize)
+		#break SEARCH;
+
+	#DeltaBaseCache.Entry e = curs.getDeltaBaseCache().get(this, base);
+	#if (e != null) {
+		#type = e.type;
+		#data = e.data;
+		#cached = true;
+		#break SEARCH;
+	#}
+	#pos = base;
+	#continue SEARCH;
+
     class PackFileEntryHeader < BinData::Record
         bit1 :a_end
         bit3 :type
@@ -84,6 +108,10 @@ module GitRead
         OBJ_TAG    = 4
         OBJ_OFS_DELTA = 6
         OBJ_REF_DELTA = 7
+
+        def delta?
+            type == OBJ_OFS_DELTA || type == OBJ_REF_DELTA
+        end
 
         def a_end?
             a_end != 0
