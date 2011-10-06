@@ -14,6 +14,7 @@ module GitRead
             @loadedIndexFiles = []
         end
 
+        # ShaRef -> (GitObject | nil)
         def access_object(sha)
             loose_file = @base + 'objects/' + sha.loose_path
             if File.exist?(loose_file)
@@ -23,6 +24,32 @@ module GitRead
             end
         end
 
+        class RawBlob
+            def initialize(obj_type, obj_data)
+                @data = obj_data
+                @type = obj_type
+            end
+
+            def type
+                @type
+            end
+
+            def data
+                @data
+            end
+        end
+
+        # ShaRef -> (RawBlob | nil)
+        def access_object_raw(sha)
+            loose_file = @base + 'objects/' + sha.loose_path
+            if File.exist?(loose_file)
+                RawBlob.new(:unknown, access_loose_object_raw(sha, loose_file))
+            else
+                access_packed_object_raw(sha)
+            end
+        end
+
+        # ShaRef
         # Return the SHA1 of the HEAD (if any) or nil if not found.
         def head_sha
             open(@base + 'HEAD', 'r') do |file|
@@ -41,17 +68,26 @@ module GitRead
         end
 
     private
+        # (ShaRef, FilePath) -> GitObject
+        # \return a GitRead::Objects corresponding to the given sha
+        def access_loose_object(sha, filename)
+            data = access_loose_object_raw(sha, filename)
+            GitRead.read_loose_object(sha, data)
+        end
+
+        # (ShaRef, FilePath) -> RawString
         # A loose object is an object stored in a single file
         # in the '.git/objects' subdirectory.
-        def access_loose_object(sha, filename)
+        def access_loose_object_raw(sha, filename)
             puts ">>> Loose"
             open(filename, 'rb') do |file| 
-                GitRead.read_loose_object(sha, Zlib::Inflate.inflate(file.read))
+                Zlib::Inflate.inflate(file.read)
             end
         end
 
+        # (ShaRef, PackFileEntryHeader, Int, File, Int) -> RawBlob
         # header is PackFileEntryHeader
-        def read_delta_object(sha, header, offset, file, file_size)
+        def read_delta_object_raw(sha, header, offset, file, file_size)
             pp "read_delta_object"
 
             case header.obj_type
@@ -66,7 +102,8 @@ module GitRead
                 pp deflated_data
 
                 # must read _raw_ object, not clean one
-                origin = read_packed_object(sha, real_offset, file)
+                # origin :: RawBlob
+                origin = read_packed_object_raw(sha, real_offset, file)
                 pp origin
 
                 inflated_delta = Zlib::Inflate.inflate(deflated_data)
@@ -82,9 +119,9 @@ module GitRead
             #Delta.new(origin)
         end
 
-        def read_packed_object(sha, offset, pack_file)
-
-            pp "read_packed_object"
+        # (ShaRef, Int, File) -> RawBlob
+        def read_packed_object_raw(sha, offset, pack_file)
+            pp "read_packed_object_raw"
             pack_file.seek(0, IO::SEEK_END)
             file_size = pack_file.pos
 
@@ -94,21 +131,32 @@ module GitRead
             puts "offset: #{offset} pos: #{pack_file.tell} file_size: #{file_size}"
 
             if pack_entry_header.delta?
-                return read_delta_object(sha, pack_entry_header, offset, pack_file, file_size)
+                return read_delta_object_raw(sha, pack_entry_header, offset, pack_file, file_size)
             else
                 read_size = [pack_entry_header.uncompressed_size,
                         file_size - offset].min
                 read_data = pack_file.read(read_size)
-                object_data = Zlib::Inflate.inflate(read_data)
-                return GitRead.read_pack_object(sha, pack_entry_header.obj_type, object_data)
+                return RawBlob.new(pack_entry_header.obj_type, Zlib::Inflate.inflate(read_data))
             end
         end
 
+        def read_packed_object(sha, offset, pack_file)
+            raw = GitRead.read_pack_object_raw(sha, pack_entry_header.obj_type, object_data)
+            GitRead.read_pack_object(sha, raw[0], raw[1])
+        end
+
+        # ShaRef -> (GitObject | nil)
         def access_packed_object(sha)
+            raw = access_packed_object_raw(sha)
+            GitRead.read_pack_object(sha, raw.type, raw.data)
+        end
+
+        # ShaRef -> (RawBlob | nil)
+        def access_packed_object_raw(sha)
            puts ">>> Packed"
            found_ref = find_packed_ref(sha)
            if !found_ref
-               return "not_found"
+               return nil
            end
 
            packfilename = @base + 'objects/pack/' + @packFilesList[ found_ref[1] ]
@@ -121,12 +169,13 @@ module GitRead
                    return nil
                end
 
-               ret = read_packed_object(sha, found_ref[0], pack_file)
+               ret = read_packed_object_raw(sha, found_ref[0], pack_file)
            end
 
            ret
         end
 
+        # ShaRef -> ([Offset, Sizer] | nil)
         def find_packed_ref(sha)
             # we search in the alread loaded list
             offset = nil

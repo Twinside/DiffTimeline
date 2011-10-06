@@ -108,6 +108,7 @@ module GitRead
             end
         end
 
+        # (Repository, FilePath) -> (Object | nil)
         # Access a git object in the tree (if any) with the
         # given repository and path.
         def access_path(repo, path)
@@ -160,6 +161,7 @@ module GitRead
     COMMIT_PREFIX = "commit "
     TREE_PREFIX = "tree "
 
+    # (ShaRef, Type, String) -> (GitObject | nil)
     def GitRead.read_pack_object(sha, type, data)
         case type
         when PackFileEntryHeader::OBJ_COMMIT 
@@ -182,6 +184,7 @@ module GitRead
         end
     end
 
+    # (ShaRef, String) -> (GitObject | nil)
     def GitRead.read_loose_object(sha, str)
         case 
         when str.start_with?(BLOB_PREFIX) 
