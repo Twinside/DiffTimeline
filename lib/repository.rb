@@ -50,20 +50,28 @@ module GitRead
             end
         end
 
-        def read_delta_object(sha, header, offset, file)
+        # header is PackFileEntryHeader
+        def read_delta_object(sha, header, offset, file, file_size)
             pp "read_delta_object"
-            read_size = header.uncompressed_size
-            object_data = file.read(read_size)
 
             case header.obj_type
             when PackFileEntryHeader::OBJ_OFS_DELTA
-                size = DeltaOffset.read(file)
-                real_offset = offset - size.to_i
-                pp offset
-                pp size.to_i
-                pp real_offset
+                base_offset = DeltaOffset.read(file)
+                real_offset = offset - base_offset.to_i
+
+                to_read = [header.uncompressed_size,
+                           file_size - offset - header.read_size].min
+                pp to_read
+                deflated_data = file.read(to_read)
+                pp deflated_data
+
+                # must read _raw_ object, not clean one
                 origin = read_packed_object(sha, real_offset, file)
+                pp origin
+
+                inflated_delta = Zlib::Inflate.inflate(deflated_data)
             when PackFileEntryHeader::OBJ_REF_DELTA
+                puts "OBJ_REF_DELTA"
                 ref = ShaRef.new(BinSha.read(file).bits)
                 origin = access_object(ref)
             else
@@ -83,10 +91,10 @@ module GitRead
             pack_file.seek(offset, IO::SEEK_SET)
             pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
             pp pack_entry_header
-
+            puts "offset: #{offset} pos: #{pack_file.tell} file_size: #{file_size}"
 
             if pack_entry_header.delta?
-                return read_delta_object(sha, pack_entry_header, offset, pack_file)
+                return read_delta_object(sha, pack_entry_header, offset, pack_file, file_size)
             else
                 read_size = [pack_entry_header.uncompressed_size,
                         file_size - offset].min

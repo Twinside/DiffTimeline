@@ -196,6 +196,14 @@ module GitRead
         bit1 :d_end,     :initial_value => 0, :onlyif => :c_end?
         bit7 :d_size,    :initial_value => 0, :onlyif => :c_end?
 
+        def read_size
+            rez = 1
+            rez += 1 if a_end?
+            rez += 1 if b_end?
+            rez += 1 if c_end?
+            rez
+        end
+
         def uncompressed_size
             (d_size << 18) | (c_size << 11) | (b_size << 4) | a_size 
         end
