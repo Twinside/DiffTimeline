@@ -40,11 +40,13 @@ module GitRead
     private
         def find_between(sha, beg, ending)
             if ending < beg
+                puts "Not found #{sha}"
                 return nil
             end
             middle = beg + (ending - beg) / 2
 
             if shas[middle].bits == sha.raw
+                puts "Found #{sha} in packfile at #{offsets[middle]}"
                 return offsets[middle]
             end
 
@@ -56,29 +58,129 @@ module GitRead
         end
     end
 
-#case Constants.OBJ_OFS_DELTA: {
-	#c = ib[p++] & 0xff;
-	#long base = c & 127;
-	#while ((c & 128) != 0) {
-		#base += 1;
-		#c = ib[p++] & 0xff;
-		#base <<= 7;
-		#base += (c & 127);
-	#}
-	#base = pos - base;
-	#delta = new Delta(delta, pos, (int) sz, p, base);
-	#if (sz != delta.deltaSize)
-		#break SEARCH;
+    # Used to unpack the size of a delta
+    class DeltaSize < BinData::Record
+        bit1 :a_end
+        bit7 :a_size
 
-	#DeltaBaseCache.Entry e = curs.getDeltaBaseCache().get(this, base);
-	#if (e != null) {
-		#type = e.type;
-		#data = e.data;
-		#cached = true;
-		#break SEARCH;
-	#}
-	#pos = base;
-	#continue SEARCH;
+        bit1 :b_end,     :initial_value => 0, :onlyif => :a_end?
+        bit7 :b_size,    :initial_value => 0, :onlyif => :a_end?
+
+        bit1 :c_end,     :initial_value => 0, :onlyif => :b_end?
+        bit7 :c_size,    :initial_value => 0, :onlyif => :b_end?
+
+        bit1 :d_end,     :initial_value => 0, :onlyif => :c_end?
+        bit7 :d_size,    :initial_value => 0, :onlyif => :c_end?
+
+        def a_end?
+            a_end != 0
+        end
+
+        def b_end?
+            b_end != 0
+        end
+
+        def c_end?
+            c_end != 0
+        end
+
+        def to_i
+            (d_size << (3 * 7)) | (c_size << (2 * 7)) | (b_size << 7) | a_size
+        end
+
+        def read_size
+            base = 1
+            base += 1 if b_end?
+            base += 1 if c_end?
+            base += 1 if d_end != 0
+            base
+        end
+    end
+
+    class DeltaOffset < DeltaSize
+        def to_i
+            rez = a_size 
+            rez = ((rez + 1) << 7) + b_size if a_end?
+            rez = ((rez + 1) << 7) + c_size if b_end?
+            rez = ((rez + 1) << 7) + d_size if c_end?
+            rez
+        end
+    end
+
+    class Delta < BinData::Record
+        bit1 :is_src,       :initial_value => 0
+        bit7 :ini_size,     :initial_value => 0
+
+        # if it's src, we must read it, parsing is a bit complicated
+        uint8 :offset_1,    :initial_value => 0, :onlyif => :offset_byte1?
+        uint8 :offset_2,    :initial_value => 0, :onlyif => :offset_byte2?
+        uint8 :offset_3,    :initial_value => 0, :onlyif => :offset_byte3?
+        uint8 :offset_4,    :initial_value => 0, :onlyif => :offset_byte4?
+
+        uint8 :size_1,      :initial_value => 0, :onlyif => :size_byte1?
+        uint8 :size_2,      :initial_value => 0, :onlyif => :size_byte2?
+        uint8 :size_3,      :initial_value => 0, :onlyif => :size_byte3?
+
+        # if just raw data, only read it, simple
+        array :data, :type => :uint8, :initial_length => :ini_size, :onlyif => :is_raw?
+
+        def data_from(file)
+            return data if is_raw?
+
+            file.seek(offset, IO::SEEK_SET)
+            file.read(size)
+        end
+
+        def offset
+            offset_1 | (offset_2 << 8) | (offset_3 << 16) | (offset_4 << 24)
+        end
+
+        def size
+            sz = size_1 | (size_2 << 8) | (size_3 << 16)
+
+            return 0x10000 if sz == 0
+            sz
+        end
+
+        def size_byte1?
+            is_src != 0 && ini_size & 16 != 0
+        end
+
+        def size_byte2?
+            is_src != 0 && ini_size & 32 != 0
+        end
+
+        def size_byte3?
+            is_src != 0 && ini_size & 64 != 0
+        end
+
+        def offset_byte1?
+            is_src != 0 && ini_size & 1 != 0
+        end
+
+        def offset_byte2?
+            is_src != 0 && ini_size & 2 != 0
+        end
+
+        def offset_byte3?
+            is_src != 0 && ini_size & 4 != 0
+        end
+
+        def offset_byte4?
+            is_src != 0 && ini_size & 8 != 0
+        end
+
+        def is_raw?
+            is_src == 0
+        end
+    end
+
+    class DeltaPack < BinData::Record
+        # modif?
+        delta_size  :src_size
+        delta_size  :rez_size
+        array       :deltas, :type => Delta
+    end
 
     class PackFileEntryHeader < BinData::Record
         bit1 :a_end
@@ -132,7 +234,10 @@ module GitRead
         uint32be  :entries_count
         uint8     :padding
 
+        HEADER_SIZE = 4 + 4 + 4 + 1
+
         def valid?
+            pp [pack_str, pack_version, entries_count, padding ]
             pack_str == "PACK" && pack_version == 2
         end
     end

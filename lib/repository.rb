@@ -44,47 +44,76 @@ module GitRead
         # A loose object is an object stored in a single file
         # in the '.git/objects' subdirectory.
         def access_loose_object(sha, filename)
+            puts ">>> Loose"
             open(filename, 'rb') do |file| 
                 GitRead.read_loose_object(sha, Zlib::Inflate.inflate(file.read))
             end
         end
 
+        def read_delta_object(sha, header, offset, file)
+            pp "read_delta_object"
+            read_size = header.uncompressed_size
+            object_data = file.read(read_size)
+
+            case header.obj_type
+            when PackFileEntryHeader::OBJ_OFS_DELTA
+                size = DeltaOffset.read(file)
+                real_offset = offset - size.to_i
+                pp offset
+                pp size.to_i
+                pp real_offset
+                origin = read_packed_object(sha, real_offset, file)
+            when PackFileEntryHeader::OBJ_REF_DELTA
+                ref = ShaRef.new(BinSha.read(file).bits)
+                origin = access_object(ref)
+            else
+                throw
+            end
+            #DeltaPack.read()
+
+            #Delta.new(origin)
+        end
+
+        def read_packed_object(sha, offset, pack_file)
+
+            pp "read_packed_object"
+            pack_file.seek(0, IO::SEEK_END)
+            file_size = pack_file.pos
+
+            pack_file.seek(offset, IO::SEEK_SET)
+            pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
+            pp pack_entry_header
+
+
+            if pack_entry_header.delta?
+                return read_delta_object(sha, pack_entry_header, offset, pack_file)
+            else
+                read_size = [pack_entry_header.uncompressed_size,
+                        file_size - offset].min
+                read_data = pack_file.read(read_size)
+                object_data = Zlib::Inflate.inflate(read_data)
+                return GitRead.read_pack_object(sha, pack_entry_header.obj_type, object_data)
+            end
+        end
+
         def access_packed_object(sha)
-           foundRef = find_packed_ref(sha)
-           if !foundRef
+           puts ">>> Packed"
+           found_ref = find_packed_ref(sha)
+           if !found_ref
                return "not_found"
            end
 
-           packfilename = @base + 'objects/pack/' + @packFilesList[ foundRef[1] ]
+           packfilename = @base + 'objects/pack/' + @packFilesList[ found_ref[1] ]
+           pp packfilename
            ret = nil
-           header_size = 4 + 4 + 4 + 1
-           open(packfilename, 'rb') do |pack_file|
-               header = GitRead::PackFileHeader.read(pack_file.read(header_size))
 
+           open(packfilename, 'rb') do |pack_file|
+               header = GitRead::PackFileHeader.read(pack_file.read(PackFileHeader::HEADER_SIZE))
                if !header || !header.valid?
                    return nil
                end
 
-               pack_file.seek(0, IO::SEEK_END)
-               file_size = pack_file.pos
-
-               pack_file.seek(foundRef[0], IO::SEEK_SET)
-               pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
-
-
-
-               if pack_entry_header.delta?
-                   read_size = pack_entry_header.uncompressed_size
-                   object_data = pack_file.read(read_size)
-                   pp inflated_data
-               else
-                   read_size = [pack_entry_header.uncompressed_size,
-                            file_size - foundRef[0]].min
-                   read_data = pack_file.read(read_size)
-                   object_data = Zlib::Inflate.inflate(read_data)
-               end
-
-               ret = GitRead.read_pack_object(sha, pack_entry_header.obj_type, object_data)
+               ret = read_packed_object(sha, found_ref[0], pack_file)
            end
 
            ret

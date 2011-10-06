@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+# -*- encoding: utf-8 -*-
 require 'rubygems'
 require 'net/http/server'
 require 'launchy'
@@ -7,18 +9,22 @@ require_relative 'lib/packfile'
 require_relative 'lib/objects'
 require_relative 'lib/repository'
 
-repository = GitRead::Repository.new('C:/Users/Vince/Desktop/Webrexp')
+repository = GitRead::Repository.new('/Users/vince/Documents/Coding/Webrexp')
 head = repository.head_sha
 
+#current = repository.access_object(head)
+
+#while current.class == GitRead::Commit && current.parents.size > 0
+    #puts current.to_s
+    #current = repository.access_object( current.parents[0] )
+#end
+#puts current.to_s
+
 current = repository.access_object(head)
-
-puts repository.access_object(current.tree).access_path(repository, 'Text/Webrexp/IOMock.hs').data
-
-while current.class == GitRead::Commit && current.parents.size > 0
-    puts current.to_s
-    current = repository.access_object( current.parents[0] )
-end
-puts current.to_s
+pp current
+tree = repository.access_object(current.tree)
+pp tree
+puts tree.access_path(repository, 'Text/Webrexp/IOMock.hs').data
 
 # Serious race condition, but it will be ok to test
 #Launchy.open('http://127.0.0.1:8080')
