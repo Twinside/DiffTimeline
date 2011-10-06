@@ -75,6 +75,8 @@ module GitRead
             GitRead.read_loose_object(sha, data)
         end
 
+        INFLATE_SIZE_MARGIN = 50
+
         # (ShaRef, FilePath) -> RawString
         # A loose object is an object stored in a single file
         # in the '.git/objects' subdirectory.
@@ -95,22 +97,21 @@ module GitRead
                 base_offset = DeltaOffset.read(file)
                 real_offset = offset - base_offset.to_i
 
-                to_read = [header.uncompressed_size,
+                to_read = [header.uncompressed_size + INFLATE_SIZE_MARGIN,
                            file_size - offset - header.read_size].min
-                pp to_read
                 deflated_data = file.read(to_read)
-                pp deflated_data
+                inflated_delta = Zlib::Inflate.inflate(deflated_data)
 
                 # must read _raw_ object, not clean one
                 # origin :: RawBlob
                 origin = read_packed_object_raw(sha, real_offset, file)
                 pp origin
 
-                inflated_delta = Zlib::Inflate.inflate(deflated_data)
             when PackFileEntryHeader::OBJ_REF_DELTA
                 puts "OBJ_REF_DELTA"
                 ref = ShaRef.new(BinSha.read(file).bits)
-                origin = access_object(ref)
+                origin = access_object_raw(ref)
+                pp origin
             else
                 throw
             end
@@ -133,9 +134,9 @@ module GitRead
             if pack_entry_header.delta?
                 return read_delta_object_raw(sha, pack_entry_header, offset, pack_file, file_size)
             else
-                read_size = [pack_entry_header.uncompressed_size,
+                read_size = [pack_entry_header.uncompressed_size + INFLATE_SIZE_MARGIN,
                         file_size - offset].min
-                read_data = pack_file.read(read_size)
+                read_data = pack_file.read(read_size + 50)
                 return RawBlob.new(pack_entry_header.obj_type, Zlib::Inflate.inflate(read_data))
             end
         end
