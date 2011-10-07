@@ -53,15 +53,32 @@ module GitRead
             @coeffs.generate do |i, j|
                 l = @orig[i - 1]
                 r = @dest[j - 1]
+                # Identical, so the matching score is
+                # the matching score of previous string +1
                 if l == r
                     @coeffs[i - 1][j - 1] + 1
                 else
-                    left = @coeffs[i - 1][j]
-                    down = @coeffs[i][j - 1]
-                    if left > down
-                        left
-                    else
+                    #          ^
+                    #          | down
+                    #          |
+                    # left +---+--+
+                    #   <--+      |
+                    #      +------+
+
+                    # correspond to a score with a deletion
+                    # of the origin
+                    down = @coeffs[i - 1][j] 
+
+                    # correspond to a score with an addition
+                    # to the origin
+                    left = @coeffs[i][j - 1]
+
+                    # otherwise, it's the maximum score
+                    # of the previously calculated data.
+                    if down < left
                         down
+                    else
+                        left
                     end
                 end
             end
@@ -76,11 +93,22 @@ module GitRead
 
         # (Int, Int, [DiffCommand]) -> nil
         def diff_set_at(i,j, rez)
+            # We're not at the edge of the matrix, and data
+            # is identical, so we're matching, no diff information
+            # here.
             if i > 0 && j > 0 && @orig[i - 1] == @dest[j - 1]
                 diff_set_at(i - 1, j - 1, rez)
+            # i == 0 => no more lines in origin, so must add everything
+            # else.
+            # coeffs i,(j-1) >= coeffs (i-1),j =>
+            # if we delete a line from the destination we get a better
+            # matching score (in comparison of deleting a line from origin),
+            # so declare an addition for the diff
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
                 diff_set_at(i, j-1, rez)
                 rez << DiffCommand.new(:add_line, i - 1, j - 1)
+            # inversly to previous case we get a better score by removing
+            # a line, so follow this diff
             elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
                 diff_set_at(i - 1, j, rez)
                 rez << DiffCommand.new(:rem_line, i - 1, j - 1)
