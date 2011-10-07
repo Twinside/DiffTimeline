@@ -2,16 +2,36 @@ require 'pp'
 
 module GitRead
     class Diff
+        # Class describin a diff action to pass from
+        # origin to destination.
+        class DiffCommand
+            attr_reader :cmd, :orig_idx, :dest_idx
+
+            # (:add_line | :rem_line, Int, Int) -> DiffCommand
+            def initialize(cmd, idx, ddx)
+                @cmd = cmd
+                @orig_idx = idx
+                @dest_idx = ddx
+            end
+        end
+
+        # ([String], [String]) -> Diff
+        # you should probably use diffFiles
         def initialize( orig, dest )
             @coeffs = CoeffTable.new(orig.size, dest.size)
             @orig = orig
             @dest = dest
         end
 
+        # nil
+        # Print the coefficient table on stdout
         def dump
             @coeffs.dump
         end
 
+        # (String, String) -> Diff
+        # Helper static method to create a diff from
+        # two filenames
         def Diff.diffFiles( filename1, filename2 )
             f1 = open(filename1, 'rb') do |file|
                 file.read().lines.to_a
@@ -27,8 +47,9 @@ module GitRead
             diff
         end
 
+        # nil
+        # Compute the coefficient matrix.
         def compute_diff
-            puts "Mkay"
             @coeffs.generate do |i, j|
                 l = @orig[i - 1]
                 r = @dest[j - 1]
@@ -46,10 +67,34 @@ module GitRead
             end
         end
 
+        # [DiffCommand]
+        def diff_set
+            acc = []
+            diff_set_at(@orig.length, @dest.length, acc)
+            acc
+        end
+
+        # (Int, Int, [DiffCommand]) -> nil
+        def diff_set_at(i,j, rez)
+            if i > 0 && j > 0 && @orig[i - 1] == @dest[j - 1]
+                diff_set_at(i - 1, j - 1, rez)
+            elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
+                diff_set_at(i, j-1, rez)
+                rez << DiffCommand.new(:add_line, i - 1, j - 1)
+            elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
+                diff_set_at(i - 1, j, rez)
+                rez << DiffCommand.new(:rem_line, i - 1, j - 1)
+            end
+        end
+
+        # nil
+        # print the diff on stdout.
         def print_diff
             print_diff_at(@orig.length, @dest.length)
         end
 
+        # print the diff on stdout.
+        # (Int, Int) -> nil
         def print_diff_at(i, j)
             if i > 0 && j > 0 && @orig[i - 1] == @dest[j - 1]
 
@@ -71,6 +116,7 @@ module GitRead
             end
         end
 
+        # Coefficient matrix used in the Diff algorithm.
         class CoeffTable
             def initialize(length1, length2)
                 @data = Array.new(length1 + 1) { Array.new(length2 + 1, 0) }
@@ -78,6 +124,10 @@ module GitRead
                 @dest_length = length2
             end
 
+            # nil
+            # yield Int,Int -> Int
+            # fill the coefficient table with information given
+            # by the coroutine.
             def generate
                 puts @orig_length
                 puts @dest_length
@@ -88,10 +138,14 @@ module GitRead
                 end
             end
 
+            # Int -> [Int]
+            # Return the line at the given index.
             def [](x)
                 @data[x]
             end
 
+            # nil
+            # Dump the coefficient matrix on stdout.
             def dump
                 @data.each do |line|
                     line.each { |v| print "%4d " % v }
