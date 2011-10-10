@@ -5,13 +5,50 @@ module GitRead
         # Class describin a diff action to pass from
         # origin to destination.
         class DiffCommand
-            attr_reader :cmd, :orig_idx, :dest_idx
+            attr_reader :cmd, :orig_idx, :dest_idx, :size
 
             # (:add_line | :rem_line, Int, Int) -> DiffCommand
             def initialize(cmd, idx, ddx)
                 @cmd = cmd
+                @size = 1
                 @orig_idx = idx
                 @dest_idx = ddx
+            end
+
+            def inc_size
+                @size += 1
+            end
+        end
+
+        class DiffSet
+            def initialize()
+                @listing = []
+            end
+
+            def add_line(orig_line, dest_line)
+                if @listing.size == 0
+                    @listing << DiffCommand.new(:add_line, orig_line, dest_line)
+                end
+                prev = @listing.last
+
+                if prev.cmd == :add_line && dest_line == prev.dest_idx + prev.size
+                    @listing.last.inc_size
+                else
+                    @listing << DiffCommand.new(:add_line, orig_line, dest_line)
+                end
+            end
+
+            def rem_line(orig_line, dest_line)
+                if @listing.size == 0
+                    @listing << DiffCommand.new(:rem_line, orig_line, dest_line)
+                end
+                prev = @listing.last
+
+                if prev.cmd == :rem_line && orig_line == prev.orig_idx + prev.size
+                    @listing.last.inc_size
+                else
+                    @listing << DiffCommand.new(:rem_line, orig_line, dest_line)
+                end
             end
         end
 
@@ -76,17 +113,17 @@ module GitRead
                     # otherwise, it's the maximum score
                     # of the previously calculated data.
                     if down < left
-                        down
-                    else
                         left
+                    else
+                        down
                     end
                 end
             end
         end
 
-        # [DiffCommand]
+        # DiffSet
         def diff_set
-            acc = []
+            acc = DiffSet.new
             diff_set_at(@orig.length, @dest.length, acc)
             acc
         end
@@ -106,12 +143,12 @@ module GitRead
             # so declare an addition for the diff
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
                 diff_set_at(i, j-1, rez)
-                rez << DiffCommand.new(:add_line, i - 1, j - 1)
+                rez.add_line( i - 1, j - 1 )
             # inversly to previous case we get a better score by removing
             # a line, so follow this diff
             elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
                 diff_set_at(i - 1, j, rez)
-                rez << DiffCommand.new(:rem_line, i - 1, j - 1)
+                rez.rem_line(i - 1, j - 1)
             end
         end
 
