@@ -18,11 +18,28 @@ module GitRead
             def inc_size
                 @size += 1
             end
+
+            def to_json
+                ret = '{ "way": '
+                case @cmd
+                when :rem_line
+                    ret += '"-", '
+                when :add_line
+                    ret += '"+", '
+                end
+
+                ret + "\"size\": #{@size}, \"orig_idx\":#{@orig_idx}, \"dest_idx\": #{@dest_idx}}"
+            end
         end
 
         class DiffSet
             def initialize()
                 @listing = []
+            end
+
+            def to_json
+                json = @listing.map { |v| v.to_json }.join( "\n, " )
+                '[ ' + json + ' ]'
             end
 
             def add_line(orig_line, dest_line)

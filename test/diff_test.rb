@@ -6,4 +6,4 @@ diff.dump
 puts "\n=====================================\n"
 diff.print_diff
 
-pp diff.diff_set
+puts diff.diff_set.to_json
