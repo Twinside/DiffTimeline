@@ -5,7 +5,9 @@ require_relative 'packfile'
 module GitRead
     class Repository
         def initialize(rootPath)
-            @base = rootPath + '/.git/'
+            @base = rootPath + '.git'
+            pp rootPath
+            pp @base
             @packIdxsList = Dir.entries(@base + 'objects/pack/').find_all { |f| f.end_with?('.idx') }
             @packFilesList = Dir.entries(@base + 'objects/pack/').find_all { |f| f.end_with?('.pack') }
 

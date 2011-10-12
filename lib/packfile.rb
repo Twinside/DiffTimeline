@@ -179,7 +179,7 @@ module GitRead
         # modif?
         delta_size  :src_size
         delta_size  :rez_size
-        array       :deltas, :type => Delta
+        array       :deltas, :type => :delta
     end
 
     class PackFileEntryHeader < BinData::Record
