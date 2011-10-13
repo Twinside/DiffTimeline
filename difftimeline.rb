@@ -9,6 +9,8 @@ require 'pathname'
 require_relative 'lib/objects'
 require_relative 'lib/repository'
 
+exec_path = Pathname(__FILE__).realpath.parent
+
 if ARGV.size <= 0
     puts "Error: no specified file"
     puts "   syntax : ruby diffTimeline.rb file"
@@ -33,11 +35,11 @@ current_head = repository.head_sha
 # Serious race condition, but it will be ok to test
 Launchy.open('http://127.0.0.1:8080')
 
-def serve_css
-    ret = open('difftimeline.css', 'rb') do |file|
+def serve_file(kind, filename)
+    ret = open(filename, 'rb') do |file|
         file.read
     end
-    [200, {'Content-Type' => 'text/css'}, [ret]]
+    [200, {'Content-Type' => kind}, [ret]]
 end
 
 def serve_base_page(repository, current_head, tracked_path)
@@ -51,9 +53,10 @@ def serve_base_page(repository, current_head, tracked_path)
         <head>
             <title>#{tracked_path}</title>
             <link href="difftimeline.css" type="text/css" rel="stylesheet" />
+            <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
         </head>
         <body>
-            <div class="returnpast">
+            <div class="returnpast" onClick="back_to_the_past()">
                 &lt;&lt;
             </div>
             <div class="commit">
@@ -70,11 +73,11 @@ END
 end
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
-  pp request
-
   case request[:uri][:path]
   when '/difftimeline.css'
-      serve_css()
+      serve_file('text/css', exec_path + 'difftimeline.css')
+  when '/difftimeline.js'
+      serve_file('text/javascript', exec_path + 'difftimeline.js')
   when '/'
       serve_base_page(repository, current_head, tracked_path)
   end
