@@ -36,7 +36,6 @@ current_head = repository.head_sha
 Launchy.open('http://127.0.0.1:8080')
 
 def kind_of_filename(fname)
-    pp fname
     case fname
     when /\.js$/
         'text/javascript'
@@ -72,7 +71,8 @@ def serve_base_page(repository, current_head, tracked_path)
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
         <script language="javascript" type="text/javascript">
-            var last_infos = {file: "#{tracked_path}", key: "#{current_head}"};
+            var last_infos = { file: "#{tracked_path}", key: "#{current_head}"
+                             , parent_commit: "#{commit.parents_sha[0]}" };
         </script>
     </head>
     <body>
@@ -92,9 +92,16 @@ END
   [200, {'Content-Type' => 'text/html'}, [html_doc]]
 end
 
+def load_parent(repository, current_head, tracked_path, query_string)
+    pp "Asking #{query_string}"
+    [200, {'Content-Type' => 'text/html'}, ['[3]']]
+end
+
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
-  if File.exists?('.' + requested) && requested != '/'
+  if requested == '/ask_parent'
+      load_parent(repository, current_head, tracked_path, request[:uri][:query])
+  elsif File.exists?('.' + requested) && requested != '/'
       serve_file(exec_path + requested.slice(1, requested.size))
   else
       serve_base_page(repository, current_head, tracked_path)
