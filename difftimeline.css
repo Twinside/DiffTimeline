@@ -1,0 +1,41 @@
+*
+{ 
+    font-family: sans-serif;
+}
+
+pre
+{
+    font-family: Consolas, Inconsolata, Monospace;
+    font-size: 0.6em;
+}
+
+.commit
+{
+    position: relative;
+    float:    left;
+    margin:   10px;
+    border: 1px solid rgb(200,200,200);
+}
+
+.returnpast
+{
+    position:         relative;
+    float:            left;
+    font-width:       bold;
+    font-size:        3em;
+    height:           500px;
+    background-color: #AAAAAA;
+    padding-left:     10px;
+    padding-right:    10px;
+
+}
+
+.commitmsg
+{
+    width:      350px;
+    font-size:  0.75em;
+}
+.returnpast:hover
+{
+    background-color: #AAAAFF;
+}
