@@ -74,7 +74,7 @@ module GitRead
         # \return a GitRead::Objects corresponding to the given sha
         def access_loose_object(sha, filename)
             data = access_loose_object_raw(sha, filename)
-            GitRead.read_loose_object(sha, data)
+            GitRead.read_loose_object(self, sha, data)
         end
 
         INFLATE_SIZE_MARGIN = 50
@@ -145,13 +145,13 @@ module GitRead
 
         def read_packed_object(sha, offset, pack_file)
             raw = GitRead.read_pack_object_raw(sha, pack_entry_header.obj_type, object_data)
-            GitRead.read_pack_object(sha, raw[0], raw[1])
+            GitRead.read_pack_object(repo, sha, raw[0], raw[1])
         end
 
         # ShaRef -> (GitObject | nil)
         def access_packed_object(sha)
             raw = access_packed_object_raw(sha)
-            GitRead.read_pack_object(sha, raw.type, raw.data)
+            GitRead.read_pack_object(self, sha, raw.type, raw.data)
         end
 
         # ShaRef -> (RawBlob | nil)

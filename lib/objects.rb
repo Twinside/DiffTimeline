@@ -3,7 +3,9 @@ require_relative 'sha_ref'
 
 module GitRead
     class Blob
-        def initialize(sha, data, kind)
+        attr_reader :data, :sha
+
+        def initialize(repo, sha, data, kind)
             @sha = sha
 
             case kind
@@ -18,24 +20,22 @@ module GitRead
                 @data = data
             end
         end
-
-        def data
-            @data
-        end
     end
 
     # Represent a git commit, with the parents, the
     # message, committer and author info and (even more
     # importantly) the GitRead::Tree object of the data.
     class Commit
+        attr_reader :sha, :message, :parents_sha, :author, :tree_sha, :commiter
         # kind either :textual or :binary
-        def initialize(sha, data, kind)
+        def initialize(repo, sha, data, kind)
+            @repository = repo
             @sha = sha
             @message = ''
-            @parents = []
+            @parents_sha = []
             @author = ''
             @committer = ''
-            @tree = nil
+            @tree_sha = nil
 
             case kind
             when :textual
@@ -50,19 +50,14 @@ module GitRead
             when :binary
                 parse_commit(data)
             end
-
-        end
-
-        def tree
-            @tree
         end
 
         def to_s
             "(#{@sha}) #{@message.lines.first}"
         end
 
-        def parents
-            @parents
+        def tree
+            @repository.access_object(@tree_sha)
         end
 
     private
@@ -70,13 +65,13 @@ module GitRead
             data.each_line do |line|
                 case line
                 when /^parent (.*)\n/
-                    @parents << ShaRef.new(Regexp.last_match(1))
+                    @parents_sha << ShaRef.new(Regexp.last_match(1))
                 when /^author (.*)\n/
                     @author = Regexp.last_match(1)
                 when /^committer (.*)\n/
                     @committer = Regexp.last_match(1)
                 when /^tree (.*)\n/
-                    @tree = ShaRef.new(Regexp.last_match(1))
+                    @tree_sha = ShaRef.new(Regexp.last_match(1))
                 when /^\n$/
                     nil
                 else
@@ -89,7 +84,10 @@ module GitRead
     # Tree class, storing list of other object with
     # a (rights, name, sha) storage.
     class Tree
-        def initialize(sha, data, kind)
+        attr_reader :sha
+
+        def initialize(repo, sha, data, kind)
+            @repository = repo
             @listing = []
             @sha = sha
 
@@ -108,11 +106,11 @@ module GitRead
             end
         end
 
-        # (Repository, FilePath) -> (Object | nil)
+        # (FilePath) -> (Object | nil)
         # Access a git object in the tree (if any) with the
         # given repository and path.
-        def access_path(repo, path)
-            access_inner_path(repo, Pathname.new(path).each_filename)
+        def access_path(path)
+            access_inner_path(@repository, Pathname.new(path).each_filename)
         end
 
     protected
@@ -162,14 +160,14 @@ module GitRead
     TREE_PREFIX = "tree "
 
     # (ShaRef, Type, String) -> (GitObject | nil)
-    def GitRead.read_pack_object(sha, type, data)
+    def GitRead.read_pack_object(repo, sha, type, data)
         case type
         when PackFileEntryHeader::OBJ_COMMIT 
-            Commit.new(sha, data, :binary)
+            Commit.new(repo, sha, data, :binary)
         when PackFileEntryHeader::OBJ_TREE
-            Tree.new(sha, data, :binary)
+            Tree.new(repo, sha, data, :binary)
         when PackFileEntryHeader::OBJ_BLOB
-            Blob.new(sha, data, :binary)
+            Blob.new(repo, sha, data, :binary)
         when PackFileEntryHeader::OBJ_TAG
             pp "PackFileEntryHeader::OBJ_TAG"
             nil
@@ -185,14 +183,14 @@ module GitRead
     end
 
     # (ShaRef, String) -> (GitObject | nil)
-    def GitRead.read_loose_object(sha, str)
+    def GitRead.read_loose_object(repo, sha, str)
         case 
         when str.start_with?(BLOB_PREFIX) 
-            Blob.new(sha, str, :textual) 
+            Blob.new(repo, sha, str, :textual) 
         when str.start_with?(COMMIT_PREFIX) 
-            Commit.new(sha, str, :textual) 
+            Commit.new(repo, sha, str, :textual) 
         when str.start_with?(TREE_PREFIX) 
-            Tree.new(sha, str, :textual) 
+            Tree.new(repo, sha, str, :textual) 
         else 
             nil 
         end

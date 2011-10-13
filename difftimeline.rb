@@ -33,16 +33,50 @@ current_head = repository.head_sha
 # Serious race condition, but it will be ok to test
 Launchy.open('http://127.0.0.1:8080')
 
+def serve_css
+    ret = open('difftimeline.css', 'rb') do |file|
+        file.read
+    end
+    [200, {'Content-Type' => 'text/css'}, [ret]]
+end
+
+def serve_base_page(repository, current_head, tracked_path)
+  commit = repository.access_object(current_head)
+  tree = commit.tree
+  file = tree.access_path(tracked_path)
+  encoded_data = file.data.gsub('&', '&amp;').gsub('<', '&lt;').gsub('>', '&gt;')
+
+  html_doc = <<END
+    <html>
+        <head>
+            <title>#{tracked_path}</title>
+            <link href="difftimeline.css" type="text/css" rel="stylesheet" />
+        </head>
+        <body>
+            <div class="returnpast">
+                &lt;&lt;
+            </div>
+            <div class="commit">
+                <div class="commitmsg">#{commit}</div>
+                <div class="file_content">
+                    <pre>#{encoded_data}</pre>
+                </div>
+            </div>
+        </body>
+    </html>
+END
+
+  [200, {'Content-Type' => 'text/html'}, [html_doc]]
+end
+
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   pp request
 
-  commit = repository.access_object(current_head)
-  tree = repository.access_object(commit.tree)
-  file = tree.access_path(repository, tracked_path)
-
-  ret = "<span class=\"commitmsg\">#{commit}</span><pre>#{file.data}</pre>"
-
-  htmlDoc = "<html><head><title>#{tracked_path}</title></head><body>" + ret + '</body></html>'
-  [200, {'Content-Type' => 'text/html'}, [htmlDoc]]
+  case request[:uri][:path]
+  when '/difftimeline.css'
+      serve_css()
+  when '/'
+      serve_base_page(repository, current_head, tracked_path)
+  end
 end
 
