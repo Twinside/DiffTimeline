@@ -5,6 +5,7 @@ require 'net/http/server'
 require 'launchy'
 require 'pp'
 require 'pathname'
+require 'json'
 
 require_relative 'lib/objects'
 require_relative 'lib/repository'
@@ -54,11 +55,16 @@ def serve_file(filename)
     [200, {'Content-Type' => kind}, [ret]]
 end
 
+# a bit roots and does not cover everything, but hey, should work
+def html_encode_file(f)
+    f.gsub('&', '&amp;').gsub('<', '&lt;').gsub('>', '&gt;')
+end
+
 def serve_base_page(repository, current_head, tracked_path)
   commit = repository.access_object(current_head)
   tree = commit.tree
   file = tree.access_path(tracked_path.to_s)
-  encoded_data = file.data.gsub('&', '&amp;').gsub('<', '&lt;').gsub('>', '&gt;')
+  encoded_data = html_encode_file(file.data)
 
   html_doc = <<END
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -79,10 +85,12 @@ def serve_base_page(repository, current_head, tracked_path)
         <div class="returnpast" onClick="back_to_the_past()">
             &lt;&lt;
         </div>
-        <div class="commit">
-            <div class="commitmsg">#{commit}</div>
-            <div class="file_content">
-                <pre>#{encoded_data}</pre>
+        <div id="container" class="container">
+            <div class="commit">
+                <div class="commitmsg">#{commit}</div>
+                <div class="file_content">
+                    <pre>#{encoded_data}</pre>
+                </div>
             </div>
         </div>
     </body>
@@ -94,7 +102,16 @@ end
 
 def load_parent(repository, current_head, tracked_path, query_string)
     pp "Asking #{query_string}"
-    [200, {'Content-Type' => 'text/html'}, ['[3]']]
+    commit = repository.access_object(GitRead::ShaRef.new(query_string.to_s))
+    file = commit.tree.access_path(tracked_path.to_s)
+    encoded = { 
+        "data" => file.data,
+        "parent_commit" => commit.parents_sha[0],
+        "message" => commit.to_s,
+        "diff" => [] }
+
+    response = encoded.to_json
+    [200, {'Content-Type' => 'text/json'}, [response]]
 end
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
