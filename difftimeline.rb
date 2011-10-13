@@ -75,7 +75,7 @@ def serve_base_page(repository, current_head, tracked_path)
                              , parent_commit: "#{commit.parents_sha[0]}" };
         </script>
     </head>
-    <body>
+    <body onUnload="leave_server()">
         <div class="returnpast" onClick="back_to_the_past()">
             &lt;&lt;
         </div>
@@ -101,6 +101,9 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
   if requested == '/ask_parent'
       load_parent(repository, current_head, tracked_path, request[:uri][:query])
+  elsif requested == '/quit'
+      puts "Leaving"
+      exit 0
   elsif File.exists?('.' + requested) && requested != '/'
       serve_file(exec_path + requested.slice(1, requested.size))
   else
