@@ -245,7 +245,6 @@ module GitRead
         HEADER_SIZE = 4 + 4 + 4 + 1
 
         def valid?
-            pp [pack_str, pack_version, entries_count, padding ]
             pack_str == "PACK" && pack_version == 2
         end
     end

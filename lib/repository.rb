@@ -6,8 +6,6 @@ module GitRead
     class Repository
         def initialize(rootPath)
             @base = rootPath + '.git'
-            pp rootPath
-            pp @base
             @packIdxsList = Dir.entries(@base + 'objects/pack/').find_all { |f| f.end_with?('.idx') }
             @packFilesList = Dir.entries(@base + 'objects/pack/').find_all { |f| f.end_with?('.pack') }
 
@@ -27,17 +25,10 @@ module GitRead
         end
 
         class RawBlob
+            attr_reader :type, :data
             def initialize(obj_type, obj_data)
                 @data = obj_data
                 @type = obj_type
-            end
-
-            def type
-                @type
-            end
-
-            def data
-                @data
             end
         end
 
@@ -83,7 +74,6 @@ module GitRead
         # A loose object is an object stored in a single file
         # in the '.git/objects' subdirectory.
         def access_loose_object_raw(sha, filename)
-            puts ">>> Loose"
             open(filename, 'rb') do |file| 
                 Zlib::Inflate.inflate(file.read)
             end

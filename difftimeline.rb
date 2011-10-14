@@ -7,6 +7,7 @@ require 'pp'
 require 'pathname'
 require 'json'
 
+require_relative 'lib/diff'
 require_relative 'lib/objects'
 require_relative 'lib/repository'
 
@@ -25,6 +26,7 @@ class DiffTimelineState
         @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
         @repository = GitRead::Repository.new(repo_dir)
         @current_head = @repository.head_sha
+        @last_file = ''
     end
 
     def find_nearest_git_repo
@@ -39,13 +41,15 @@ class DiffTimelineState
         pp "Asking #{query_string}"
         commit = @repository.access_object(GitRead::ShaRef.new(query_string.to_s))
         file = commit.tree.access_path(@tracked_path.to_s)
+        diff = GitRead::Diff.diff_strings(file.data, @last_file.data)
         encoded = { 
             "data" => file.data,
             "parent_commit" => commit.parents_sha[0],
             "message" => commit.to_s,
-            "diff" => [] }
+            "diff" => diff.diff_set }
 
         response = encoded.to_json
+        @last_file = file
         [200, {'Content-Type' => 'text/json'}, [response]]
     end
 
@@ -54,6 +58,7 @@ class DiffTimelineState
         tree = commit.tree
         file = tree.access_path(@tracked_path.to_s)
         encoded_data = html_encode_file(file.data)
+        @last_file = file
 
         html_doc = <<END
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -66,8 +71,8 @@ class DiffTimelineState
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
         <script language="javascript" type="text/javascript">
-            var last_infos = { file: "#{@tracked_path}", key: "#{@current_head}"
-                             , parent_commit: "#{commit.parents_sha[0]}" };
+            var last_infos = [ { file: "#{@tracked_path}", key: "#{@current_head}"
+                               , parent_commit: "#{commit.parents_sha[0]}" } ];
         </script>
     </head>
     <body onUnload="leave_server()">
@@ -75,7 +80,7 @@ class DiffTimelineState
             &lt;&lt;
         </div>
         <div id="container" class="container">
-            <div class="commit">
+            <div class="commit" id="#{commit.sha}">
                 <div class="commitmsg">#{commit}</div>
                 <div class="file_content">
                     <pre>#{encoded_data}</pre>

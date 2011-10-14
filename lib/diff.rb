@@ -19,7 +19,7 @@ module GitRead
                 @size += 1
             end
 
-            def to_json
+            def to_json(*a)
                 ret = '{ "way": '
                 case @cmd
                 when :rem_line
@@ -37,7 +37,7 @@ module GitRead
                 @listing = []
             end
 
-            def to_json
+            def to_json(*a)
                 json = @listing.map { |v| v.to_json }.join( "\n, " )
                 '[ ' + json + ' ]'
             end
@@ -83,10 +83,10 @@ module GitRead
             @coeffs.dump
         end
 
-        # (String, String) -> Diff
+        # (Filepath, Filepath) -> Diff
         # Helper static method to create a diff from
         # two filenames
-        def Diff.diffFiles( filename1, filename2 )
+        def Diff.diff_files( filename1, filename2 )
             f1 = open(filename1, 'rb') do |file|
                 file.read().lines.to_a
             end
@@ -97,6 +97,15 @@ module GitRead
 
             return nil if f1 == nil || f2 == nil
             diff = Diff.new( f1, f2 )
+            diff.compute_diff
+            diff
+        end
+
+        # (String, String) -> Diff
+        def Diff.diff_strings( file_content_a, file_content_b )
+            lines_a = file_content_a.lines.to_a
+            lines_b = file_content_b.lines.to_a
+            diff = Diff.new( lines_a, lines_b )
             diff.compute_diff
             diff
         end
@@ -211,8 +220,6 @@ module GitRead
             # fill the coefficient table with information given
             # by the coroutine.
             def generate
-                puts @orig_length
-                puts @dest_length
                 for line in 1 .. @orig_length
                     for column in 1 .. @dest_length
                         @data[line][column] = yield line,column

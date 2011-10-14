@@ -53,7 +53,7 @@ module GitRead
         end
 
         def to_s
-            "(#{@sha}) #{@message.lines.first}"
+            "(#{@sha.to_s[0..5]}) #{@message.lines.first}"
         end
 
         def tree
@@ -131,7 +131,7 @@ module GitRead
             return nil if !found_iteration
 
             child_object = repo.access_object(@listing[found_iteration][SHA_IDX])
-            pp child_object.class
+
             if child_object.class != self.class
                 return child_object 
             end

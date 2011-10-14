@@ -39,3 +39,14 @@ pre
 {
     background-color: #AAAAFF;
 }
+
+.diff_deletion
+{
+    background-color: #FF0000;
+}
+
+.diff_addition
+{
+    background-color: #00AA00;
+}
+
