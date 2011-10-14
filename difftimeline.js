@@ -54,6 +54,7 @@ function back_to_the_past() {
         var container = document.getElementById('container');
 
         var commit = div_class('commit');
+        commit.setAttribute('id', last_commit.parent_commit);
 
         var msg = div_class('commitmsg');
         msg.innerHTML = data.message;
@@ -67,10 +68,16 @@ function back_to_the_past() {
         commit.appendChild(msg);
         commit.appendChild(content);
 
-        container.appendChild( commit );
-
         var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
         add_content.innerHTML = intercalate_diff_add(add_content.innerHTML, data.diff);
+
+        container.insertBefore(commit, container.childNodes[0]);
+
+        last_infos.push( {
+                       file: last_commit.file  
+            ,           key: last_commit.parent_commit
+            , parent_commit: data.parent_commit
+        });
     })
 }
 

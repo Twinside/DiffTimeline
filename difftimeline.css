@@ -9,6 +9,11 @@ pre
     font-size: 0.6em;
 }
 
+.container
+{
+    width: 3000px;
+}
+
 .commit
 {
     position: relative;
@@ -42,11 +47,11 @@ pre
 
 .diff_deletion
 {
-    background-color: #FF0000;
+    background-color: #FFDDDD;
 }
 
 .diff_addition
 {
-    background-color: #00AA00;
+    background-color: #DDFFDD;
 }
 
