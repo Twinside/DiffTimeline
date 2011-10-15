@@ -77,7 +77,7 @@ class DiffTimelineState
     </head>
     <body onUnload="leave_server()">
         <div class="returnpast" onClick="back_to_the_past()">
-            &lt;&lt;
+            &lt;
         </div>
         <div id="container" class="container">
             <div class="commit" id="#{commit.sha}">
@@ -132,7 +132,7 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
       puts "Leaving"
       exit 0
   elsif File.exists?('.' + requested) && requested != '/'
-      serve_file(exec_path + requested.slice(1, requested.size))
+      serve_file(exec_path + requested.to_s.slice(1, requested.size))
   else
       state.serve_base_page
   end

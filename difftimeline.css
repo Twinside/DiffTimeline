@@ -22,27 +22,56 @@ pre
     border: 1px solid rgb(200,200,200);
 }
 
-.returnpast
+.returnpast 
 {
-    position:         relative;
-    float:            left;
-    font-width:       bold;
-    font-size:        3em;
-    height:           500px;
-    background-color: #AAAAAA;
-    padding-left:     10px;
-    padding-right:    10px;
+   position:         relative;
+   float:            left;
+   font-width:       bold;
+   font-size:        3.5em;
+   height:           500px;
+   padding-left:     10px;
+   padding-right:    10px;
+   padding-top:      200px;
 
+   border-top: 1px solid #96d1f8;
+   background: #65a9d7;
+   background: -webkit-gradient(linear, left top, left bottom, from(#96c4e3), to(#65a9d7));
+   background: -webkit-linear-gradient(top, #96c4e3, #65a9d7);
+   background: -moz-linear-gradient(top, #96c4e3, #65a9d7);
+   background: -ms-linear-gradient(top, #96c4e3, #65a9d7);
+   background: -o-linear-gradient(top, #96c4e3, #65a9d7);
+   -webkit-border-radius: 13px;
+   -moz-border-radius: 13px;
+   border-radius: 13px;
+   -webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   -moz-box-shadow: rgba(0,0,0,1) 0 1px 0;
+   box-shadow: rgba(0,0,0,1) 0 1px 0;
+   text-shadow: rgba(0,0,0,.4) 0 1px 0;
+   color: white;
+   font-family: Helvetica, Arial, Sans-Serif;
+   text-decoration: none;
+   vertical-align: middle;
+}
+
+.returnpast:hover 
+{
+   border-top-color: #3e8abd;
+   background: #3e8abd;
+   color: #ffffff;
+}
+
+.returnpast:active 
+{
+   border-top-color: #1b435e;
+   background: #1b435e;
 }
 
 .commitmsg
 {
     width:      350px;
-    font-size:  0.75em;
-}
-.returnpast:hover
-{
-    background-color: #AAAAFF;
+    background: #E6F1F6;
+    font-size:  12px;
+    font-family: Helvetica,Arial,freesans,sans-serif;
 }
 
 .diff_deletion
