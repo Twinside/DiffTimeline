@@ -43,6 +43,16 @@ pre
     background-color: #DDFFDD;
 }
 
+.diff_deletion .diff_addition
+{
+    background-color: yellow;
+}
+
+.diff_addition .diff_deletion
+{
+    background-color: #FFFFDD;
+}
+
 /** The back to the past button, big blue */
 .returnpast 
 {
@@ -125,4 +135,12 @@ pre
 .delta_commit_circle:hover
 {
     background: #393;
+}
+
+.message_carret
+{
+    background-color: orange;
+   -webkit-border-radius: 5px;
+   -moz-border-radius: 5px;
+   border-radius: 5px;
 }

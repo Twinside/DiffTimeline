@@ -87,17 +87,17 @@ class DiffTimelineState
             commit = @repository.access_object(prev_commit)
 
             if commit.nil?
-                return send_error_message("Commit not found #{query_string}")
+                return send_error_message("Commit not found #{prev_commit}")
             elsif commit.class != GitRead::Commit
-                return send_error_message("#{query_string} is not a commit.")
+                return send_error_message("#{prev_commit} is not a commit.")
             end
 
             file = commit.tree.access_path(@tracked_path.to_s)
 
             if file.nil?
-                return send_error_message("File not found in commit #{query_string}")
+                return send_error_message("File not found in commit #{prev_commit}")
             elsif file.class != GitRead::Blob
-                return send_error_message("file #{tracked_path} is not a file in commit #{query_string}")
+                return send_error_message("file #{tracked_path} is not a file in commit #{prev_commit}")
             end
 
             # while the file didn't change, we keep digging but
