@@ -52,6 +52,17 @@ function show_error( data )
     container.innerHTML = data.error;
 }
 
+function build_commit_delta(node, lst)
+{
+    for ( var i = lst.length - 1; i >= 0; i-- )
+    {
+        var interval_commit = lst[i];
+        var new_commit = div_class('delta_commit_circle');
+        new_commit.setAttribute('title', interval_commit.message);
+        node.appendChild(new_commit);
+    }
+}
+
 function back_to_the_past() 
 {
     var last_commit = last_infos[ last_infos.length - 1 ];
@@ -70,6 +81,9 @@ function back_to_the_past()
         var commit = div_class('commit');
         commit.setAttribute('id', last_commit.parent_commit);
 
+        var commit_delta = div_class('commit_list');
+        build_commit_delta(commit_delta, data.path);
+
         var msg = div_class('commitmsg');
         msg.innerHTML = data.message;
 
@@ -80,6 +94,7 @@ function back_to_the_past()
         content.appendChild(pre(encoded_with_diff));
 
         commit.appendChild(msg);
+        commit.appendChild(commit_delta);
         commit.appendChild(content);
 
         var add_content = $('#' + last_commit.key + ' .file_content').get()[0];

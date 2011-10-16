@@ -17,6 +17,7 @@
 
 .file_content
 {
+    display: block;
     border: 1px solid rgb(200,200,200);
 }
 
@@ -91,6 +92,7 @@ pre
    background: #357aaf;
 }
 
+
 .commitmsg
 {
     width:      350px;
@@ -99,3 +101,28 @@ pre
     font-family: Helvetica,Arial,freesans,sans-serif;
 }
 
+.commit_list
+{
+    height: 20px;
+    display: block;
+}
+
+/* Show commit list delta */
+.delta_commit_circle 
+{
+    float: left;
+    margin-left: 5px;
+    margin-right: 7px;
+
+    display: block;
+    width: 14px;
+    height: 14px;
+    background: #333;
+    -moz-border-radius: 7px;
+    -webkit-border-radius: 7px;
+}
+
+.delta_commit_circle:hover
+{
+    background: #393;
+}
