@@ -179,6 +179,18 @@ END
     </head>
     <body onUnload="leave_server()">
         <div class="message_carret" id="message_display"></div>
+        <div class="legend">
+            <table>
+                <tr>
+                    <td><div class="diff_addition">&nbsp;&nbsp;</td><td>Addition</td>
+                    <td><div class="diff_deletion">&nbsp;&nbsp;</td><td>Deletion</td>
+                    <td><div class="diff_addition">
+                        <div class="diff_deletion">&nbsp;&nbsp;</div></td><td>Added then removed</td>
+                    <td><div class="diff_deletion"><div class="diff_addition">&nbsp;&nbsp;</div></td><td>Removed then added</td>
+
+                </tr>
+            </table>
+        </div>
         <div class="returnpast" onClick="back_to_the_past()" title="Fetch previous version">
             &lt;
         </div>

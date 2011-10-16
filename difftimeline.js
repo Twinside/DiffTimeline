@@ -58,7 +58,10 @@ function build_commit_delta(node, lst)
     {
         var interval_commit = lst[i];
         var new_commit = div_class('delta_commit_circle');
-        new_commit.setAttribute('title', interval_commit.message);
+
+        var msg_tooltip = document.createElement('div');
+        msg_tooltip.innerHTML = interval_commit.message;
+        new_commit.appendChild(msg_tooltip);
         node.appendChild(new_commit);
     }
 }

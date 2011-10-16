@@ -5,7 +5,7 @@
 
 .container
 {
-    width: 3000px;
+    width: 30000px;
 }
 
 .commit
@@ -34,6 +34,10 @@ pre
     white-space: pre;
     font-family: Consolas, Inconsolata, Monospace;
     background-color: #FFDDDD;
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
+    display: inline-block;
 }
 
 .diff_addition
@@ -41,6 +45,10 @@ pre
     white-space: pref;
     font-family: Consolas, Inconsolata, Monospace;
     background-color: #DDFFDD;
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
+    display: inline-block;
 }
 
 .diff_deletion .diff_addition
@@ -132,11 +140,6 @@ pre
     -webkit-border-radius: 7px;
 }
 
-.delta_commit_circle:hover
-{
-    background: #393;
-}
-
 .message_carret
 {
     background-color: orange;
@@ -144,3 +147,34 @@ pre
    -moz-border-radius: 5px;
    border-radius: 5px;
 }
+
+.legend td > div
+{
+    border: 1px solid gray;
+}
+
+/* ================================================ */
+/* Tooltip rules                                    */
+/* ================================================ */
+.delta_commit_circle div {
+    display: none;
+}
+
+.delta_commit_circle:hover {
+    background: #336;
+    z-index: 500;
+}
+
+.delta_commit_circle:hover div {
+    font-style: normal;
+    display:    block;
+    position:   absolute;
+    top:        40px;
+    left:       -10px;
+    padding:    5px;
+    color:      #000;
+    border:     4px solid black;
+    background: #AFA;
+    width:      350px;
+}
+
