@@ -27,7 +27,6 @@ function intercalate_diff_add(content, diff_list)
         
     }
     return lines.join("\n");
-    
 }
 
 function intercalate_diff_del(content, diff_list)
@@ -47,10 +46,25 @@ function intercalate_diff_del(content, diff_list)
     return lines.join("\n");
 }
 
-function back_to_the_past() {
-    last_commit = last_infos[ last_infos.length - 1 ];
+function show_error( data )
+{
+    var container = document.getElementById('message_display');
+    container.innerHTML = data.error;
+}
 
-    $.getJSON('ask_parent', last_commit.parent_commit, function(data) {
+function back_to_the_past() 
+{
+    var last_commit = last_infos[ last_infos.length - 1 ];
+    var params = { commit: last_commit.parent_commit
+                 , last_file: last_commit.filekey };
+
+    $.getJSON('ask_parent', params, function(data) {
+        if (data['error'])
+        { 
+            show_error( data );
+            return;
+        }
+
         var container = document.getElementById('container');
 
         var commit = div_class('commit');
@@ -75,13 +89,15 @@ function back_to_the_past() {
 
         last_infos.push( {
                        file: last_commit.file  
+            ,       filekey: data.filekey
             ,           key: last_commit.parent_commit
             , parent_commit: data.parent_commit
         });
-    })
+    });
 }
 
-function leave_server() {
-    $.ajax({url:"quit", async:false})
+function leave_server()
+{
+    $.ajax( {url:"quit", async:false} );
 }
 

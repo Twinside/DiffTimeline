@@ -56,23 +56,74 @@ class DiffTimelineState
         [200, {'Content-Type' => 'text/json'}, [response.to_json]]
     end
 
-    def load_parent(query_string)
-        pp "Asking #{query_string}"
-        commit = @repository.access_object(GitRead::ShaRef.new(query_string.to_s))
+    def split_query_string(str)
+        rez = {}
 
-        if commit.nil?
-            return send_error_message("Commit not found #{query_string}")
-        elsif commit.class != GitRead::Commit
-            return send_error_message("#{query_string} is not a commit.")
+        str.split('&').each do |param|
+            splits = param.split('=')
+            if splits.size == 2
+                rez[splits[0]] = splits[1]
+            end
         end
 
-        file = commit.tree.access_path(@tracked_path.to_s)
+        rez
+    end
+
+    def load_parent(query_string)
+        query = split_query_string(query_string.to_s)
+
+        if query['commit'] == nil || query['last_file'] == nil
+            return send_error_message('Invalid query')
+        end
+        pp "Asking #{query['commit']}"
+
+        prev_file_sha = GitRead::ShaRef.new(query['last_file'])
+        prev_commit = GitRead::ShaRef.new(query['commit'])
+        commit_path = []
+        file = nil
+        keep_digging = true
+
+        begin
+            commit = @repository.access_object(prev_commit)
+
+            if commit.nil?
+                return send_error_message("Commit not found #{query_string}")
+            elsif commit.class != GitRead::Commit
+                return send_error_message("#{query_string} is not a commit.")
+            end
+
+            file = commit.tree.access_path(@tracked_path.to_s)
+
+            if file.nil?
+                return send_error_message("File not found in commit #{query_string}")
+            elsif file.class != GitRead::Blob
+                return send_error_message("file #{tracked_path} is not a file in commit #{query_string}")
+            end
+
+            # while the file didn't change, we keep digging but
+            # we keep track of all the intermediates commit for
+            # the interface
+            if prev_file_sha == file.sha
+                prev_commit = commit.parents_sha[0]
+                commit_path << {
+                    "commit" => commit.sha,
+                    "parent_commit" => prev_commit,
+                    "message" => commit.to_s
+                }
+            else
+                keep_digging = false
+            end
+        end while keep_digging
+
         diff = GitRead::Diff.diff_strings(file.data, @last_file.data)
         encoded = { 
             "data" => file.data,
+            "filekey" => file.sha,
             "parent_commit" => commit.parents_sha[0],
             "message" => commit.to_s,
-            "diff" => diff.diff_set }
+            "diff" => diff.diff_set,
+            "path" => commit_path 
+        }
 
         response = encoded.to_json
         @last_file = file
@@ -122,11 +173,13 @@ END
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
         <script language="javascript" type="text/javascript">
             var last_infos = [ { file: "#{@tracked_path}", key: "#{@current_head}"
+                               , filekey: "#{file.sha}"
                                , parent_commit: "#{commit.parents_sha[0]}" } ];
         </script>
     </head>
     <body onUnload="leave_server()">
-        <div class="returnpast" onClick="back_to_the_past()">
+        <div class="message_carret" id="message_display"></div>
+        <div class="returnpast" onClick="back_to_the_past()" title="Fetch previous version">
             &lt;
         </div>
         <div id="container" class="container">
@@ -137,7 +190,6 @@ END
                 </div>
             </div>
         </div>
-        <div class="message_carret"></div>
     </body>
 </html>
 END
@@ -192,7 +244,6 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   # Security problem on the next line, permit access to an atacker to any file
   # on the machine.
   elsif File.exists?('.' + requested) && requested != '/'
-      pp requested
       serve_file(exec_path + requested.to_s.slice(1, requested.size))
   else
       state.serve_base_page

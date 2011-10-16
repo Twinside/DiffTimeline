@@ -14,6 +14,10 @@ module GitRead
             @sha.clone.insert(2, '/')
         end
 
+        def ==(other)
+            @raw_array == other.raw
+        end
+
         def to_s
             @sha
         end
