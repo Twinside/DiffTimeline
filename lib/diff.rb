@@ -72,9 +72,39 @@ module GitRead
         # ([String], [String]) -> Diff
         # you should probably use diffFiles
         def initialize( orig, dest )
-            @coeffs = CoeffTable.new(orig.size, dest.size)
             @orig = orig
             @dest = dest
+
+            calculate_identical_offsets()
+
+            @coeffs = CoeffTable.new(@orig_effective_size, @dest_effective_size)
+        end
+
+        # We try to reduce the diff to perform by finding
+        # the identical beginning & end
+        def calculate_identical_offsets
+            i = 0
+            while i < @orig.size && @dest.size
+                if @orig[i] != @dest[i]
+                    break
+                end
+                i += 1
+            end
+            @begin_offset = i
+
+            orig_end = @orig.size - 1
+            dest_end = @dest.size - 1
+
+            while orig_end > 0 && dest_end > 0
+                if @orig[orig_end] != @dest[dest_end]
+                    break
+                end
+                orig_end -= 1
+                dest_end -= 1
+            end
+
+            @orig_effective_size = orig_end - @begin_offset + 1
+            @dest_effective_size = dest_end - @begin_offset + 1
         end
 
         # nil
@@ -114,8 +144,11 @@ module GitRead
         # Compute the coefficient matrix.
         def compute_diff
             @coeffs.generate do |i, j|
-                l = @orig[i - 1]
-                r = @dest[j - 1]
+                full_i = i + @begin_offset
+                full_j = j + @begin_offset
+
+                l = @orig[full_i - 1]
+                r = @dest[full_j - 1]
                 # Identical, so the matching score is
                 # the matching score of previous string +1
                 if l == r
@@ -150,16 +183,21 @@ module GitRead
         # DiffSet
         def diff_set
             acc = DiffSet.new
-            diff_set_at(@orig.length, @dest.length, acc)
+            diff_set_at(@orig_effective_size, @dest_effective_size, acc)
             acc
         end
 
         # (Int, Int, [DiffCommand]) -> nil
         def diff_set_at(i,j, rez)
+            real_i = @begin_offset + i
+            real_j = @begin_offset + j
+            l = @orig[real_i - 1]
+            r = @dest[real_j - 1]
+
             # We're not at the edge of the matrix, and data
             # is identical, so we're matching, no diff information
             # here.
-            if i > 0 && j > 0 && @orig[i - 1] == @dest[j - 1]
+            if i > 0 && j > 0 && l == r
                 diff_set_at(i - 1, j - 1, rez)
             # i == 0 => no more lines in origin, so must add everything
             # else.
@@ -169,38 +207,54 @@ module GitRead
             # so declare an addition for the diff
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
                 diff_set_at(i, j-1, rez)
-                rez.add_line( i - 1, j - 1 )
+                rez.add_line( real_i - 1, real_j - 1)
             # inversly to previous case we get a better score by removing
             # a line, so follow this diff
             elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
                 diff_set_at(i - 1, j, rez)
-                rez.rem_line(i - 1, j - 1)
+                rez.rem_line(real_i - 1, real_j - 1)
             end
         end
 
         # nil
         # print the diff on stdout.
-        def print_diff
-            print_diff_at(@orig.length, @dest.length)
+        def print_diff(only_diff)
+            pp [:beg, @begin_offset, :orig_effective, @orig_effective_size, :dest_eff, @dest_effective_size]
+
+            if only_diff
+                (0..(@begin_offset - 1)).each { |v| print "(BEGI) #{@orig[v]}" }
+            end
+
+            print_diff_at(@orig_effective_size, @dest_effective_size, only_diff)
+
+            if only_diff
+                ((@begin_offset + @orig_effective_size)..(@orig.size - 1)).each do |v|
+                    puts "(END ) #{@orig[v]}"
+                end
+            end
         end
 
         # print the diff on stdout.
         # (Int, Int) -> nil
-        def print_diff_at(i, j)
-            if i > 0 && j > 0 && @orig[i - 1] == @dest[j - 1]
+        def print_diff_at(i, j, only_diff)
+            real_i = @begin_offset + i
+            real_j = @begin_offset + j
+            l = @orig[real_i - 1]
+            r = @dest[real_j - 1]
+            if i > 0 && j > 0 && l == r
 
-                print_diff_at(i - 1, j - 1)
-                print ("(    )  " + @orig[i - 1])
+                print_diff_at(i - 1, j - 1, only_diff)
+                print ("(    )  " + l) if only_diff
 
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
 
-                print_diff_at(i, j-1)
-                print (("(%4d)+ " % i) + @dest[j - 1])
+                print_diff_at(i, j-1, only_diff)
+                print (("(%4d)+ " % i) + r)
 
             elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
 
-                print_diff_at(i - 1, j)
-                print (("(%4d)- " % i) + @orig[i - 1])
+                print_diff_at(i - 1, j, only_diff)
+                print (("(%4d)- " % i) + l)
 
             else
                 puts ""
