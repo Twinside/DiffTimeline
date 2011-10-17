@@ -25,10 +25,10 @@ module GitRead
         end
 
         class RawBlob
-            attr_reader :type, :data
-            def initialize(obj_type, obj_data)
+            attr_reader :obj_type, :data
+            def initialize(obj_typ, obj_data)
                 @data = obj_data
-                @type = obj_type
+                @obj_type = obj_typ
             end
         end
 
@@ -48,7 +48,8 @@ module GitRead
             open(@base + 'HEAD', 'r') do |file|
                 content = file.read
 
-                if /ref: (?<refPath>.*)/ =~ content.chomp
+                if /ref: (.*)/ =~ content.chomp
+                    refPath = Regexp.last_match(1)
                     file.close
                     open( @base + refPath ) do |ref_file|
                         sha = ShaRef.new( ref_file.read )
@@ -141,7 +142,7 @@ module GitRead
         # ShaRef -> (GitObject | nil)
         def access_packed_object(sha)
             raw = access_packed_object_raw(sha)
-            GitRead.read_pack_object(self, sha, raw.type, raw.data)
+            GitRead.read_pack_object(self, sha, raw.obj_type, raw.data)
         end
 
         # ShaRef -> (RawBlob | nil)

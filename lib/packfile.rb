@@ -184,7 +184,7 @@ module GitRead
 
     class PackFileEntryHeader < BinData::Record
         bit1 :a_end
-        bit3 :type
+        bit3 :entry_type
         bit4 :a_size
 
         bit1 :b_end,     :initial_value => 0, :onlyif => :a_end?
@@ -209,7 +209,7 @@ module GitRead
         end
 
         def obj_type
-            type
+            entry_type
         end
 
         OBJ_COMMIT = 1
@@ -220,7 +220,7 @@ module GitRead
         OBJ_REF_DELTA = 7
 
         def delta?
-            type == OBJ_OFS_DELTA || type == OBJ_REF_DELTA
+            entry_type == OBJ_OFS_DELTA || entry_type == OBJ_REF_DELTA
         end
 
         def a_end?

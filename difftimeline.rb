@@ -1,5 +1,14 @@
 #!/usr/bin/env ruby
 # -*- encoding: utf-8 -*-
+#
+unless Kernel.respond_to?(:require_relative)
+  module Kernel
+    def require_relative(path)
+      require File.join(File.dirname(caller[0]), path.to_str)
+    end
+  end
+end
+
 require 'rubygems'
 require 'net/http/server'
 require 'launchy'
@@ -217,9 +226,6 @@ rescue RepositoryNotFound
     exit(1)
 end
 
-# Serious race condition, but it will be ok to test
-Launchy.open('http://127.0.0.1:8080')
-
 # a bit roots and does not cover everything, but hey, should work
 def html_encode_file(f)
     f.gsub('&', '&amp;').gsub('<', '&lt;').gsub('>', '&gt;')
@@ -244,21 +250,32 @@ def serve_file(filename)
     [200, {'Content-Type' => kind}, [ret]]
 end
 
+# Serious race condition, but it will be ok to test
+Launchy.open('http://127.0.0.1:8080')
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
+  puts "Requested: #{requested}"
+
   if requested == '/ask_parent'
       state.load_parent(request[:uri][:query])
   elsif requested == '/quit'
       puts "Leaving"
       exit 0
+  end
 
+  requested_file = exec_path + requested.to_s.slice(1, requested.size)
+  
   # Security problem on the next line, permit access to an atacker to any file
   # on the machine.
-  elsif File.exists?('.' + requested) && requested != '/'
-      serve_file(exec_path + requested.to_s.slice(1, requested.size))
-  else
+  if File.exists?(requested_file) && requested != '/'
+      puts "> Serving file #{requested_file}"
+      serve_file(requested_file)
+  elsif requested == '/'
+      puts "> Sending base page"
       state.serve_base_page
+  else
+      [404, {}, []]
   end
 end
 

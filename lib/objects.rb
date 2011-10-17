@@ -110,7 +110,9 @@ module GitRead
         # Access a git object in the tree (if any) with the
         # given repository and path.
         def access_path(path)
-            access_inner_path(@repository, Pathname.new(path).each_filename)
+            file_list = []
+            Pathname.new(path).each_filename { |f| file_list << f }
+            access_inner_path(@repository, 0, file_list)
         end
 
     protected
@@ -118,13 +120,13 @@ module GitRead
         NAME_IDX = 1
         SHA_IDX = 2
 
-        def access_inner_path(repo, path_enum)
+        def access_inner_path(repo, idx, path_array)
             child_val = ''
-            begin
-                child_val = path_enum.next
-            rescue StopIteration
+            if idx >= path_array.size
                 return self
             end
+
+            child_val = path_array[idx]
 
             # linear search, find a way to do a binary search here (abstract it)
             found_iteration = @listing.index { |info| info[NAME_IDX] == child_val }
@@ -136,13 +138,15 @@ module GitRead
                 return child_object 
             end
 
-            child_object.access_inner_path(repo, path_enum)
+            child_object.access_inner_path(repo, idx + 1, path_array)
         end
 
     private
         def parse_tree(data, generalIdx)
             while !data.empty?
-                /^(?<rights>\d+)/ =~ data
+                /^(\d+)/ =~ data
+
+                rights = Regexp.last_match(1)
 
                 idx = data.index("\x00")
                 filename = data.slice(rights.length + 1 .. idx - 1)
@@ -160,8 +164,8 @@ module GitRead
     TREE_PREFIX = "tree "
 
     # (ShaRef, Type, String) -> (GitObject | nil)
-    def GitRead.read_pack_object(repo, sha, type, data)
-        case type
+    def GitRead.read_pack_object(repo, sha, obj_type, data)
+        case obj_type
         when PackFileEntryHeader::OBJ_COMMIT 
             Commit.new(repo, sha, data, :binary)
         when PackFileEntryHeader::OBJ_TREE
