@@ -77,7 +77,7 @@ module GitRead
 
             calculate_identical_offsets()
 
-            @coeffs = CoeffTable.new(@orig_effective_size, @dest_effective_size)
+            @coeffs = Array.new(@orig_effective_size + 1) { Array.new(@dest_effective_size + 1, 0) }
         end
 
         # We try to reduce the diff to perform by finding
@@ -105,6 +105,9 @@ module GitRead
 
             @orig_effective_size = orig_end - @begin_offset + 1
             @dest_effective_size = dest_end - @begin_offset + 1
+
+            @orig_hash = Array.new(@orig_effective_size) { |i| @orig[i + @begin_offset].hash }
+            @dest_hash = Array.new(@dest_effective_size) { |i| @dest[i + @begin_offset].hash }
         end
 
         # nil
@@ -143,38 +146,41 @@ module GitRead
         # nil
         # Compute the coefficient matrix.
         def compute_diff
-            @coeffs.generate do |i, j|
-                full_i = i + @begin_offset
-                full_j = j + @begin_offset
+            for i in 1 .. @orig_effective_size
+                for j in 1 .. @dest_effective_size
 
-                l = @orig[full_i - 1]
-                r = @dest[full_j - 1]
-                # Identical, so the matching score is
-                # the matching score of previous string +1
-                if l == r
-                    @coeffs[i - 1][j - 1] + 1
-                else
-                    #          ^
-                    #          | down
-                    #          |
-                    # left +---+--+
-                    #   <--+      |
-                    #      +------+
+                    full_i = i + @begin_offset
+                    full_j = j + @begin_offset
 
-                    # correspond to a score with a deletion
-                    # of the origin
-                    down = @coeffs[i - 1][j] 
-
-                    # correspond to a score with an addition
-                    # to the origin
-                    left = @coeffs[i][j - 1]
-
-                    # otherwise, it's the maximum score
-                    # of the previously calculated data.
-                    if down < left
-                        left
+                    l = @orig_hash[full_i - 1]
+                    r = @dest_hash[full_j - 1]
+                    # Identical, so the matching score is
+                    # the matching score of previous string +1
+                    if l == r
+                        @coeffs[i - 1][j - 1] + 1
                     else
-                        down
+                        #          ^
+                        #          | down
+                        #          |
+                        # left +---+--+
+                        #   <--+      |
+                        #      +------+
+
+                        # correspond to a score with a deletion
+                        # of the origin
+                        down = @coeffs[i - 1][j] 
+
+                        # correspond to a score with an addition
+                        # to the origin
+                        left = @coeffs[i][j - 1]
+
+                        # otherwise, it's the maximum score
+                        # of the previously calculated data.
+                        if down < left
+                            @coeffs[i][j] = left
+                        else
+                            @coeffs[i][j] = down
+                        end
                     end
                 end
             end
@@ -258,42 +264,6 @@ module GitRead
 
             else
                 puts ""
-            end
-        end
-
-        # Coefficient matrix used in the Diff algorithm.
-        class CoeffTable
-            def initialize(length1, length2)
-                @data = Array.new(length1 + 1) { Array.new(length2 + 1, 0) }
-                @orig_length = length1
-                @dest_length = length2
-            end
-
-            # nil
-            # yield Int,Int -> Int
-            # fill the coefficient table with information given
-            # by the coroutine.
-            def generate
-                for line in 1 .. @orig_length
-                    for column in 1 .. @dest_length
-                        @data[line][column] = yield line,column
-                    end
-                end
-            end
-
-            # Int -> [Int]
-            # Return the line at the given index.
-            def [](x)
-                @data[x]
-            end
-
-            # nil
-            # Dump the coefficient matrix on stdout.
-            def dump
-                @data.each do |line|
-                    line.each { |v| print "%4d " % v }
-                    print "\n"
-                end
             end
         end
     end
