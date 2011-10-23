@@ -9,7 +9,6 @@ module GitRead
         end
 
         def content(str)
-            pp [:offset, @offset, :end_offset, (@offset + @size), :size, str.size]
             str[@offset .. (@offset + @size - 1)]
         end
     end
