@@ -1,4 +1,5 @@
 require 'zlib'
+require_relative 'delta'
 require_relative 'sha_ref'
 require_relative 'packfile'
 
@@ -98,7 +99,7 @@ module GitRead
                 # must read _raw_ object, not clean one
                 # origin :: RawBlob
                 origin = read_packed_object_raw(sha, real_offset, file)
-                pp origin
+                RawDeltaPack.read(inflated_delta).to_delta.apply_delta(origin.data)
 
             when PackFileEntryHeader::OBJ_REF_DELTA
                 puts "OBJ_REF_DELTA"
@@ -108,21 +109,16 @@ module GitRead
             else
                 throw
             end
-            #DeltaPack.read()
-
-            #Delta.new(origin)
         end
 
         # (ShaRef, Int, File) -> RawBlob
         def read_packed_object_raw(sha, offset, pack_file)
-            pp "read_packed_object_raw"
+            puts ">> read_packed_object_raw"
             pack_file.seek(0, IO::SEEK_END)
             file_size = pack_file.pos
 
             pack_file.seek(offset, IO::SEEK_SET)
             pack_entry_header = GitRead::PackFileEntryHeader.read(pack_file)
-            pp pack_entry_header
-            puts "offset: #{offset} pos: #{pack_file.tell} file_size: #{file_size}"
 
             if pack_entry_header.delta?
                 return read_delta_object_raw(sha, pack_entry_header, offset, pack_file, file_size)
@@ -142,19 +138,19 @@ module GitRead
         # ShaRef -> (GitObject | nil)
         def access_packed_object(sha)
             raw = access_packed_object_raw(sha)
+            return nil if raw.nil?
             GitRead.read_pack_object(self, sha, raw.obj_type, raw.data)
         end
 
         # ShaRef -> (RawBlob | nil)
         def access_packed_object_raw(sha)
-           puts ">>> Packed"
+           puts ">>> access packed object raw"
            found_ref = find_packed_ref(sha)
            if !found_ref
                return nil
            end
 
            packfilename = @base + 'objects/pack/' + @packFilesList[ found_ref[1] ]
-           pp packfilename
            ret = nil
 
            open(packfilename, 'rb') do |pack_file|
