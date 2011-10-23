@@ -99,7 +99,8 @@ module GitRead
                 # must read _raw_ object, not clean one
                 # origin :: RawBlob
                 origin = read_packed_object_raw(sha, real_offset, file)
-                RawDeltaPack.read(inflated_delta).to_delta.apply_delta(origin.data)
+                full_data = RawDeltaPack.read(inflated_delta).to_delta.apply_delta(origin.data)
+                RawBlob.new(origin.obj_type, full_data)
 
             when PackFileEntryHeader::OBJ_REF_DELTA
                 puts "OBJ_REF_DELTA"
