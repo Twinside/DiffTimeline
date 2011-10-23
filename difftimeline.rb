@@ -84,7 +84,7 @@ class DiffTimelineState
         if query['commit'] == nil || query['last_file'] == nil
             return send_error_message('Invalid query')
         end
-        pp "Asking #{query['commit']}"
+        puts ">> Asking #{query['commit']}"
 
         prev_file_sha = GitRead::ShaRef.new(query['last_file'])
         prev_commit = GitRead::ShaRef.new(query['commit'])
@@ -262,20 +262,20 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   elsif requested == '/quit'
       puts "Leaving"
       exit 0
-  end
-
-  requested_file = exec_path + requested.to_s.slice(1, requested.size)
-  
-  # Security problem on the next line, permit access to an atacker to any file
-  # on the machine.
-  if File.exists?(requested_file) && requested != '/'
-      puts "> Serving file #{requested_file}"
-      serve_file(requested_file)
-  elsif requested == '/'
-      puts "> Sending base page"
-      state.serve_base_page
   else
-      [404, {}, []]
+    requested_file = exec_path + requested.to_s.slice(1, requested.size)
+    
+    # Security problem on the next line, permit access to an atacker to any file
+    # on the machine.
+    if File.exists?(requested_file) && requested != '/'
+        puts "> Serving file #{requested_file}"
+        serve_file(requested_file)
+    elsif requested == '/'
+        puts "> Sending base page"
+        state.serve_base_page
+    else
+        [404, {}, []]
+    end
   end
 end
 
