@@ -45,26 +45,29 @@ module GitRead
             def add_line(orig_line, dest_line)
                 if @listing.size == 0
                     @listing << DiffCommand.new(:add_line, orig_line, dest_line)
-                end
-                prev = @listing.last
-
-                if prev.cmd == :add_line && dest_line == prev.dest_idx + prev.size
-                    @listing.last.inc_size
                 else
-                    @listing << DiffCommand.new(:add_line, orig_line, dest_line)
+                    prev = @listing.last
+
+                    if prev.cmd == :add_line && dest_line == prev.dest_idx + prev.size
+                        @listing.last.inc_size
+                    else
+                        @listing << DiffCommand.new(:add_line, orig_line, dest_line)
+                    end
                 end
             end
 
             def rem_line(orig_line, dest_line)
                 if @listing.size == 0
                     @listing << DiffCommand.new(:rem_line, orig_line, dest_line)
-                end
-                prev = @listing.last
-
-                if prev.cmd == :rem_line && orig_line == prev.orig_idx + prev.size
-                    @listing.last.inc_size
+                    return
                 else
-                    @listing << DiffCommand.new(:rem_line, orig_line, dest_line)
+                    prev = @listing.last
+
+                    if prev.cmd == :rem_line && orig_line == prev.orig_idx + prev.size
+                        @listing.last.inc_size
+                    else
+                        @listing << DiffCommand.new(:rem_line, orig_line, dest_line)
+                    end
                 end
             end
         end
@@ -152,12 +155,12 @@ module GitRead
                     full_i = i + @begin_offset
                     full_j = j + @begin_offset
 
-                    l = @orig_hash[full_i - 1]
-                    r = @dest_hash[full_j - 1]
+                    l = @orig_hash[i - 1]
+                    r = @dest_hash[j - 1]
                     # Identical, so the matching score is
                     # the matching score of previous string +1
                     if l == r
-                        @coeffs[i - 1][j - 1] + 1
+                        @coeffs[i][j] = @coeffs[i - 1][j - 1] + 1
                     else
                         #          ^
                         #          | down
@@ -176,11 +179,7 @@ module GitRead
 
                         # otherwise, it's the maximum score
                         # of the previously calculated data.
-                        if down < left
-                            @coeffs[i][j] = left
-                        else
-                            @coeffs[i][j] = down
-                        end
+                        @coeffs[i][j] = [left, down].max
                     end
                 end
             end
@@ -197,8 +196,8 @@ module GitRead
         def diff_set_at(i,j, rez)
             real_i = @begin_offset + i
             real_j = @begin_offset + j
-            l = @orig[real_i - 1]
-            r = @dest[real_j - 1]
+            l = @orig_hash[i - 1]
+            r = @dest_hash[j - 1]
 
             # We're not at the edge of the matrix, and data
             # is identical, so we're matching, no diff information
@@ -212,7 +211,7 @@ module GitRead
             # matching score (in comparison of deleting a line from origin),
             # so declare an addition for the diff
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
-                diff_set_at(i, j-1, rez)
+                diff_set_at(i, j - 1, rez)
                 rez.add_line( real_i - 1, real_j - 1)
             # inversly to previous case we get a better score by removing
             # a line, so follow this diff
@@ -225,17 +224,15 @@ module GitRead
         # nil
         # print the diff on stdout.
         def print_diff(only_diff)
-            pp [:beg, @begin_offset, :orig_effective, @orig_effective_size, :dest_eff, @dest_effective_size]
-
-            if only_diff
-                (0..(@begin_offset - 1)).each { |v| print "(BEGI) #{@orig[v]}" }
+            if !only_diff
+                (0..(@begin_offset - 1)).each { |v| print "(BEGI)  #{@orig[v]}" }
             end
 
             print_diff_at(@orig_effective_size, @dest_effective_size, only_diff)
 
-            if only_diff
+            if !only_diff
                 ((@begin_offset + @orig_effective_size)..(@orig.size - 1)).each do |v|
-                    puts "(END ) #{@orig[v]}"
+                    puts "(END )  #{@orig[v]}"
                 end
             end
         end
@@ -247,20 +244,21 @@ module GitRead
             real_j = @begin_offset + j
             l = @orig[real_i - 1]
             r = @dest[real_j - 1]
+
             if i > 0 && j > 0 && l == r
 
                 print_diff_at(i - 1, j - 1, only_diff)
-                print ("(    )  " + l) if only_diff
+                print ("(    )  " + l) if !only_diff
 
             elsif j > 0 && (i == 0 || @coeffs[i][j-1] >= @coeffs[i-1][j])
 
                 print_diff_at(i, j-1, only_diff)
-                print (("(%4d)+ " % i) + r)
+                print (("(%4d)+ " % real_i) + r)
 
             elsif i > 0 && (j == 0 || @coeffs[i][j-1] < @coeffs[i-1][j])
 
                 print_diff_at(i - 1, j, only_diff)
-                print (("(%4d)- " % i) + l)
+                print (("(%4d)- " % real_i) + l)
 
             else
                 puts ""
