@@ -52,10 +52,25 @@ module GitRead
                 if /ref: (.*)/ =~ content.chomp
                     refPath = Regexp.last_match(1)
                     file.close
-                    open( @base + refPath ) do |ref_file|
-                        sha = ShaRef.new( ref_file.read )
-                        ref_file.close
-                        return sha
+                    # Loose reference to the ref
+                    if File.exists?( @base + refPath )
+                        open( @base + refPath, 'r' ) do |ref_file|
+                            sha = ShaRef.new( ref_file.read )
+                            ref_file.close
+                            return sha
+                        end
+                    # if not loose try the packed reference file
+                    elsif File.exists?( @base + 'packed-refs' )
+                        open( @base + 'packed-refs', 'r' ) do |file|
+                            file.read.lines.each do |line|
+                                if /([0-9a-fA-F]{40}) (.*)/ =~ line
+                                    sha = Regexp.last_match(1)
+                                    v = Regexp.last_match(2)
+                                    pp [:sha, sha, :v, v, :ref_path, refPath]
+                                    return ShaRef.new(sha) if v == refPath
+                                end
+                            end
+                        end
                     end
                 end
             end
