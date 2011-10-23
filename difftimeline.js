@@ -73,6 +73,12 @@ function back_to_the_past()
                  , last_file: last_commit.filekey };
 
     $.getJSON('ask_parent', params, function(data) {
+        if (data === null)
+        {
+            show_error({error: 'Communication error with the server'});
+            return;
+        }
+
         if (data['error'])
         { 
             show_error( data );
