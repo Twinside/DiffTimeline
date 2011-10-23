@@ -108,23 +108,27 @@ module GitRead
 
                 to_read = [header.uncompressed_size + INFLATE_SIZE_MARGIN,
                            file_size - offset - header.read_size].min
+
                 deflated_data = file.read(to_read)
-                inflated_delta = Zlib::Inflate.inflate(deflated_data)
 
                 # must read _raw_ object, not clean one
                 # origin :: RawBlob
                 origin = read_packed_object_raw(sha, real_offset, file)
-                full_data = RawDeltaPack.read(inflated_delta).to_delta.apply_delta(origin.data)
-                RawBlob.new(origin.obj_type, full_data)
 
             when PackFileEntryHeader::OBJ_REF_DELTA
                 puts "OBJ_REF_DELTA"
+                to_read = [header.read_size, file_size - offset - header.read_size].min
+                deflated_data = file.read(to_read)
+
                 ref = ShaRef.new(BinSha.read(file).bits)
                 origin = access_object_raw(ref)
-                pp origin
             else
                 throw
             end
+
+            inflated_delta = Zlib::Inflate.inflate(deflated_data)
+            full_data = RawDeltaPack.read(inflated_delta).to_delta.apply_delta(origin.data)
+            RawBlob.new(origin.obj_type, full_data)
         end
 
         # (ShaRef, Int, File) -> RawBlob
