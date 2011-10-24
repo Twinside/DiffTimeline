@@ -253,6 +253,8 @@ end
 # Serious race condition, but it will be ok to test
 Launchy.open('http://127.0.0.1:8080')
 
+static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js" ]
+
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
   puts "Requested: #{requested}"
@@ -263,13 +265,13 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
       puts "Leaving"
       exit 0
   else
-    requested_file = exec_path + requested.to_s.slice(1, requested.size)
+    requested_file = requested.to_s.slice(1, requested.size)
     
     # Security problem on the next line, permit access to an atacker to any file
     # on the machine.
-    if File.exists?(requested_file) && requested != '/'
-        puts "> Serving file #{requested_file}"
-        serve_file(requested_file)
+    if static_files.index(requested_file) != nil
+        puts "> Serving file #{requested_file}\n"
+        serve_file(exec_path + 'static-content/' + requested_file)
     elsif requested == '/'
         puts "> Sending base page"
         state.serve_base_page
