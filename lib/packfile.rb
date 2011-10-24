@@ -40,13 +40,11 @@ module GitRead
     private
         def find_between(sha, beg, ending)
             if ending < beg
-                puts "Not found #{sha}"
                 return nil
             end
             middle = beg + (ending - beg) / 2
 
             if shas[middle].bits == sha.raw
-                puts "Found #{sha} in packfile at #{offsets[middle]}"
                 return offsets[middle]
             end
 

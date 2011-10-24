@@ -66,7 +66,6 @@ module GitRead
                                 if /([0-9a-fA-F]{40}) (.*)/ =~ line
                                     sha = Regexp.last_match(1)
                                     v = Regexp.last_match(2)
-                                    pp [:sha, sha, :v, v, :ref_path, refPath]
                                     return ShaRef.new(sha) if v == refPath
                                 end
                             end
@@ -99,8 +98,6 @@ module GitRead
         # (ShaRef, PackFileEntryHeader, Int, File, Int) -> RawBlob
         # header is PackFileEntryHeader
         def read_delta_object_raw(sha, header, offset, file, file_size)
-            pp "read_delta_object"
-
             case header.obj_type
             when PackFileEntryHeader::OBJ_OFS_DELTA
                 base_offset = DeltaOffset.read(file)
@@ -133,7 +130,6 @@ module GitRead
 
         # (ShaRef, Int, File) -> RawBlob
         def read_packed_object_raw(sha, offset, pack_file)
-            puts ">> read_packed_object_raw"
             pack_file.seek(0, IO::SEEK_END)
             file_size = pack_file.pos
 
@@ -164,7 +160,6 @@ module GitRead
 
         # ShaRef -> (RawBlob | nil)
         def access_packed_object_raw(sha)
-           puts ">>> access packed object raw"
            found_ref = find_packed_ref(sha)
            if !found_ref
                return nil
