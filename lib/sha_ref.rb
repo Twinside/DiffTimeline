@@ -26,6 +26,10 @@ module GitRead
             @raw_array
         end
 
+        def short
+            @sha[0..10]
+        end
+
         def is_greater_than(arr)
             i = 0
             while i < 20

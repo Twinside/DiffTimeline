@@ -53,7 +53,7 @@ module GitRead
         end
 
         def to_s
-            "(#{@sha.to_s[0..5]}) #{@message.lines.first}"
+            "(#{@sha.short}) #{@message.lines.first}"
         end
 
         def tree

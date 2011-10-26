@@ -52,8 +52,9 @@ function show_error( data )
     container.innerHTML = data.error;
 }
 
-function build_commit_delta(node, lst)
+function build_commit_delta(lst)
 {
+    var node = div_class('commit_list');
     for ( var i = lst.length - 1; i >= 0; i-- )
     {
         var interval_commit = lst[i];
@@ -64,6 +65,23 @@ function build_commit_delta(node, lst)
         new_commit.appendChild(msg_tooltip);
         node.appendChild(new_commit);
     }
+
+    return node;
+}
+
+function build_commit_message_node(commit, message)
+{
+    var msg = div_class('commitmsg');
+    msg.innerHTML = '<span class="id">' + commit + '</span><hr /><h3>' + message + '</h3>';
+
+    return msg;
+}
+
+function div_sub( cl, lst )
+{
+    var node = div_class(cl);
+    for ( var i in lst ) { node.appendChild( lst[i] ); }
+    return node;
 }
 
 function back_to_the_past() 
@@ -90,20 +108,16 @@ function back_to_the_past()
         var commit = div_class('commit');
         commit.setAttribute('id', last_commit.parent_commit);
 
-        var commit_delta = div_class('commit_list');
-        build_commit_delta(commit_delta, data.path);
+        var commitmsg = build_commit_message_node(last_commit.parent_commit, data.message);
+        var deltas = build_commit_delta(data.path);
+        var commit_info = div_sub("commitinfo", [commitmsg, deltas]);
 
-        var msg = div_class('commitmsg');
-        msg.innerHTML = data.message;
-
-        var rawData = data.data;
-        var encoded = rawData.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
+        var encoded = data.data.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
         var encoded_with_diff = intercalate_diff_del(encoded, data.diff);
         var content = div_class('file_content');
         content.appendChild(pre(encoded_with_diff));
 
-        commit.appendChild(msg);
-        commit.appendChild(commit_delta);
+        commit.appendChild(commit_info);
         commit.appendChild(content);
 
         var add_content = $('#' + last_commit.key + ' .file_content').get()[0];

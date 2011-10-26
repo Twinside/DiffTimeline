@@ -129,7 +129,7 @@ class DiffTimelineState
             "data" => file.data,
             "filekey" => file.sha,
             "parent_commit" => commit.parents_sha[0],
-            "message" => commit.to_s,
+            "message" => commit.message,
             "diff" => diff.diff_set,
             "path" => commit_path 
         }
@@ -176,6 +176,7 @@ END
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <title>#{@tracked_path}</title>
+        <link href="screen.css" type="text/css" rel="stylesheet" />
         <link href="difftimeline.css" type="text/css" rel="stylesheet" />
         <!-- Loading from local path to be able to work offline -->
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
@@ -205,7 +206,16 @@ END
         </div>
         <div id="container" class="container">
             <div class="commit" id="#{commit.sha}">
-                <div class="commitmsg">#{commit}</div>
+                <div class="commitinfo">
+                    <div class="commitmsg">
+                        <span class="id">#{commit.sha.short}</span>
+                        <hr />
+                        <h3>#{commit.message}<h3>
+                    </div>
+                    <div class="commit_list">
+                        meh
+                    </div>
+                </div>
                 <div class="file_content">
                     <pre>#{encoded_data}</pre>
                 </div>
@@ -253,7 +263,8 @@ end
 # Serious race condition, but it will be ok to test
 Launchy.open('http://127.0.0.1:8080')
 
-static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js" ]
+static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
+                 "screen.css" ]
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
