@@ -72,7 +72,7 @@ function build_commit_delta(lst)
 function build_commit_message_node(commit, message)
 {
     var msg = div_class('commitmsg');
-    msg.innerHTML = '<span class="id">' + commit + '</span><hr /><h3>' + message + '</h3>';
+    msg.innerHTML = '<span class="id">' + commit + '</span><hr /><h4>' + message + '</h4>';
 
     return msg;
 }

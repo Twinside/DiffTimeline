@@ -210,11 +210,9 @@ END
                     <div class="commitmsg">
                         <span class="id">#{commit.sha.short}</span>
                         <hr />
-                        <h3>#{commit.message}<h3>
+                        <h4>#{commit.message}<h4>
                     </div>
-                    <div class="commit_list">
-                        meh
-                    </div>
+                    <div class="commit_list">&nbsp;</div>
                 </div>
                 <div class="file_content">
                     <pre>#{encoded_data}</pre>
