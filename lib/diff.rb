@@ -98,7 +98,7 @@ module GitRead
             orig_end = @orig.size - 1
             dest_end = @dest.size - 1
 
-            while orig_end > 0 && dest_end > 0
+            while orig_end > 0 && dest_end > 0 && orig_end >= @begin_offset
                 if @orig[orig_end] != @dest[dest_end]
                     break
                 end
@@ -109,8 +109,10 @@ module GitRead
             @orig_effective_size = orig_end - @begin_offset + 1
             @dest_effective_size = dest_end - @begin_offset + 1
 
-            @orig_hash = Array.new(@orig_effective_size) { |i| @orig[i + @begin_offset].hash }
-            @dest_hash = Array.new(@dest_effective_size) { |i| @dest[i + @begin_offset].hash }
+            if @orig_effective_size > 0
+                @orig_hash = Array.new(@orig_effective_size) { |i| @orig[i + @begin_offset].hash }
+                @dest_hash = Array.new(@dest_effective_size) { |i| @dest[i + @begin_offset].hash }
+            end
         end
 
         # nil
@@ -187,6 +189,10 @@ module GitRead
 
         # DiffSet
         def diff_set
+            if @orig_effective_size <= 0
+                return DiffSet.new
+            end
+
             acc = DiffSet.new
             diff_set_at(@orig_effective_size, @dest_effective_size, acc)
             acc
