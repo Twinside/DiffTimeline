@@ -210,7 +210,7 @@ END
                     <div class="commitmsg">
                         <span class="id">#{commit.sha.short}</span>
                         <hr />
-                        <h4>#{commit.message}<h4>
+                        <h4 title="#{commit.message}">#{commit.message.first}<h4>
                     </div>
                     <div class="commit_list">&nbsp;</div>
                 </div>
