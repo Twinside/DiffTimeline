@@ -158,6 +158,10 @@ END
         [200, {'Content-Type' => 'text/html'}, [html_error]]
     end
 
+    def first_line(str)
+        str.lines{ |v| return v }
+    end
+
     def serve_base_page
         commit = @repository.access_object(@current_head)
         tree = commit.tree
@@ -210,7 +214,7 @@ END
                     <div class="commitmsg">
                         <span class="id">#{commit.sha.short}</span>
                         <hr />
-                        <h4 title="#{commit.message}">#{commit.message.first}<h4>
+                        <h4 title="#{commit.message}">#{first_line(commit.message)}<h4>
                     </div>
                     <div class="commit_list">&nbsp;</div>
                 </div>
@@ -262,7 +266,7 @@ end
 Launchy.open('http://127.0.0.1:8080')
 
 static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
-                 "screen.css" ]
+                 "screen.css", "favicon.ico" ]
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
