@@ -85,6 +85,76 @@ function div_sub( cl, lst )
     return node;
 }
 
+function toggle_diff_full(i)
+{
+    var ranges = [];
+    var rems = _.filter(last_infos[i].data, function (c) {
+        return c.way == '-';
+    }).map(function (c) { return $.extend(true, {}, c) }).toArray();
+
+    var adds = _.filter(last_infos[i - 1].data, function (c) {
+        return c.way == '+';
+    }).map(function (c) { return $.extend(true, {}, c) }).toArray();
+
+    var rems_read_index = 0;
+    var adds_read_index = 0;
+
+    var rem = rems[rems_read_index];
+    var add = add[adds_read_index];
+
+    while (rems_read_index < rems.length && adds_read_index < adds.length)
+    {
+        add = add[adds_read_index];
+
+        // rem before add
+        if (rem.orig_idx < add.dest_idx)
+        {
+            // full before
+            if (rem.orig_idx + rem.size < add.dest_idx)
+            {
+                ranges.add({way: '-', beg: rem.orig_dix, end: rem.orig_idx + rem.size });
+                rem = rems[++rems_read_index];
+            }
+            // end before the end of other
+            else if ()
+            {
+            }
+        }
+        // add <= rem
+        else
+        {
+            if (rem.orig_idx > add.dest_idx + add.size)
+            {
+                ranges.add({way: '+', beg: add.orig_dix, end: add.orig_idx + add.size });
+            }
+            
+        }
+
+    }
+
+    if (rems_read_index < rems.length )
+    {
+        while (rems_read_index < rems.length)
+        {
+            var idx = rems[rems_read_index].orig_idx;
+            var s = rems[rems_read_index].size;
+            ranges.add({ way: '-', beg: idx, end:  idx + s });
+            rems_read_index++;
+        }
+    }
+
+    if (adds_read_index < adds.length)
+    {
+        while (adds_read_index < adds.length)
+        {
+            var idx = adds[adds_read_index].dest_idx;
+            var s = adds[adds_read_index].size;
+            ranges.add({ way: '+', beg: idx, end:  idx + s });
+            adds_read_index++;
+        }
+    }
+}
+
 function back_to_the_past() 
 {
     var last_commit = last_infos[ last_infos.length - 1 ];
@@ -128,6 +198,8 @@ function back_to_the_past()
 
         last_infos.push( {
                        file: last_commit.file  
+            ,          diff: data.diff
+            ,          data: encoded
             ,       filekey: data.filekey
             ,           key: last_commit.parent_commit
             , parent_commit: data.parent_commit

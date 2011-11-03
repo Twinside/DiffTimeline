@@ -56,8 +56,13 @@ pre
     background-color: #FFFFDD;
 }
 
+.toolbar
+{
+
+}
+
 /** The back to the past button, big blue */
-.returnpast 
+.btn_returnpast 
 {
    position:         relative;
    float:            left;
@@ -92,14 +97,14 @@ pre
    vertical-align: middle;
 }
 
-.returnpast:hover 
+.btn_returnpast:hover 
 {
    border-top-color: #3e8abd;
    background: #3e8abd;
    color: #ffffff;
 }
 
-.returnpast:active 
+.btn_returnpast:active 
 {
    border-top-color: #357aaf;
    background: #357aaf;

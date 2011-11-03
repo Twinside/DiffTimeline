@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # -*- encoding: utf-8 -*-
-#
+
 unless Kernel.respond_to?(:require_relative)
   module Kernel
     def require_relative(path)
@@ -185,10 +185,14 @@ END
         <!-- Loading from local path to be able to work offline -->
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
+        <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
         <script language="javascript" type="text/javascript">
-            var last_infos = [ { file: "#{@tracked_path}", key: "#{@current_head}"
+            var last_infos = [ { file: "#{@tracked_path}"
+                               , key: "#{@current_head}"
                                , filekey: "#{file.sha}"
-                               , parent_commit: "#{commit.parents_sha[0]}" } ];
+                               , parent_commit: "#{commit.parents_sha[0]}"
+                               , data: #{encoded_data.to_json} 
+                               , diff: [] } ];
         </script>
     </head>
     <body onUnload="leave_server()">
@@ -205,8 +209,14 @@ END
                 </tr>
             </table>
         </div>
-        <div class="returnpast" onClick="back_to_the_past()" title="Fetch previous version">
-            &lt;
+        <div class="toolbar">
+            <div class="btn_toggleview"
+                 onClick="toggle_diff_full()"
+                 title="Switch between compact and full view">Compact view</div>
+
+            <div class="btn_returnpast" 
+                 onClick="back_to_the_past()" 
+                 title="Fetch previous version">&lt;</div>
         </div>
         <div id="container" class="container">
             <div class="commit" id="#{commit.sha}">
@@ -266,7 +276,7 @@ end
 Launchy.open('http://127.0.0.1:8080')
 
 static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
-                 "screen.css", "favicon.ico" ]
+                 "screen.css", "favicon.ico", "underscore-min.js" ]
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path]
