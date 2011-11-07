@@ -1,3 +1,6 @@
+/////////////////////////////////////////////////////////////////////
+//              HTML generation
+/////////////////////////////////////////////////////////////////////
 function div_class(classname)
 {
     ret = document.createElement('div');
@@ -85,74 +88,174 @@ function div_sub( cl, lst )
     return node;
 }
 
-function toggle_diff_full(i)
+////////////////////////////////////////////////////////////
+////  Diff handling
+////////////////////////////////////////////////////////////
+function generate_compact_html(data, diff)
+{
+    var lines = data.split("\n");
+    var begs = {
+        '+': '<div class="diff_addition">',
+        '-': '<div class="diff_deletion">',
+        '~': '<div class="diff_addition"><div class="diff_deletion">',
+        '!': '<div class="diff_deletion"><div class="diff_addition">'
+    };
+
+    var ends = {
+        '+': '</div>',       '-': '</div>',
+        '~': '</div></div>', '!': '</div></div>'
+    };
+
+    var processed_lines = [];
+
+    for ( var i in diff )
+    {
+        var d = diff[i];
+        
+        if (d.end - d.beg == 0)
+        {
+            processed_lines.push(begs[d.way] + lines[d.beg - 1] + ends[d.way]);
+            continue;
+        }
+
+        processed_lines.push(begs[d.way]);
+        for ( var lineNum = d.beg + 1; lineNum <= d.end - 1; lineNum++ )
+            processed_lines.push(lines[lineNum]);
+        processed_lines.push(ends[d.way] + "\n...\n");
+    }
+
+    return processed_lines.join("\n");
+}
+
+function toggle_diff_full()
+{
+    var ranges = null;
+
+    for ( var i in last_infos )
+    {
+        var key = last_infos[i].key;
+        var cont = $('#' + key + ' .file_content pre');
+        ranges = calculate_fold_set(i);
+        var new_content = generate_compact_html(last_infos[i].data, ranges);
+        cont.html(new_content);
+    }
+}
+
+/** Combine two diff list into one list of edition
+ * ranges.
+ */
+function calculate_fold_set(i)
 {
     var ranges = [];
-    var rems = _.filter(last_infos[i].data, function (c) {
+    var lefts = _.toArray(_.filter(last_infos[i].diff, function (c) {
         return c.way == '-';
-    }).map(function (c) { return $.extend(true, {}, c) }).toArray();
+    }).map(function (c) { return { way: '-'
+                                 , beg: c.orig_idx
+                                 , end: c.orig_idx + c.size}}));
 
-    var adds = _.filter(last_infos[i - 1].data, function (c) {
-        return c.way == '+';
-    }).map(function (c) { return $.extend(true, {}, c) }).toArray();
-
-    var rems_read_index = 0;
-    var adds_read_index = 0;
-
-    var rem = rems[rems_read_index];
-    var add = add[adds_read_index];
-
-    while (rems_read_index < rems.length && adds_read_index < adds.length)
+    var rights = [];
+    if (i > 0)
     {
-        add = add[adds_read_index];
+        rights = _.toArray( _.filter(last_infos[i - 1].diff, function (c) {
+            return c.way == '+';
+        }).map(function (c) { return { way: '+'
+                                     , beg: c.dest_idx
+                                     , end: c.dest_idx + c.size}}));
+    }
 
-        // rem before add
-        if (rem.orig_idx < add.dest_idx)
-        {
-            // full before
-            if (rem.orig_idx + rem.size < add.dest_idx)
-            {
-                ranges.add({way: '-', beg: rem.orig_dix, end: rem.orig_idx + rem.size });
-                rem = rems[++rems_read_index];
-            }
-            // end before the end of other
-            else if ()
-            {
-            }
-        }
-        // add <= rem
+    var combiner = function(a,b) {
+        if (a == '+' && b == '-')
+            { return '~' }
         else
+            { return '!' }
+    };
+
+    var left_read_index = 0;
+    var right_read_index = 0;
+
+    var left = lefts[left_read_index];
+    var right = rights[right_read_index];
+
+    var swapArrays = function() {
+        var swap_idx = left_read_index;
+        left_read_index = right_read_index;
+        right_read_index = swap_idx;
+
+        var swap_array = lefts;
+        lefts = rights;
+        rights = swap_array;
+
+        var swap_obj = left;
+        left = right;
+        right = swap_obj;
+    }
+
+    var inc_right = function() {
+        right_read_index++;
+        if (right_read_index < rights.length)
+            right = rights[right_read_index];
+    }
+
+    var inc_left = function() {
+        left_read_index++;
+        if (left_read_index < lefts.length)
+            left = lefts[left_read_index];
+    }
+
+    while (left_read_index < lefts.length && right_read_index < rights.length)
+    {
+        if (right.beg >= right.end) { inc_right(); }
+        else if (left.beg >= left.end) { inc_left(); }
+        else if (right.beg < left.beg) { swapArrays(); }
+        // ############
+        //                  ############
+        else if (left.beg < right.beg && left.end < right.beg)
         {
-            if (rem.orig_idx > add.dest_idx + add.size)
+            ranges.push({ way: left.way, beg: left.beg, end: left.end });
+            inc_left();
+        }
+        else if (left.beg < right.beg && left.end <= right.end)
+        {
+            ranges.push({ way: left.way, beg: left.beg, end: right.beg - 1 });
+            ranges.push({ way: combiner(left.way, right.way)
+                       , beg: right.beg, end: left.end });
+            right.beg = left.end + 1;
+            inc_left();
+        }
+        else if (left.beg == right.beg)
+        {
+            if (left.end <= right.end )
             {
-                ranges.add({way: '+', beg: add.orig_dix, end: add.orig_idx + add.size });
+                ranges.push({ way: combiner(left.way, right.way)
+                           , beg: left.beg, end: left.end });
+                right.end = left.end + 1;
+                inc_left();
             }
-            
+            else
+            {
+                ranges.push({ way: combiner(left.way, right.way)
+                           , beg: left.beg, end: right.end });
+                left.beg = right.end + 1;
+                inc_right();
+            }
         }
-
-    }
-
-    if (rems_read_index < rems.length )
-    {
-        while (rems_read_index < rems.length)
+        else if (left.beg < right.beg && left.end > right.end)
         {
-            var idx = rems[rems_read_index].orig_idx;
-            var s = rems[rems_read_index].size;
-            ranges.add({ way: '-', beg: idx, end:  idx + s });
-            rems_read_index++;
+            ranges.push( {way: left.way, beg: left.beg, end: right.beg - 1  } );
+            ranges.push({ way: combiner(left.way, right.way)
+                        , beg: right.beg, end: right.end });
+            left.beg = right.end + 1;
+            inc_right();
         }
     }
 
-    if (adds_read_index < adds.length)
-    {
-        while (adds_read_index < adds.length)
-        {
-            var idx = adds[adds_read_index].dest_idx;
-            var s = adds[adds_read_index].size;
-            ranges.add({ way: '+', beg: idx, end:  idx + s });
-            adds_read_index++;
-        }
-    }
+    while (left_read_index < lefts.length)
+        { ranges.push(lefts[left_read_index++]); }
+
+    while (right_read_index < rights.length)
+        { ranges.push(rights[right_read_index++]);  }
+
+    return ranges;
 }
 
 function back_to_the_past() 
