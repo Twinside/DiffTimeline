@@ -264,21 +264,41 @@ var DiffManipulator = (function () {
     };
 })();
 
+function render_commit( commit_number )
+{
+    var current_commit = last_infos[commit_number];
+    var prevs = commit_number <= 0 ? [] : last_infos[commit_number - 1].diff;
+    var neo_content = render_file(prevs, current_commit.diff, current_commit.data);
+    $('#' + current_commit.key + ' .file_content pre').html(neo_content);
+}
+
+function render_file(prev_diff, diff, data)
+{
+    var rems = DiffManipulator.filterRems(diff);
+    var adds = DiffManipulator.filterAdds(prev_diff);
+    var ranges = DiffManipulator.calculateFoldSet(rems, adds);
+
+    if (application_state.view_mode === 'compact')
+        return DiffManipulator.generateCompactHtml(data, ranges);
+    else // render full
+    {
+        var encoded_with_diff = DiffManipulator.intercalateDiffDel(data, rems);
+        return DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
+    }
+}
+
 function toggle_diff_full()
 {
     var ranges = null;
 
-    for ( var i in last_infos )
-    {
-        var key = last_infos[i].key;
-        var cont = $('#' + key + ' .file_content pre');
-        var rems = DiffManipulator.filterRems(last_infos[i].diff);
-        var adds = (i <= 0) ? [] : DiffManipulator.filterAdds(last_infos[i - 1].diff);
+    if (application_state.view_mode === 'full')
+        application_state.view_mode = 'compact';
+    else
+        application_state.view_mode = 'full';
 
-        ranges = DiffManipulator.calculateFoldSet(rems, adds);
-        var new_content = DiffManipulator.generateCompactHtml(last_infos[i].data, ranges);
-        cont.html(new_content);
-    }
+
+    for ( var i in last_infos )
+        { render_commit(i); }
 }
 
 function back_to_the_past() 
@@ -288,14 +308,12 @@ function back_to_the_past()
                  , last_file: last_commit.filekey };
 
     $.getJSON('ask_parent', params, function(data) {
-        if (data === null)
-        {
+        if (data === null) {
             show_error({error: 'Communication error with the server'});
             return;
         }
 
-        if (data['error'])
-        { 
+        if (data['error']) { 
             show_error( data );
             return;
         }
@@ -310,15 +328,13 @@ function back_to_the_past()
         var commit_info = div_sub("commitinfo", [commitmsg, deltas]);
 
         var encoded = data.data.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
-        var encoded_with_diff = DiffManipulator.intercalateDiffDel(encoded, data.diff);
         var content = div_class('file_content');
-        content.appendChild(pre(encoded_with_diff));
+        content.appendChild(pre(''));
 
         commit.appendChild(commit_info);
         commit.appendChild(content);
 
         var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
-        add_content.innerHTML = DiffManipulator.intercalateDiffAdd(add_content.innerHTML, data.diff);
 
         container.insertBefore(commit, container.childNodes[0]);
 
@@ -330,6 +346,9 @@ function back_to_the_past()
             ,           key: last_commit.parent_commit
             , parent_commit: data.parent_commit
         });
+
+        render_commit( 0 );
+        render_commit( 1 );
     });
 }
 
