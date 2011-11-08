@@ -5,6 +5,11 @@ var application_state = {
     view_mode: 'full'
 };
 
+var btn_toggle_text = {
+    full: '&#x25bc;<br/>&#x25b2;',
+    compact:  '&#x25b2;<br/>&#x25bc;'
+}
+
 /////////////////////////////////////////////////////////////////////
 //              HTML generation
 /////////////////////////////////////////////////////////////////////
@@ -295,6 +300,9 @@ function toggle_diff_full()
         application_state.view_mode = 'compact';
     else
         application_state.view_mode = 'full';
+
+    $('.btn_toggleview').html(
+        btn_toggle_text[application_state.view_mode]);
 
 
     for ( var i in last_infos )

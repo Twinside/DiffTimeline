@@ -212,8 +212,7 @@ END
         <div class="toolbar">
             <div class="btn_toggleview"
                  onClick="toggle_diff_full()"
-                 title="Switch between compact and full view">Compact view</div>
-
+                 title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
             <div class="btn_returnpast" 
                  onClick="back_to_the_past()" 
                  title="Fetch previous version">&lt;</div>
