@@ -65,7 +65,7 @@ var DiffManipulator = (function () {
      * @param data {String} file content.
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
-    var generate_compact_html = function (data, diff) {
+    var generate_compact_html = function (isLineNumberRequired, data, diff) {
         var lines = data.split("\n");
         var begs = {
             '+': '<div class="diff_addition">',
@@ -82,6 +82,10 @@ var DiffManipulator = (function () {
         };
 
         var processed_lines = [];
+        var line_number_string = function (i) {
+            if (!isLineNumberRequired) return '';
+            return '<span class="line_number">' + (i + 1).toString() + '</span>'
+        }
 
         for ( var i in diff )
         {
@@ -89,14 +93,19 @@ var DiffManipulator = (function () {
             
             if (d.end - d.beg == 0)
             {
-                processed_lines.push(begs[d.way] + lines[d.beg] + ends[d.way]);
+                processed_lines.push(begs[d.way] + line_number_string(d.beg) +
+                                     lines[d.beg] + ends[d.way]);
                 continue;
             }
 
-            processed_lines.push(begs[d.way] + lines[d.beg]);
+            processed_lines.push( begs[d.way] + line_number_string(d.beg) +
+                                  lines[d.beg]);
+
             for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
-                processed_lines.push(lines[lineNum]);
-            processed_lines.push(lines[d.end] + ends[d.way] + "\n...\n");
+                processed_lines.push(line_number_string(d.beg) + lines[lineNum]);
+
+            processed_lines.push(line_number_string(d.end) + lines[d.end] +
+                                 ends[d.way] + "\n...\n");
         }
 
         return processed_lines.join("\n");
@@ -213,9 +222,7 @@ var DiffManipulator = (function () {
         return ranges;
     }
 
-    var intercalate_diff_add = function (content, diff_list) {
-        var lines = content.split("\n");
-
+    var intercalate_diff_add = function (lines, diff_list) {
         for ( var idx in diff_list )
         {
             var diff = diff_list[idx];
@@ -226,12 +233,10 @@ var DiffManipulator = (function () {
             }
             
         }
-        return lines.join("\n");
+        return lines;
     }
 
-    var intercalate_diff_del = function (content, diff_list) {
-        var lines = content.split("\n");
-
+    var intercalate_diff_del = function (lines, diff_list) {
         for ( var idx in diff_list )
         {
             var diff = diff_list[idx];
@@ -242,7 +247,7 @@ var DiffManipulator = (function () {
             }
             
         }
-        return lines.join("\n");
+        return lines;
     }
 
     /** Keep only the diff information of adding (with a '+' way property)
@@ -277,6 +282,15 @@ function render_commit( commit_number )
     $('#' + current_commit.key + ' .file_content pre').html(neo_content);
 }
 
+function add_line_number( lines )
+{
+    var ret = [];
+    for ( var i = 0; i < lines.length; i++ )
+        ret.push('<span class="line_number">' + (i + 1).toString() + '</span>' + lines[i]);
+
+    return ret;
+}
+
 function render_file(prev_diff, diff, data)
 {
     var rems = DiffManipulator.filterRems(diff);
@@ -284,11 +298,13 @@ function render_file(prev_diff, diff, data)
     var ranges = DiffManipulator.calculateFoldSet(rems, adds);
 
     if (application_state.view_mode === 'compact')
-        return DiffManipulator.generateCompactHtml(data, ranges);
+        return DiffManipulator.generateCompactHtml(true, data, ranges);
     else // render full
     {
-        var encoded_with_diff = DiffManipulator.intercalateDiffDel(data, rems);
-        return DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
+        var lines = add_line_number(data.split('\n'));
+        var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
+        var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
+        return diffed_content.join('\n');
     }
 }
 
