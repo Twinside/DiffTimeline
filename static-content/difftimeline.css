@@ -16,8 +16,10 @@ body
 
 .toolbar
 {
+    background: white;
     position: fixed;
     z-index: 1;
+    padding: 10px;
 }
 
 .commit
@@ -88,13 +90,12 @@ pre .line_number
 .btn_returnpast 
 {
    position:         relative;
-   float:            left;
    font-width:       bold;
    font-size:        2.0em;
    padding-left:     10px;
    padding-right:    10px;
-   padding-top:      300px;
-   padding-bottom:   300px;
+   padding-top:      150px;
+   padding-bottom:   150px;
 
    border-top:    1px solid #7bb7e6;
    border-left:   1px solid #7bb7e6;
@@ -136,9 +137,8 @@ pre .line_number
 .btn_toggleview 
 {
    position:         relative;
-   float:            left;
    font-width:       bold;
-   font-size:        2.0em;
+   font-size:        1.7em;
    padding-left:     10px;
    padding-right:    10px;
    padding-top:      10px;
