@@ -1,6 +1,23 @@
+body
+{
+    /*background-color: #888888;*/
+    background-color: white;
+}
+
+/** Position of various elements of the application.
+ */
 .container
 {
     width: 30000px;
+    left:  100px;
+    position: relative;
+    z-index: 0;
+}
+
+.toolbar
+{
+    position: fixed;
+    z-index: 1;
 }
 
 .commit
@@ -14,6 +31,7 @@
 {
     display: block;
     border: 1px solid rgb(200,200,200);
+    /*background: #EEEEEE;*/
 }
 
 /** File content style, diff_deletion & diff_addition
@@ -64,11 +82,6 @@ pre .line_number
     color:            #777777;
 
     margin-right: 5px;
-}
-
-.toolbar
-{
-
 }
 
 /** The back to the past button, big blue */
