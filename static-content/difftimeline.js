@@ -2,7 +2,8 @@
 //              Initial state
 /////////////////////////////////////////////////////////////////////
 var application_state = {  
-    view_mode: 'full'
+    view_mode: 'full',
+    context_size: 2
 };
 
 var btn_toggle_text = {
@@ -62,10 +63,12 @@ function div_sub( cl, lst ) {
 ////////////////////////////////////////////////////////////
 var DiffManipulator = (function () {
     /** Generate an HTML representation of a diff and a file content.
+     * @param contextSize Int
+     * @param isLineNumberRequired {Bool}
      * @param data {String} file content.
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
-    var generate_compact_html = function (isLineNumberRequired, data, diff) {
+    var generate_compact_html = function (contextSize, isLineNumberRequired, data, diff) {
         var lines = data.split("\n");
         var begs = {
             '+': '<div class="diff_addition">',
@@ -87,25 +90,46 @@ var DiffManipulator = (function () {
             return '<span class="line_number">' + (i + 1).toString() + '</span>'
         }
 
-        for ( var i in diff )
+        var last_outputted_line = -1;
+
+        var i;
+        for ( i = 0; i < diff.length; i++ )
         {
             var d = diff[i];
             
+            // output the context before the diff
+            var context_begin = Math.max(last_outputted_line + 1, d.beg - contextSize);
+
+            // write an elipssiss if there is a deconnection
+            if (context_begin > last_outputted_line + 1 && i != 0)
+                processed_lines.push("...");
+
+            for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ )
+                processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
+
+            // output the real diff
             if (d.end - d.beg == 0)
             {
                 processed_lines.push(begs[d.way] + line_number_string(d.beg) +
                                      lines[d.beg] + ends[d.way]);
-                continue;
+            }
+            else
+            {
+                processed_lines.push( begs[d.way] + line_number_string(d.beg) +
+                                    lines[d.beg]);
+
+                for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
+                    processed_lines.push(line_number_string(d.beg) + lines[lineNum]);
+
+                processed_lines.push(line_number_string(d.end) + lines[d.end] + ends[d.way]);
             }
 
-            processed_lines.push( begs[d.way] + line_number_string(d.beg) +
-                                  lines[d.beg]);
+            var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
+            var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
+            for ( var lineNum = d.end + 1; lineNum <= context_end; lineNum++ )
+                processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
 
-            for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
-                processed_lines.push(line_number_string(d.beg) + lines[lineNum]);
-
-            processed_lines.push(line_number_string(d.end) + lines[d.end] +
-                                 ends[d.way] + "\n...\n");
+            last_outputted_line = context_end;
         }
 
         return processed_lines.join("\n");
@@ -298,7 +322,7 @@ function render_file(prev_diff, diff, data)
     var ranges = DiffManipulator.calculateFoldSet(rems, adds);
 
     if (application_state.view_mode === 'compact')
-        return DiffManipulator.generateCompactHtml(true, data, ranges);
+        return DiffManipulator.generateCompactHtml(application_state.context_size, true, data, ranges);
     else // render full
     {
         var lines = add_line_number(data.split('\n'));
