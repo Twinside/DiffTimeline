@@ -78,6 +78,26 @@ class DiffTimelineState
         rez
     end
 
+    def find_first_commit(commit_path, sha_file, last_commit, commit_sha)
+        commit = @repository.access_object(commit_sha)
+        return nil if commit.nil?
+
+        file = commit.tree.access_path(@tracked_path.to_s)
+        return nil if file.nil?
+
+        if sha_file == file.sha
+            prev_commit = commit.parents_sha[0]
+            commit_path << {
+                "commit" => last_commit.sha,
+                "parent_commit" => commit.sha,
+                "message" => last_commit.to_s
+            }
+            find_first_commit(commit_path, sha_file, commit, commit.parents_sha[0])
+        else
+            last_commit
+        end
+    end
+
     def load_parent(query_string)
         query = split_query_string(query_string.to_s)
 
@@ -120,6 +140,7 @@ class DiffTimelineState
                     "message" => commit.to_s
                 }
             else
+                commit = find_first_commit(commit_path, file.sha, commit, commit.parents_sha[0])
                 keep_digging = false
             end
         end while keep_digging

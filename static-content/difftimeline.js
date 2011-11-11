@@ -352,8 +352,12 @@ function toggle_diff_full()
 function back_to_the_past() 
 {
     var last_commit = last_infos[0];
+                 // commit: Hash
     var params = { commit: last_commit.parent_commit
-                 , last_file: last_commit.filekey };
+                 // last_file: Hash
+                 , last_file: last_commit.filekey 
+                 // file path, to be more restfull
+                 , path: last_commit.file };
 
     $.getJSON('ask_parent', params, function(data) {
         if (data === null) {
