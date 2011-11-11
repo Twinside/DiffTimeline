@@ -28,7 +28,7 @@ end
 
 exec_path = Pathname(__FILE__).realpath.parent
 
-class RepositoryNotFound < RuntimeError 
+class RepositoryNotFound < RuntimeError
 end
 
 class FileNotInRepository < RuntimeError
@@ -52,7 +52,7 @@ class DiffTimelineState
     end
 
     def find_nearest_git_repo
-        currDir = Dir.pwd   
+        currDir = Dir.pwd
         Pathname.new(Dir.pwd).ascend do |v|
             gitDir = v + '.git'
             return v if File.exists?(gitDir)
@@ -146,13 +146,13 @@ class DiffTimelineState
         end while keep_digging
 
         diff = GitRead::Diff.diff_strings(file.data, @last_file.data)
-        encoded = { 
+        encoded = {
             "data" => file.data,
             "filekey" => file.sha,
             "parent_commit" => commit.parents_sha[0],
             "message" => commit.message,
             "diff" => diff.diff_set,
-            "path" => commit_path 
+            "path" => commit_path
         }
 
         response = encoded.to_json
@@ -212,7 +212,7 @@ END
                                , key: "#{@current_head}"
                                , filekey: "#{file.sha}"
                                , parent_commit: "#{commit.parents_sha[0]}"
-                               , data: #{encoded_data.to_json} 
+                               , data: #{encoded_data.to_json}
                                , diff: [] } ];
         </script>
     </head>
@@ -234,8 +234,8 @@ END
             <div class="btn_toggleview"
                  onClick="toggle_diff_full()"
                  title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
-            <div class="btn_returnpast" 
-                 onClick="back_to_the_past()" 
+            <div class="btn_returnpast"
+                 onClick="back_to_the_past()"
                  title="Fetch previous version">&lt;</div>
         </div>
         <div id="container" class="container">
@@ -263,7 +263,7 @@ end
 state = nil
 begin
     state = DiffTimelineState.new()
-rescue RepositoryNotFound 
+rescue RepositoryNotFound
     puts "Error : no git repository found"
     exit(1)
 end
@@ -309,7 +309,7 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
       exit 0
   else
     requested_file = requested.to_s.slice(1, requested.size)
-    
+
     # Security problem on the next line, permit access to an atacker to any file
     # on the machine.
     if static_files.index(requested_file) != nil
