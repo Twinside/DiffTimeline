@@ -18,7 +18,7 @@ require 'json'
 
 require_relative 'lib/diff'
 require_relative 'lib/objects'
-require_relative 'lib/repository'
+require_relative 'lib/cached_repository'
 
 if ARGV.size <= 0
     puts "Error: no specified file"
@@ -46,9 +46,7 @@ class DiffTimelineState
         raise RepositoryNotFound if repo_dir.nil?
 
         @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
-        @repository = GitRead::Repository.new(repo_dir)
-        @current_head = @repository.head_sha
-        @last_file = ''
+        @repository = GitRead::CachedRepository.new(repo_dir)
     end
 
     def find_nearest_git_repo
@@ -78,24 +76,22 @@ class DiffTimelineState
         rez
     end
 
-    def find_first_commit(commit_path, sha_file, last_commit, commit_sha)
+    def find_first_commit(file_path, commit_path, sha_file, last_commit, commit_sha)
         commit = @repository.access_object(commit_sha)
         return nil if commit.nil?
 
-        file = commit.tree.access_path(@tracked_path.to_s)
+        file = commit.tree.access_path(file_path)
         return nil if file.nil?
 
-        if sha_file == file.sha
-            prev_commit = commit.parents_sha[0]
-            commit_path << {
-                "commit" => last_commit.sha,
-                "parent_commit" => commit.sha,
-                "message" => last_commit.to_s
-            }
-            find_first_commit(commit_path, sha_file, commit, commit.parents_sha[0])
-        else
-            last_commit
-        end
+        return last_commit if sha_file != file.sha
+        prev_commit = commit.parents_sha[0]
+        commit_path << {
+            "commit" => last_commit.sha,
+            "parent_commit" => commit.sha,
+            "message" => last_commit.to_s
+        }
+
+        find_first_commit(file_path, commit_path, sha_file, commit, commit.parents_sha[0])
     end
 
     def load_parent(query_string)
@@ -109,6 +105,7 @@ class DiffTimelineState
         prev_file_sha = GitRead::ShaRef.new(query['last_file'])
         prev_commit = GitRead::ShaRef.new(query['commit'])
         commit_path = []
+        file_path = query['path']
         file = nil
         keep_digging = true
 
@@ -121,7 +118,7 @@ class DiffTimelineState
                 return send_error_message("#{prev_commit} is not a commit.")
             end
 
-            file = commit.tree.access_path(@tracked_path.to_s)
+            file = commit.tree.access_path(file_path)
 
             if file.nil?
                 return send_error_message("File not found in commit #{prev_commit}")
@@ -140,12 +137,13 @@ class DiffTimelineState
                     "message" => commit.to_s
                 }
             else
-                commit = find_first_commit(commit_path, file.sha, commit, commit.parents_sha[0])
+                commit = find_first_commit(file_path, commit_path, file.sha, commit, commit.parents_sha[0])
                 keep_digging = false
             end
         end while keep_digging
 
-        diff = GitRead::Diff.diff_strings(file.data, @last_file.data)
+        last_file_data = @repository.access_object(prev_file_sha).data
+        diff = GitRead::Diff.diff_strings(file.data, last_file_data)
         encoded = {
             "data" => file.data,
             "filekey" => file.sha,
@@ -156,7 +154,6 @@ class DiffTimelineState
         }
 
         response = encoded.to_json
-        @last_file = file
         [200, {'Content-Type' => 'text/json'}, [response]]
     end
 
@@ -184,7 +181,8 @@ END
     end
 
     def serve_base_page
-        commit = @repository.access_object(@current_head)
+        current_head = @repository.head_sha
+        commit = @repository.access_object(current_head)
         tree = commit.tree
         file = tree.access_path(@tracked_path.to_s)
 
@@ -193,7 +191,6 @@ END
         end
 
         encoded_data = html_encode_file(file.data)
-        @last_file = file
 
         html_doc = <<END
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -209,7 +206,7 @@ END
         <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
         <script language="javascript" type="text/javascript">
             var last_infos = [ { file: "#{@tracked_path}"
-                               , key: "#{@current_head}"
+                               , key: "#{current_head}"
                                , filekey: "#{file.sha}"
                                , parent_commit: "#{commit.parents_sha[0]}"
                                , data: #{encoded_data.to_json}
