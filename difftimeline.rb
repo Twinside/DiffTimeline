@@ -94,7 +94,10 @@ class DiffTimelineState
         find_first_commit(file_path, commit_path, sha_file, commit, commit.parents_sha[0])
     end
 
-    def load_parent(query_string)
+    # Given a query string, find the first commit with a different
+    # file.
+    # yield commit_path, commit, last_file, file
+    def yield_query(query_string)
         query = split_query_string(query_string.to_s)
 
         if query['commit'] == nil || query['last_file'] == nil
@@ -142,16 +145,27 @@ class DiffTimelineState
             end
         end while keep_digging
 
-        last_file_data = @repository.access_object(prev_file_sha).data
-        diff = GitRead::Diff.diff_strings(file.data, last_file_data)
-        encoded = {
-            "data" => file.data,
-            "filekey" => file.sha,
-            "parent_commit" => commit.parents_sha[0],
-            "message" => commit.message,
-            "diff" => diff.diff_set,
-            "path" => commit_path
-        }
+        last_file = @repository.access_object(prev_file_sha)
+
+        yield commit_path, commit, last_file, file
+    end
+
+    def load_miniature(query_string)
+    end
+
+    def load_parent(query_string)
+        encoded = yield_query(query_string) do |commit_path, commit, last_file, file|
+
+            diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+
+            { "data" => file.data,
+              "filekey" => file.sha,
+              "parent_commit" => commit.parents_sha[0],
+              "message" => commit.message,
+              "diff" => diff.diff_set,
+              "path" => commit_path
+            }
+        end
 
         response = encoded.to_json
         [200, {'Content-Type' => 'text/json'}, [response]]
@@ -301,6 +315,8 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
 
   if requested == '/ask_parent'
       state.load_parent(request[:uri][:query])
+  elsif requested == '/miniature'
+      state.load_miniature(request[:uri][:query])
   elsif requested == '/quit'
       puts "Leaving"
       exit 0
