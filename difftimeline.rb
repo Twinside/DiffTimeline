@@ -97,8 +97,7 @@ class DiffTimelineState
     # Given a query string, find the first commit with a different
     # file.
     # yield commit_path, commit, last_file, file
-    def yield_query(query_string)
-        query = split_query_string(query_string.to_s)
+    def yield_query(query)
 
         if query['commit'] == nil || query['last_file'] == nil
             return send_error_message('Invalid query')
@@ -151,10 +150,25 @@ class DiffTimelineState
     end
 
     def load_miniature(query_string)
+        query = split_query_string(query_string.to_s)
+        prev_commit = nil
+        yield_query(query) do |commit_path, commit, last_file, file|
+            first_diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+            prev_commit = { 'commit' => commit.parents[0],
+                            'last_file' => last_file.sha,
+                            'path' => query['path'] }
+        end
+
+        new_query(prev_commit) do |commit_path, commit, last_file, file|
+            second_diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+        end
+
+        second_diff.merge.merge(diff)
     end
 
     def load_parent(query_string)
-        encoded = yield_query(query_string) do |commit_path, commit, last_file, file|
+        query = split_query_string(query_string.to_s)
+        encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
             diff = GitRead::Diff.diff_strings(file.data, last_file.data)
 

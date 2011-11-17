@@ -349,6 +349,10 @@ function toggle_diff_full()
         { render_commit(i); }
 }
 
+function fetch_image(i)
+{
+}
+
 function back_to_the_past() 
 {
     var last_commit = last_infos[0];

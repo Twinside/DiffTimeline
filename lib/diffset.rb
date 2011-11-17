@@ -1,3 +1,4 @@
+require 'pp'
 
 module GitRead
     # Class describin a diff action to pass from
@@ -63,6 +64,15 @@ module GitRead
             &listing.each { |c| yield c if c.cmd == :rem_line }
         end
 
+        class ChangeRange
+            attr :beg, :last, :way
+            def initialize(way, beg, last)
+                @way = way
+                @beg = beg
+                @last = last
+            end
+        end
+
         # keep only :add from self, keep only ; del from other
         # ---------
         #              ------------ l'un puis l'autre
@@ -75,10 +85,106 @@ module GitRead
         #        ----------
         #   le début du premier, puis le combiné, et enfin la fin du dernier
         def merge(other_diffset)
-            self_idx = 0
-            rig_idx = 0
+            ranges = []
 
+            lefts = []
+            other_diffset.each_rem do |c|
+                lefts << ChangeRange.new(:rem, c.orig_idx, c.orig_idx + c.size)
+            end
 
+            rights = []
+            adds_actions do |c|
+                rights << ChangeRange.new(:add, c.dest_idx, c.dest_idx + c.size)
+            end
+
+            def combiner(a,b)
+                if a == :add && b == :rem)
+                    :addrem
+                else
+                    :remadd
+                end
+            end
+
+            left_read_index = 0
+            right_read_index = 0
+
+            left = lefts[left_read_index]
+            right = rights[right_read_index]
+
+            def swapArrays
+                var swap_idx = left_read_index
+                left_read_index = right_read_index
+                right_read_index = swap_idx
+
+                var swap_array = lefts
+                lefts = rights
+                rights = swap_array
+
+                var swap_obj = left
+                left = right
+                right = swap_obj
+            end
+
+            def inc_right
+                right_read_index += 1
+                right = rights[right_read_index] if right_read_index < rights.size
+            end
+
+            def inc_left
+                left_read_index += 1
+                left = lefts[left_read_index] if left_read_index < lefts.size
+            end
+
+            while left_read_index < lefts.size && right_read_index < rights.size do
+                if right.beg >= right.end 
+                    inc_right
+                elsif left.beg >= left.end
+                    inc_left
+                elsif right.beg < left.beg 
+                    swapArrays
+
+                elsif left.beg < right.beg && left.end < right.beg
+                    ranges << ChangeRange.new(left.way, left.beg, left.last)
+                    inc_left
+
+                elsif left.beg < right.beg && left.end <= right.end
+                    ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
+                    ranges << ChangeRange.new(combiner(left.way, right.way),
+                                              right.beg, left.last)
+                    right.beg = left.end + 1
+                    inc_left
+                elsif left.beg == right.beg
+                    if left.end <= right.end
+                        ranges << ChangeRange.new(combiner(left.way, right.way),
+                                                    left.beg, left.last)
+                        right.last = left.end + 1
+                        inc_left
+                    else
+                        ranges << ChangeRange.new(combiner(left.way, right.way),
+                                                  left.beg, right.last)
+                        left.beg = right.end + 1
+                        inc_right
+                    end
+                elsif left.beg < right.beg && left.end > right.end
+                    ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
+                    ranges << ChangeRange.new(combiner(left.way, right.way),
+                                              right.beg, right.end)
+                    left.beg = right.end + 1
+                    inc_right
+                end
+            end
+
+            while left_read_index < lefts.size
+                ranges << lefts[left_read_index]
+                left_read_index += 1
+            end
+
+            while right_read_index < rights.size
+                ranges << rights[right_read_index]
+                right_read_index += 1
+            end
+
+            ranges.each { |v| pp v }
         end
 
         def add_range(orig_line, dest_line, size)
@@ -109,6 +215,19 @@ module GitRead
                 end
             end
         end
+
+        # | Parse lines of a fil defining a diff of the following form :
+        #  "+:35:6"
+        #  /- -- -----> size
+        #  |    \_____ begin line
+        #  |
+        # diff action
+        # actions are 
+        #
+        #  * '+' : diff add
+        #  * '-' : diff deletion
+        #  * '~' : diff deletion then add
+        #  * '+' : diff add then deletion
     end
 end
 
