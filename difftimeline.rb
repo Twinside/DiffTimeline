@@ -19,6 +19,7 @@ require 'json'
 require_relative 'lib/diff'
 require_relative 'lib/objects'
 require_relative 'lib/cached_repository'
+require_relative 'lib/diffset'
 
 if ARGV.size <= 0
     puts "Error: no specified file"
@@ -152,18 +153,29 @@ class DiffTimelineState
     def load_miniature(query_string)
         query = split_query_string(query_string.to_s)
         prev_commit = nil
+        first_diff = nil
         yield_query(query) do |commit_path, commit, last_file, file|
-            first_diff = GitRead::Diff.diff_strings(file.data, last_file.data)
-            prev_commit = { 'commit' => commit.parents[0],
-                            'last_file' => last_file.sha,
+            first_diff = GitRead::Diff.diff_strings(file.data, last_file.data).diff_set
+            prev_commit = { 'commit' => commit.parents_sha[0].to_s,
+                            'last_file' => last_file.sha.to_s,
                             'path' => query['path'] }
         end
 
-        new_query(prev_commit) do |commit_path, commit, last_file, file|
-            second_diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+        second_diff = nil
+        yield_query(prev_commit) do |commit_path, commit, last_file, file|
+            second_diff = GitRead::Diff.diff_strings(file.data, last_file.data).diff_set
         end
 
-        second_diff.merge.merge(diff)
+        puts "Meh"
+        
+        begin
+            second_diff.merge_with( first_diff )
+        rescue => e
+            p e.message
+            p e.backtrace
+        end
+
+        puts "Boh"
     end
 
     def load_parent(query_string)

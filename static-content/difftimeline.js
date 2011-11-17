@@ -349,8 +349,20 @@ function toggle_diff_full()
         { render_commit(i); }
 }
 
-function fetch_image(i)
+function fetch_image(key)
 {
+    for ( var i in last_infos )
+    {
+        var e = last_infos[i];
+        if (e.key === key)
+        {
+            var params = { commit: e.parent_commit
+                        , last_file: e.filekey 
+                        , path: e.file };
+            
+            $.getJSON('miniature', params, function(data) {});
+        }
+    }
 }
 
 function back_to_the_past() 
@@ -378,6 +390,7 @@ function back_to_the_past()
 
         var commit = div_class('commit');
         commit.setAttribute('id', last_commit.parent_commit);
+        commit.setAttribute('onClick', 'fetch_image("' + last_commit.key + '");');
 
         var commitmsg = build_commit_message_node(last_commit.parent_commit, data.message);
         var deltas = build_commit_delta(data.path);

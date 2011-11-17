@@ -61,11 +61,11 @@ module GitRead
         end
 
         def each_rem
-            &listing.each { |c| yield c if c.cmd == :rem_line }
+            @listing.each { |c| yield c if c.cmd == :rem_line }
         end
 
         class ChangeRange
-            attr :beg, :last, :way
+            attr_accessor :beg, :last, :way
             def initialize(way, beg, last)
                 @way = way
                 @beg = beg
@@ -84,7 +84,8 @@ module GitRead
         #   ---------
         #        ----------
         #   le début du premier, puis le combiné, et enfin la fin du dernier
-        def merge(other_diffset)
+        def merge_with(other_diffset)
+            puts "Moumouk"
             ranges = []
 
             lefts = []
@@ -93,12 +94,12 @@ module GitRead
             end
 
             rights = []
-            adds_actions do |c|
+            each_add do |c|
                 rights << ChangeRange.new(:add, c.dest_idx, c.dest_idx + c.size)
             end
 
             def combiner(a,b)
-                if a == :add && b == :rem)
+                if a == :add && b == :rem
                     :addrem
                 else
                     :remadd
@@ -111,65 +112,65 @@ module GitRead
             left = lefts[left_read_index]
             right = rights[right_read_index]
 
-            def swapArrays
-                var swap_idx = left_read_index
+            swapArrays = lambda do
+                swap_idx = left_read_index
                 left_read_index = right_read_index
                 right_read_index = swap_idx
 
-                var swap_array = lefts
+                swap_array = lefts
                 lefts = rights
                 rights = swap_array
 
-                var swap_obj = left
+                swap_obj = left
                 left = right
                 right = swap_obj
             end
 
-            def inc_right
+            inc_right = lambda do
                 right_read_index += 1
                 right = rights[right_read_index] if right_read_index < rights.size
             end
 
-            def inc_left
+            inc_left = lambda do
                 left_read_index += 1
                 left = lefts[left_read_index] if left_read_index < lefts.size
             end
 
             while left_read_index < lefts.size && right_read_index < rights.size do
-                if right.beg >= right.end 
+                if right.beg >= right.last
                     inc_right
-                elsif left.beg >= left.end
+                elsif left.beg >= left.last
                     inc_left
                 elsif right.beg < left.beg 
                     swapArrays
 
-                elsif left.beg < right.beg && left.end < right.beg
+                elsif left.beg < right.beg && left.last < right.beg
                     ranges << ChangeRange.new(left.way, left.beg, left.last)
                     inc_left
 
-                elsif left.beg < right.beg && left.end <= right.end
+                elsif left.beg < right.beg && left.last <= right.last
                     ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
                     ranges << ChangeRange.new(combiner(left.way, right.way),
                                               right.beg, left.last)
-                    right.beg = left.end + 1
+                    right.beg = left.last + 1
                     inc_left
                 elsif left.beg == right.beg
-                    if left.end <= right.end
+                    if left.last <= right.last
                         ranges << ChangeRange.new(combiner(left.way, right.way),
                                                     left.beg, left.last)
-                        right.last = left.end + 1
+                        right.last = left.last + 1
                         inc_left
                     else
                         ranges << ChangeRange.new(combiner(left.way, right.way),
                                                   left.beg, right.last)
-                        left.beg = right.end + 1
+                        left.beg = right.last + 1
                         inc_right
                     end
-                elsif left.beg < right.beg && left.end > right.end
+                elsif left.beg < right.beg && left.last > right.last
                     ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
                     ranges << ChangeRange.new(combiner(left.way, right.way),
-                                              right.beg, right.end)
-                    left.beg = right.end + 1
+                                              right.beg, right.last)
+                    left.beg = right.last + 1
                     inc_right
                 end
             end

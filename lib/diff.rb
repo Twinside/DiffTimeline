@@ -1,3 +1,4 @@
+require_relative 'diffset'
 
 module GitRead
     class Diff
@@ -44,50 +45,6 @@ module GitRead
                 when :add_line
                     (d.dest_idx .. d.dest_idx + d.size - 1).each do |i|
                         puts "+ (#{i}) #{@dest[i]}"
-                    end
-                end
-            end
-        end
-
-        class DiffSet
-            def initialize()
-                @listing = []
-            end
-
-            def each
-                @listing.each { |v| yield v }
-            end
-
-            def to_json(*a)
-                json = @listing.map { |v| v.to_json }.join( "\n, " )
-                '[ ' + json + ' ]'
-            end
-
-            def add_range(orig_line, dest_line, size)
-                if @listing.size == 0
-                    @listing << DiffCommand.new(:add_line, orig_line, dest_line, size)
-                else
-                    prev = @listing.last
-
-                    if prev.cmd == :add_line && dest_line == prev.dest_idx + prev.size
-                        @listing.last.inc_size(size)
-                    else
-                        @listing << DiffCommand.new(:add_line, orig_line, dest_line, size)
-                    end
-                end
-            end
-
-            def rem_range(orig_line, dest_line, size)
-                if @listing.size == 0
-                    @listing << DiffCommand.new(:rem_line, orig_line, dest_line, size)
-                    return
-                else
-                    prev = @listing.last
-
-                    if prev.cmd == :rem_line && orig_line == prev.orig_idx + prev.size
-                        @listing.last.inc_size(size)
-                    else
-                        @listing << DiffCommand.new(:rem_line, orig_line, dest_line, size)
                     end
                 end
             end
