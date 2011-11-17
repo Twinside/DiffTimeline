@@ -357,10 +357,13 @@ function fetch_image(key)
         if (e.key === key)
         {
             var params = { commit: e.parent_commit
-                        , last_file: e.filekey 
-                        , path: e.file };
+                         , last_file: e.filekey 
+                         , path: e.file };
             
-            $.getJSON('miniature', params, function(data) {});
+            var miniatures = $('.miniatures').get()[0];
+            var toInsert = '<img src="miniature&commit=' + e.parent_commit + '&last_file=' + e.filekey + '&path=' + e.file + '" />';
+            miniatures.insertBefore(toInsert, minatures.childNodes[0]);
+            
         }
     }
 }
@@ -390,7 +393,6 @@ function back_to_the_past()
 
         var commit = div_class('commit');
         commit.setAttribute('id', last_commit.parent_commit);
-        commit.setAttribute('onClick', 'fetch_image("' + last_commit.key + '");');
 
         var commitmsg = build_commit_message_node(last_commit.parent_commit, data.message);
         var deltas = build_commit_delta(data.path);
@@ -407,6 +409,7 @@ function back_to_the_past()
 
         container.insertBefore(commit, container.childNodes[0]);
 
+
         last_infos.unshift( {
                        file: last_commit.file  
             ,          diff: data.diff
@@ -418,6 +421,8 @@ function back_to_the_past()
 
         render_commit( 0 );
         render_commit( 1 );
+
+        fetch_image(data.filekey);
     });
 }
 

@@ -71,6 +71,22 @@ module GitRead
                 @beg = beg
                 @last = last
             end
+
+            def to_s
+                way_str = ''
+                case @way
+                when :addrem
+                    way_str = '!'
+                when :remadd
+                    way_str = '~'
+                when :add
+                    way_str = '+'
+                when :rem
+                    way_str = '-'
+                end
+
+                "#{way_str}:#{@beg}:#{@last}"
+            end
         end
 
         # keep only :add from self, keep only ; del from other
@@ -85,7 +101,6 @@ module GitRead
         #        ----------
         #   le début du premier, puis le combiné, et enfin la fin du dernier
         def merge_with(other_diffset)
-            puts "Moumouk"
             ranges = []
 
             lefts = []
@@ -112,7 +127,7 @@ module GitRead
             left = lefts[left_read_index]
             right = rights[right_read_index]
 
-            swapArrays = lambda do
+            swap_arrays = lambda do
                 swap_idx = left_read_index
                 left_read_index = right_read_index
                 right_read_index = swap_idx
@@ -138,54 +153,52 @@ module GitRead
 
             while left_read_index < lefts.size && right_read_index < rights.size do
                 if right.beg >= right.last
-                    inc_right
+                    inc_right.call()
                 elsif left.beg >= left.last
-                    inc_left
+                    inc_left.call()
                 elsif right.beg < left.beg 
-                    swapArrays
+                    swap_arrays.call()
 
                 elsif left.beg < right.beg && left.last < right.beg
-                    ranges << ChangeRange.new(left.way, left.beg, left.last)
-                    inc_left
+                    yield ChangeRange.new(left.way, left.beg, left.last)
+                    inc_left.call()
 
                 elsif left.beg < right.beg && left.last <= right.last
-                    ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
-                    ranges << ChangeRange.new(combiner(left.way, right.way),
+                    yield ChangeRange.new(left.way, left.beg, right.beg - 1)
+                    yield ChangeRange.new(combiner(left.way, right.way),
                                               right.beg, left.last)
                     right.beg = left.last + 1
-                    inc_left
+                    inc_left.call()
                 elsif left.beg == right.beg
                     if left.last <= right.last
-                        ranges << ChangeRange.new(combiner(left.way, right.way),
+                        yield ChangeRange.new(combiner(left.way, right.way),
                                                     left.beg, left.last)
                         right.last = left.last + 1
-                        inc_left
+                        inc_left.call()
                     else
-                        ranges << ChangeRange.new(combiner(left.way, right.way),
+                        yield ChangeRange.new(combiner(left.way, right.way),
                                                   left.beg, right.last)
                         left.beg = right.last + 1
-                        inc_right
+                        inc_right.call()
                     end
                 elsif left.beg < right.beg && left.last > right.last
-                    ranges << ChangeRange.new(left.way, left.beg, right.beg - 1)
-                    ranges << ChangeRange.new(combiner(left.way, right.way),
-                                              right.beg, right.last)
+                    yield ChangeRange.new(left.way, left.beg, right.beg - 1)
+                    yield ChangeRange.new(combiner(left.way, right.way),
+                                          right.beg, right.last)
                     left.beg = right.last + 1
-                    inc_right
+                    inc_right.call()
                 end
             end
 
             while left_read_index < lefts.size
-                ranges << lefts[left_read_index]
+                yield lefts[left_read_index]
                 left_read_index += 1
             end
 
             while right_read_index < rights.size
-                ranges << rights[right_read_index]
+                yield rights[right_read_index]
                 right_read_index += 1
             end
-
-            ranges.each { |v| pp v }
         end
 
         def add_range(orig_line, dest_line, size)
@@ -216,19 +229,6 @@ module GitRead
                 end
             end
         end
-
-        # | Parse lines of a fil defining a diff of the following form :
-        #  "+:35:6"
-        #  /- -- -----> size
-        #  |    \_____ begin line
-        #  |
-        # diff action
-        # actions are 
-        #
-        #  * '+' : diff add
-        #  * '-' : diff deletion
-        #  * '~' : diff deletion then add
-        #  * '+' : diff add then deletion
     end
 end
 

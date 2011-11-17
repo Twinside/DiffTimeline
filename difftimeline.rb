@@ -162,20 +162,29 @@ class DiffTimelineState
         end
 
         second_diff = nil
+        file_data = nil
         yield_query(prev_commit) do |commit_path, commit, last_file, file|
-            second_diff = GitRead::Diff.diff_strings(file.data, last_file.data).diff_set
+            file_data = file.data
+            second_diff = GitRead::Diff.diff_strings(file_data, last_file.data).diff_set
         end
 
-        puts "Meh"
-        
-        begin
-            second_diff.merge_with( first_diff )
-        rescue => e
-            p e.message
-            p e.backtrace
+        temp_file = File.join(Dir.tmpdir, Pathname.new(query['path']).basename)
+        open(temp_file, 'w') { |file| file.write(file_data) }
+
+        temp_diff = tempfile + '.diff'
+        open(temp_diff, 'w') do |file|
+            second_diff.merge_with( first_diff ) { |range| file.write(range.to_s) }
         end
 
-        puts "Boh"
+        generated_file = temp_file + '.png'
+                   #"--conf=#{}"
+        system('codeoverview.exe',
+                   "--output=#{generated_file}",
+                   "--diff=#{temp_diff}",
+                   temp_file)
+        data = open(generated_file, 'rb') { |file| file.read }
+
+        [200, {'Content-Type' => 'image/png'}, [data]]
     end
 
     def load_parent(query_string)
@@ -290,6 +299,7 @@ END
                 </div>
             </div>
         </div>
+        <div id="miniatures" class="miniatures"></div>
     </body>
 </html>
 END

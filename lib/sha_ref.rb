@@ -22,6 +22,10 @@ module GitRead
             @sha
         end
 
+        def hash
+            @sha.hash
+        end
+
         def raw
             @raw_array
         end
