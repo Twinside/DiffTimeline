@@ -85,7 +85,7 @@ module GitRead
                     way_str = '-'
                 end
 
-                "#{way_str}:#{@beg}:#{@last}"
+                "#{way_str}:#{@beg}:#{@last - @beg + 1}"
             end
         end
 

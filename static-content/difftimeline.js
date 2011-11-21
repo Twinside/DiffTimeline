@@ -20,6 +20,12 @@ function div_class(classname) {
     return ret;
 }
 
+function img(src) {
+    ret = document.createElement('img');
+    ret.setAttribute('src', src);
+    return ret;
+}
+
 function pre(content) {
     ret = document.createElement('pre');
     ret.innerHTML = content;
@@ -349,23 +355,12 @@ function toggle_diff_full()
         { render_commit(i); }
 }
 
-function fetch_image(key)
+function fetch_image(e)
 {
-    for ( var i in last_infos )
-    {
-        var e = last_infos[i];
-        if (e.key === key)
-        {
-            var params = { commit: e.parent_commit
-                         , last_file: e.filekey 
-                         , path: e.file };
-            
-            var miniatures = $('.miniatures').get()[0];
-            var toInsert = '<img src="miniature&commit=' + e.parent_commit + '&last_file=' + e.filekey + '&path=' + e.file + '" />';
-            miniatures.insertBefore(toInsert, minatures.childNodes[0]);
-            
-        }
-    }
+    var miniatures = document.getElementById('miniatures');
+    var src = ('miniature?commit=' + e.parent_commit + '&last_file=' +
+                e.filekey + '&path=' + e.file);
+    miniatures.insertBefore(img(src), miniatures.childNodes[0]);
 }
 
 function back_to_the_past() 
@@ -410,19 +405,20 @@ function back_to_the_past()
         container.insertBefore(commit, container.childNodes[0]);
 
 
-        last_infos.unshift( {
+        var new_commit = {
                        file: last_commit.file  
             ,          diff: data.diff
             ,          data: encoded
             ,       filekey: data.filekey
             ,           key: last_commit.parent_commit
             , parent_commit: data.parent_commit
-        });
+        };
+        last_infos.unshift( new_commit );
 
         render_commit( 0 );
         render_commit( 1 );
 
-        fetch_image(data.filekey);
+        fetch_image(new_commit);
     });
 }
 

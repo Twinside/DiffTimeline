@@ -15,6 +15,7 @@ require 'launchy'
 require 'pp'
 require 'pathname'
 require 'json'
+require 'tmpdir'
 
 require_relative 'lib/diff'
 require_relative 'lib/objects'
@@ -168,23 +169,30 @@ class DiffTimelineState
             second_diff = GitRead::Diff.diff_strings(file_data, last_file.data).diff_set
         end
 
-        temp_file = File.join(Dir.tmpdir, Pathname.new(query['path']).basename)
-        open(temp_file, 'w') { |file| file.write(file_data) }
+        begin
+            temp_file = File.join(Dir.tmpdir, Pathname.new(query['path']).basename)
+            open(temp_file, 'w') { |file| file.write(file_data) }
 
-        temp_diff = tempfile + '.diff'
-        open(temp_diff, 'w') do |file|
-            second_diff.merge_with( first_diff ) { |range| file.write(range.to_s) }
+            temp_diff = temp_file + '.diff'
+            open(temp_diff, 'w') do |file|
+                second_diff.merge_with( first_diff ) { |range| file.write(range.to_s + "\n") }
+            end
+
+            generated_file = temp_file + '.png'
+                    #"--conf=#{}"
+            
+            system('cat', temp_diff)
+            system('C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe',
+                    "--output=#{generated_file}",
+                    "--diff=#{temp_diff}",
+                    temp_file)
+            data = open(generated_file, 'rb') { |file| file.read }
+
+            [200, {'Content-Type' => 'image/png'}, [data]]
+        rescue => e
+            puts e.message
+            e.backtrace.each { |v| puts v }
         end
-
-        generated_file = temp_file + '.png'
-                   #"--conf=#{}"
-        system('codeoverview.exe',
-                   "--output=#{generated_file}",
-                   "--diff=#{temp_diff}",
-                   temp_file)
-        data = open(generated_file, 'rb') { |file| file.read }
-
-        [200, {'Content-Type' => 'image/png'}, [data]]
     end
 
     def load_parent(query_string)
@@ -299,7 +307,9 @@ END
                 </div>
             </div>
         </div>
-        <div id="miniatures" class="miniatures"></div>
+        <div id="miniatures" class="miniatures">
+            &lt;mooh&gt;
+        </div>
     </body>
 </html>
 END
