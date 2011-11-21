@@ -14,6 +14,14 @@ body
     z-index: 0;
 }
 
+.miniatures
+{
+    width: 3000px;
+    left: 100px;
+    position: relative;
+    z-index: 0;
+}
+
 .toolbar
 {
     background: white;
