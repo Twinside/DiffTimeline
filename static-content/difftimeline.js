@@ -358,8 +358,8 @@ function toggle_diff_full()
 function fetch_image(e)
 {
     var miniatures = document.getElementById('miniatures');
-    var src = ('miniature?commit=' + e.parent_commit + '&last_file=' +
-                e.filekey + '&path=' + e.file);
+    var src = ('miniature/' + e.file + '?commit=' + e.parent_commit + '&last_file=' +
+                e.filekey);
     miniatures.insertBefore(img(src), miniatures.childNodes[0]);
 }
 
@@ -370,10 +370,9 @@ function back_to_the_past()
     var params = { commit: last_commit.parent_commit
                  // last_file: Hash
                  , last_file: last_commit.filekey 
-                 // file path, to be more restfull
-                 , path: last_commit.file };
+                 };
 
-    $.getJSON('ask_parent', params, function(data) {
+    $.getJSON('ask_parent/' + last_commit.file, params, function(data) {
         if (data === null) {
             show_error({error: 'Communication error with the server'});
             return;

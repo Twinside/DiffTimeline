@@ -49,6 +49,7 @@ class DiffTimelineState
 
         @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
         @repository = GitRead::CachedRepository.new(repo_dir)
+        @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
     end
 
     def find_nearest_git_repo
@@ -151,8 +152,9 @@ class DiffTimelineState
         yield commit_path, commit, last_file, file
     end
 
-    def load_miniature(query_string)
+    def load_miniature(file_req, query_string)
         query = split_query_string(query_string.to_s)
+        query['path'] = file_req
         prev_commit = nil
         first_diff = nil
         yield_query(query) do |commit_path, commit, last_file, file|
@@ -181,8 +183,7 @@ class DiffTimelineState
             generated_file = temp_file + '.png'
                     #"--conf=#{}"
             
-            system('cat', temp_diff)
-            system('C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe',
+            system(@codeoverview_exec,
                     "--output=#{generated_file}",
                     "--diff=#{temp_diff}",
                     temp_file)
@@ -195,8 +196,9 @@ class DiffTimelineState
         end
     end
 
-    def load_parent(query_string)
+    def load_parent(file_req, query_string)
         query = split_query_string(query_string.to_s)
+        query['path'] = file_req
         encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
             diff = GitRead::Diff.diff_strings(file.data, last_file.data)
@@ -356,21 +358,22 @@ static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
                  "screen.css", "favicon.ico", "underscore-min.js" ]
 
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
-  requested = request[:uri][:path]
-  puts "Requested: #{requested}"
+  requested = request[:uri][:path].to_s
+  command = Pathname.new(requested).each_filename.first
+  puts "Requested: #{requested} (#{command})"
 
-  if requested == '/ask_parent'
-      state.load_parent(request[:uri][:query])
-  elsif requested == '/miniature'
-      state.load_miniature(request[:uri][:query])
-  elsif requested == '/quit'
+  if command == 'ask_parent'
+      req_file = Pathname(requested).each_filename.drop(1).join("/")
+      state.load_parent(req_file, request[:uri][:query])
+  elsif command == 'miniature'
+      req_file = Pathname(requested).each_filename.drop(1).join("/")
+      state.load_miniature(req_file, request[:uri][:query])
+  elsif command == 'quit'
       puts "Leaving"
       exit 0
   else
     requested_file = requested.to_s.slice(1, requested.size)
 
-    # Security problem on the next line, permit access to an atacker to any file
-    # on the machine.
     if static_files.index(requested_file) != nil
         puts "> Serving file #{requested_file}\n"
         serve_file(exec_path + 'static-content/' + requested_file)
