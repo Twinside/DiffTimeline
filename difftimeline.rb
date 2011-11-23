@@ -50,6 +50,7 @@ class DiffTimelineState
         @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
         @repository = GitRead::CachedRepository.new(repo_dir)
         @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
+        @codeoverview_exec = '~/.vim/bundle/vim-codeoverview/plugin/codeoverview'
     end
 
     def find_nearest_git_repo
@@ -357,16 +358,35 @@ Launchy.open('http://127.0.0.1:8080')
 static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
                  "screen.css", "favicon.ico", "underscore-min.js" ]
 
+def first_filename(p)
+    p.each_filename { |v| return v }
+end
+
+def file_rest(p)
+    ret = []
+    dropped = false
+
+    p.each_filename do |v|
+        if dropped
+            ret << v
+        else
+            dropped = true
+        end
+    end
+
+    ret.join("/")
+end
+
 Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   requested = request[:uri][:path].to_s
-  command = Pathname.new(requested).each_filename.first
+  command = first_filename(Pathname.new(requested))
   puts "Requested: #{requested} (#{command})"
 
   if command == 'ask_parent'
-      req_file = Pathname(requested).each_filename.drop(1).join("/")
+      req_file = file_rest(Pathname(requested))
       state.load_parent(req_file, request[:uri][:query])
   elsif command == 'miniature'
-      req_file = Pathname(requested).each_filename.drop(1).join("/")
+      req_file = file_rest(Pathname(requested))
       state.load_miniature(req_file, request[:uri][:query])
   elsif command == 'quit'
       puts "Leaving"
