@@ -182,8 +182,10 @@ class DiffTimelineState
             end
 
             generated_file = temp_file + '.png'
-                    #"--conf=#{}"
             
+            puts "#{@codeoverview_exec} --output=#{generated_file} --diff=#{temp_diff} #{temp_file}"
+            puts `#{@codeoverview_exec} --output=#{generated_file} --diff=#{temp_diff} #{temp_file}`
+
             system(@codeoverview_exec,
                     "--output=#{generated_file}",
                     "--diff=#{temp_diff}",
