@@ -33,6 +33,9 @@ exec_path = Pathname(__FILE__).realpath.parent
 class RepositoryNotFound < RuntimeError
 end
 
+class QueryingError < RuntimeError
+end
+
 class FileNotInRepository < RuntimeError
     attr_reader :filename
     def initialize(f)
@@ -81,10 +84,10 @@ class DiffTimelineState
 
     def find_first_commit(file_path, commit_path, sha_file, last_commit, commit_sha)
         commit = @repository.access_object(commit_sha)
-        return nil if commit.nil?
+        return last_commit if commit.nil?
 
         file = commit.tree.access_path(file_path)
-        return nil if file.nil?
+        return last_commit if file.nil?
 
         return last_commit if sha_file != file.sha
         prev_commit = commit.parents_sha[0]
@@ -103,7 +106,7 @@ class DiffTimelineState
     def yield_query(query)
 
         if query['commit'] == nil || query['last_file'] == nil
-            return send_error_message('Invalid query')
+            raise QueryingError, send_error_message('Invalid query')
         end
         puts ">> Asking #{query['commit']}"
 
@@ -118,17 +121,21 @@ class DiffTimelineState
             commit = @repository.access_object(prev_commit)
 
             if commit.nil?
-                return send_error_message("Commit not found #{prev_commit}")
+                puts "Commit not found #{prev_commit}"
+                raise QueryingError, send_error_message("Commit not found #{prev_commit}")
             elsif commit.class != GitRead::Commit
-                return send_error_message("#{prev_commit} is not a commit.")
+                puts "#{prev_commit} is not a commit."
+                raise QueryingError, send_error_message("#{prev_commit} is not a commit.")
             end
 
             file = commit.tree.access_path(file_path)
 
             if file.nil?
-                return send_error_message("File not found in commit #{prev_commit}")
+                puts "File not found in commit #{prev_commit}"
+                raise QueryingError, send_error_message("File not found in commit #{prev_commit}")
             elsif file.class != GitRead::Blob
-                return send_error_message("file #{tracked_path} is not a file in commit #{prev_commit}")
+                puts "file #{tracked_path} is not a file in commit #{prev_commit}"
+                raise QueryingError, end_error_message("file #{tracked_path} is not a file in commit #{prev_commit}")
             end
 
             # while the file didn't change, we keep digging but
@@ -157,18 +164,22 @@ class DiffTimelineState
         query['path'] = file_req
         prev_commit = nil
         first_diff = nil
-        yield_query(query) do |commit_path, commit, last_file, file|
-            first_diff = GitRead::Diff.diff_strings(file.data, last_file.data).diff_set
-            prev_commit = { 'commit' => commit.parents_sha[0].to_s,
-                            'last_file' => last_file.sha.to_s,
-                            'path' => query['path'] }
-        end
+        begin
+            yield_query(query) do |commit_path, commit, last_file, file|
+                first_diff = GitRead::Diff.diff_strings(file.data, last_file.data).diff_set
+                prev_commit = { 'commit' => commit.parents_sha[0].to_s,
+                                'last_file' => last_file.sha.to_s,
+                                'path' => query['path'] }
+            end
 
-        second_diff = nil
-        file_data = nil
-        yield_query(prev_commit) do |commit_path, commit, last_file, file|
-            file_data = file.data
-            second_diff = GitRead::Diff.diff_strings(file_data, last_file.data).diff_set
+            second_diff = nil
+            file_data = nil
+            yield_query(prev_commit) do |commit_path, commit, last_file, file|
+                file_data = file.data
+                second_diff = GitRead::Diff.diff_strings(file_data, last_file.data).diff_set
+            end
+        rescue QueryingError => e
+            return e.message
         end
 
         begin
@@ -199,17 +210,21 @@ class DiffTimelineState
     def load_parent(file_req, query_string)
         query = split_query_string(query_string.to_s)
         query['path'] = file_req
-        encoded = yield_query(query) do |commit_path, commit, last_file, file|
+        begin
+            encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
-            diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+                diff = GitRead::Diff.diff_strings(file.data, last_file.data)
 
-            { "data" => file.data,
-              "filekey" => file.sha,
-              "parent_commit" => commit.parents_sha[0],
-              "message" => commit.message,
-              "diff" => diff.diff_set,
-              "path" => commit_path
-            }
+                { "data" => file.data,
+                  "filekey" => file.sha,
+                  "parent_commit" => commit.parents_sha[0],
+                  "message" => commit.message,
+                  "diff" => diff.diff_set,
+                  "path" => commit_path
+                }
+            end
+        rescue QueryingError => e
+            return e.message
         end
 
         response = encoded.to_json

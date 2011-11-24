@@ -32,7 +32,10 @@ function pre(content) {
     return ret;
 }
 
-function show_error( data ) { $('.message_display').html( data.error ) }
+function show_error( data )
+{
+    $('.message_carret').html( data.error )
+}
 
 function build_commit_delta(lst) {
     var node = div_class('commit_list');
@@ -125,7 +128,7 @@ var DiffManipulator = (function () {
                                     lines[d.beg]);
 
                 for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
-                    processed_lines.push(line_number_string(d.beg) + lines[lineNum]);
+                    processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
 
                 processed_lines.push(line_number_string(d.end) + lines[d.end] + ends[d.way]);
             }
