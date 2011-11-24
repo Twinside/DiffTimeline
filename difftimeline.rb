@@ -16,6 +16,7 @@ require 'pp'
 require 'pathname'
 require 'json'
 require 'tmpdir'
+require 'rbconfig'
 
 require_relative 'lib/diff'
 require_relative 'lib/objects'
@@ -52,8 +53,11 @@ class DiffTimelineState
 
         @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
         @repository = GitRead::CachedRepository.new(repo_dir)
-        @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
-        @codeoverview_exec = '~/.vim/bundle/vim-codeoverview/plugin/codeoverview'
+        if RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
+            @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
+        else
+            @codeoverview_exec = '~/.vim/bundle/vim-codeoverview/plugin/codeoverview'
+        end
     end
 
     def find_nearest_git_repo
