@@ -324,6 +324,22 @@ function add_line_number( lines )
     return ret;
 }
 
+function increase_context_size()
+{
+    application_state.context_size = application_state.context_size + 1;
+    $('.toolbar div textarea').text(application_state.context_size);
+    if (application_state.view_mode === 'compact')
+        { render_all_files(); }
+}
+
+function decrease_context_size()
+{
+    application_state.context_size = Math.max(0, application_state.context_size - 1);
+    $('.toolbar div textarea').text(application_state.context_size);
+    if (application_state.view_mode === 'compact')
+        { render_all_files(); }
+}
+
 function render_file(prev_diff, diff, data)
 {
     var rems = DiffManipulator.filterRems(diff);
@@ -341,6 +357,12 @@ function render_file(prev_diff, diff, data)
     }
 }
 
+function render_all_files()
+{
+    for ( var i in last_infos )
+        { render_commit(i); }
+}
+
 function toggle_diff_full()
 {
     var ranges = null;
@@ -353,9 +375,7 @@ function toggle_diff_full()
     $('.btn_toggleview').html(
         btn_toggle_text[application_state.view_mode]);
 
-
-    for ( var i in last_infos )
-        { render_commit(i); }
+    render_all_files();
 }
 
 function fetch_image(e)

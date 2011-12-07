@@ -97,6 +97,7 @@ pre .line_number
 /** The back to the past button, big blue */
 .btn_returnpast 
 {
+   width:            20px;
    position:         relative;
    font-width:       bold;
    font-size:        2.0em;
@@ -144,6 +145,7 @@ pre .line_number
 
 .btn_toggleview 
 {
+   width:            20px;
    position:         relative;
    font-width:       bold;
    font-size:        1.7em;
@@ -187,6 +189,34 @@ pre .line_number
 {
    border-top-color: #357aaf;
    background: #357aaf;
+}
+
+.toolbar div textarea
+{
+    width: 15px;
+    height: 10px;
+    font-size: 9px;
+    resize: none;
+}
+
+.toolbar div button
+{
+    padding: 0px;
+    width:  12px;
+    height: 12px;
+    font-size: 8px;
+}
+
+.toolbar div div
+{
+    width: 13px;
+    display: inline-block;
+}
+
+.toolbar div .label
+{
+    font-size: 9px;
+    padding-bottom: 0px;
 }
 
 .commitinfo

@@ -315,6 +315,14 @@ END
             <div class="btn_returnpast"
                  onClick="back_to_the_past()"
                  title="Fetch previous version">&lt;</div>
+            <div>
+                <span class="label">Context size</span><br />
+                <textarea readonly="true" rows="1">2</textarea>
+                <div>
+                    <button type="button" onClick="increase_context_size()">+</button>
+                    <button type="button" onClick="decrease_context_size()">-</button>
+                </div>
+            </div>
         </div>
         <div id="container" class="container">
             <div class="commit" id="#{commit.sha}">
