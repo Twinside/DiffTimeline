@@ -290,6 +290,11 @@ pre .line_number
     -webkit-border-radius: 7px;
 }
 
+.ellipsis
+{
+    float: left;
+}
+
 .message_carret
 {
     background-color: orange;
@@ -306,7 +311,7 @@ pre .line_number
 /* ================================================ */
 /* Tooltip rules                                    */
 /* ================================================ */
-.delta_commit_circle div {
+.ellipsis div, .delta_commit_circle div {
     display: none;
 }
 
@@ -315,7 +320,7 @@ pre .line_number
     z-index: 500;
 }
 
-.delta_commit_circle:hover div {
+.ellipsis:hover div, .delta_commit_circle:hover div {
     font-style: normal;
     display:    block;
     position:   absolute;

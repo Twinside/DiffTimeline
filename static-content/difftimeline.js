@@ -3,7 +3,9 @@
 /////////////////////////////////////////////////////////////////////
 var application_state = {  
     view_mode: 'full',
-    context_size: 2
+    context_size: 2,
+    max_commit_delta_show: 15,
+    commit_delta_margin: 6
 };
 
 var btn_toggle_text = {
@@ -39,15 +41,37 @@ function show_error( data )
 
 function build_commit_delta(lst) {
     var node = div_class('commit_list');
-    for ( var i = lst.length - 1; i >= 0; i-- )
-    {
-        var interval_commit = lst[i];
+    var commit_renderer = function (interval_commit) {
         var new_commit = div_class('delta_commit_circle');
 
         var msg_tooltip = document.createElement('div');
         msg_tooltip.innerHTML = interval_commit.message;
         new_commit.appendChild(msg_tooltip);
         node.appendChild(new_commit);
+    }
+
+    if (lst.length < application_state.max_commit_delta_show)
+    {
+        for ( var i = lst.length - 1; i >= 0; i-- )
+            { commit_renderer( lst[i] ); }
+    }
+    else // we show the first n and last n
+    {
+        var commit_context_size = application_state.commit_delta_margin;
+        var low_bound = lst.length - 1 - commit_context_size;
+
+        for ( var i = lst.length - 1; i >= low_bound; i-- )
+            { commit_renderer( lst[i] ); }
+        
+        var ellipsis = div_class('ellipsis');
+        var msg_tooltip = document.createElement('div');
+        msg_tooltip.innerHTML = lst.length + " commits";
+        ellipsis.innerHTML = "...";
+        ellipsis.appendChild(msg_tooltip);
+        node.appendChild(ellipsis);
+
+        for (i = commit_context_size; i >= 0; i--)
+            { commit_renderer( lst[i] ); }
     }
 
     return node;
