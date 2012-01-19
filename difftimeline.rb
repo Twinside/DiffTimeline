@@ -285,6 +285,7 @@ END
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
         <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
+        <script language="javascript" type="text/javascript" src="tinysyntaxhighlighter.js"></script>
         <script language="javascript" type="text/javascript">
             var last_infos = [ { file: "#{@tracked_path}"
                                , key: "#{current_head}"
@@ -385,7 +386,8 @@ end
 Launchy.open('http://127.0.0.1:8080')
 
 static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
-                 "screen.css", "favicon.ico", "underscore-min.js" ]
+                 "screen.css", "favicon.ico", "underscore-min.js",
+                 "tinysyntaxhighlighter.js"]
 
 def first_filename(p)
     p.each_filename { |v| return v }

@@ -342,8 +342,13 @@ function render_commit( commit_number )
 function add_line_number( lines )
 {
     var ret = [];
+    var highlighter = TinySyntaxHighlighter.c_highlighter();
+
     for ( var i = 0; i < lines.length; i++ )
-        ret.push('<span class="line_number">' + (i + 1).toString() + '</span>' + lines[i]);
+    {
+        ret.push('<span class="line_number">' + (i + 1).toString() + '</span>' +
+                 highlighter.colorLine(lines[i]));
+    }
 
     return ret;
 }
