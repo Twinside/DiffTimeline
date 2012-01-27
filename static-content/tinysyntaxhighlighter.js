@@ -7,7 +7,7 @@ var TinySyntaxHighlighter = (function () {
         var nextTabIndex = line.indexOf('\t', currentIndex);
     };
 
-    var isPrefixOf = function( pref, line, base ) {
+    function isTokenPrefixOf( pref, line, base ) {
         if (line.length < pref.length) return false;
 
         for ( var i = 0; i < pref.length; i++ )
@@ -29,6 +29,7 @@ var TinySyntaxHighlighter = (function () {
         var maxIndex = line.length;
         var currentIndex = 0;
         var ret = "";
+        var consumed = false;
 
         for ( var j in this.activeStack )
         {
@@ -38,7 +39,7 @@ var TinySyntaxHighlighter = (function () {
 
         while (currentIndex < maxIndex)
         {
-            while (line[currentIndex] === ' ' || line[curentIndex] === '\t')
+            while (line[currentIndex] === ' ' || line[currentIndex] === '\t')
             {
                 ret += line[currentIndex];
                 currentIndex++;
@@ -47,23 +48,30 @@ var TinySyntaxHighlighter = (function () {
             for ( var i in this.def.regions )
             {
                 var r = this.def.regions[i];
-                if (isPrefixOf(r.begin, line, currentIndex))
+                if (isTokenPrefixOf(r.begin, line, currentIndex))
                 {
+                    trace('Hook');
                     this.activeStack.push(r.kind);
                     ret += '<span class="' + r.kind + '">';
                     consumed = true;
                     currentIndex += r.begin.length;
+                    break;
                 }
-                else if (isPrefixOf(r.end, line, currentIndex))
+                else if (isTokenPrefixOf(r.end, line, currentIndex))
                 {
                     this.activeStack.pop();
                     ret += '</span>';
                     currentIndex += r.end.length;
+                    break;
                 }
             }
 
 
-            if (consumed) continue;
+            if (consumed)
+            {
+                consumed = false;
+                continue;   
+            }
             var tokenIndex = nextSpaceIndex( line, currentIndex );
             var substr = line.substring(currentIndex, tokenIndex - 1);
 
@@ -86,7 +94,7 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     };
 
-    var createHighlighter( highlightDef ) = function {
+    var createHighlighter = function( highlightDef ) {
         this.activeStack = [];
         this.def = highlightDef;
         this.colorLine = colorLine;
@@ -95,8 +103,8 @@ var TinySyntaxHighlighter = (function () {
 
     var cDef = {
         regions:[
-            { begin:"/*", end:"*/", kind="syntax_comment", nested=false },
-            { begin:"//", end:"\n", kind="syntax_comment", nested=false }
+            { begin:"/*", end:"*/", kind:"syntax_comment", nested:false },
+            { begin:"//", end:"\n", kind:"syntax_comment", nested:false }
         ],
 
         parsers:[
@@ -115,7 +123,7 @@ var TinySyntaxHighlighter = (function () {
 
                 return line.substring(idx, currIdx);
             }
-        ]
+        ],
             
         keywords:{
             "if"    :"syntax_conditional",
@@ -129,6 +137,6 @@ var TinySyntaxHighlighter = (function () {
     };
     
     return {
-        c_highlighter: function () { return createHighlighter( cDef ); }
+        c_highlighter: function () { return new createHighlighter( cDef ); }
     };
 })();
