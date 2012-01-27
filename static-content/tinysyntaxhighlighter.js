@@ -50,7 +50,6 @@ var TinySyntaxHighlighter = (function () {
                 var r = this.def.regions[i];
                 if (isTokenPrefixOf(r.begin, line, currentIndex))
                 {
-                    trace('Hook');
                     this.activeStack.push(r.kind);
                     ret += '<span class="' + r.kind + '">';
                     consumed = true;
@@ -66,23 +65,30 @@ var TinySyntaxHighlighter = (function () {
                 }
             }
 
-
-            if (consumed)
+            for ( var i in this.def.parsers )
             {
-                consumed = false;
-                continue;   
-            }
-            var tokenIndex = nextSpaceIndex( line, currentIndex );
-            var substr = line.substring(currentIndex, tokenIndex - 1);
+                var parser = this.def.parsers[i];
+                var parserRet = parser.recognizer(line, currentIndex);
 
-            if (this.def.keywords.hasOwnProperty(substr))
-            {
-                ret += '<span class="' + this.def.keywords[substr];
-                ret += substr + '</span>';
-            }
-            else ret += substr;
+                if (parserRet !== '')
+                {
+                    if (this.def.keywords.hasOwnProperty(parserRet))
+                    {
+                        ret += '<span class="' + this.def.keywords[parserRet];
+                        ret += + '">' + parserRet + '</span>';
+                    }
+                    else ret += '<span class="' + parser.kind + '">' + parserRet + '</span>';
 
-            currentIndex += substr.length;
+                    currentIndex += parserRet.length;
+                    consumed = true;
+                    break;
+                }
+            }
+
+            if (!consumed)
+                { ret += line[currentIndex++]; }
+
+            consumed = false;
         }
 
         // end of line, we must close all the
@@ -101,6 +107,44 @@ var TinySyntaxHighlighter = (function () {
         return this;
     };
 
+    var rubyDef = {
+        parsers:[
+            { recognizer: function( line, idx ) {
+                    if (line[idx] !== '#') return '';
+                    return line.substring(idx, line.length - 1);
+              }
+            , kind: 'syntax_comment'
+            },
+
+            { recognizer: function( line, idx ) {
+                var currIdx = idx;
+
+                if (currIdx < line.length && !line[currIdx++].match(/[a-zA-Z]/))
+                    return '';
+
+                while (currIdx < line.length && line[currIdx].match(/[_a-zA-Z0-9]/))
+                    { currIdx++; }
+
+                return line.substring(idx, currIdx);
+              }
+
+            , kind: 'syntax_identifier'
+            }
+        ],
+            
+        keywords:{
+            "begin" :"syntax_conditional",
+            "end"   :"syntax_conditional",
+            "switch":"syntax_conditional",
+            "else"  :"syntax_conditional",
+
+            "for"    :"syntax_loop" ,
+            "while"  :"syntax_loop" ,
+            "do"     :"syntax_loop" 
+        }
+        
+    }
+
     var cDef = {
         regions:[
             { begin:"/*", end:"*/", kind:"syntax_comment", nested:false },
@@ -108,20 +152,25 @@ var TinySyntaxHighlighter = (function () {
         ],
 
         parsers:[
-            function( line, idx ) {
-                if (line[idx] !== '"') return "";
-            },
+            //{ recognizer: function( line, idx ) {
+                    //if (line[idx] !== '"') return '';
+              //}
+            //, kind: 'syntax_string'
+            //},
 
-            function( line, idx ) {
+            { recognizer: function( line, idx ) {
                 var currIdx = idx;
-                if (!line[idx].match(/[a-zA-Z]/))
-                    return "";
 
-                idx++;
-                while (line[currIdx].match(/[a-zA-Z]/))
+                if (currIdx < line.length && !line[currIdx++].match(/[a-zA-Z]/))
+                    return '';
+
+                while (currIdx < line.length && line[currIdx].match(/[_a-zA-Z0-9]/))
                     { currIdx++; }
 
                 return line.substring(idx, currIdx);
+              }
+
+            , kind: 'syntax_identifier'
             }
         ],
             
@@ -137,6 +186,6 @@ var TinySyntaxHighlighter = (function () {
     };
     
     return {
-        c_highlighter: function () { return new createHighlighter( cDef ); }
+        c_highlighter: function () { return new createHighlighter( rubyDef /*cDef */); }
     };
 })();
