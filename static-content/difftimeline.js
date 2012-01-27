@@ -335,14 +335,18 @@ function render_commit( commit_number )
 {
     var current_commit = last_infos[commit_number];
     var prevs = commit_number <= 0 ? [] : last_infos[commit_number - 1].diff;
-    var neo_content = render_file(prevs, current_commit.diff, current_commit.data);
+    var neo_content = render_file( current_commit.file
+                                 , prevs
+                                 , current_commit.diff
+                                 , current_commit.data);
+
     $('#' + current_commit.key + ' .file_content pre').html(neo_content);
 }
 
-function add_line_number( lines )
+function add_line_number( filename, lines )
 {
     var ret = [];
-    var highlighter = TinySyntaxHighlighter.c_highlighter();
+    var highlighter = TinySyntaxHighlighter.from_filename(filename);
 
     for ( var i = 0; i < lines.length; i++ )
     {
@@ -369,7 +373,7 @@ function decrease_context_size()
         { render_all_files(); }
 }
 
-function render_file(prev_diff, diff, data)
+function render_file(filename, prev_diff, diff, data)
 {
     var rems = DiffManipulator.filterRems(diff);
     var adds = DiffManipulator.filterAdds(prev_diff);
@@ -379,7 +383,7 @@ function render_file(prev_diff, diff, data)
         return DiffManipulator.generateCompactHtml(application_state.context_size, true, data, ranges);
     else // render full
     {
-        var lines = add_line_number(data.split('\n'));
+        var lines = add_line_number(filename, data.split('\n'));
         var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
         var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
         return diffed_content.join('\n');

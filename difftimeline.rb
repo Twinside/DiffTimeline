@@ -281,6 +281,7 @@ END
         <title>#{@tracked_path}</title>
         <link href="screen.css" type="text/css" rel="stylesheet" />
         <link href="difftimeline.css" type="text/css" rel="stylesheet" />
+        <link href="syntax-highlight.css" type="text/css" rel="stylesheet" />
         <!-- Loading from local path to be able to work offline -->
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
@@ -385,9 +386,9 @@ end
 # Serious race condition, but it will be ok to test
 Launchy.open('http://127.0.0.1:8080')
 
-static_files = [ "difftimeline.css", "difftimeline.js", "jquery-1.6.4.min.js",
-                 "screen.css", "favicon.ico", "underscore-min.js",
-                 "tinysyntaxhighlighter.js"]
+static_files = [ 'difftimeline.css', 'difftimeline.js', 'jquery-1.6.4.min.js',
+                 'screen.css', 'favicon.ico', 'underscore-min.js',
+                 'tinysyntaxhighlighter.js', 'syntax-highlight.css']
 
 def first_filename(p)
     p.each_filename { |v| return v }

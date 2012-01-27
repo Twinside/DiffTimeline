@@ -74,10 +74,13 @@ var TinySyntaxHighlighter = (function () {
                 {
                     if (this.def.keywords.hasOwnProperty(parserRet))
                     {
-                        ret += '<span class="' + this.def.keywords[parserRet];
-                        ret += + '">' + parserRet + '</span>';
+                        var found_class = this.def.keywords[parserRet]
+                        ret += '<span class="' + found_class + '">' + parserRet + '</span>';
                     }
-                    else ret += '<span class="' + parser.kind + '">' + parserRet + '</span>';
+                    else
+                    {
+                        ret += '<span class="' + parser.kind + '">' + parserRet + '</span>';
+                    }
 
                     currentIndex += parserRet.length;
                     consumed = true;
@@ -106,17 +109,29 @@ var TinySyntaxHighlighter = (function () {
         this.colorLine = colorLine;
         return this;
     };
-
-    var rubyDef = {
-        parsers:[
-            { recognizer: function( line, idx ) {
+    var generic_parsers = {
+        conf_comment:
+            { kind: 'syntax_comment'
+            , recognizer: function( line, idx ) {
                     if (line[idx] !== '#') return '';
                     return line.substring(idx, line.length - 1);
               }
-            , kind: 'syntax_comment'
             },
 
-            { recognizer: function( line, idx ) {
+        integer:
+            { kind: 'syntax_number'
+            , recognizer: function( line, idx ) {
+                    var currIdx = idx;
+                    while (currIdx < line.length && line[currIdx].match(/[0-9]/))
+                        { currIdx++; }
+
+                    return line.substring(idx, currIdx);
+              }
+            },
+
+        c_like_identifier:
+            { kind: 'syntax_identifier'
+            , recognizer: function( line, idx ) {
                 var currIdx = idx;
 
                 if (currIdx < line.length && !line[currIdx++].match(/[a-zA-Z]/))
@@ -127,65 +142,110 @@ var TinySyntaxHighlighter = (function () {
 
                 return line.substring(idx, currIdx);
               }
+            },
 
-            , kind: 'syntax_identifier'
+        simple_quote_string:
+            { kind: 'syntax_string'
+            , recognizer: function( line, idx ) {
+                if (line[idx] !== "'") return '';
+
+                var currIdx = idx + 1;
+                while (currIdx < line.length)
+                {
+                    if (line[currIdx] === "'") {
+                        return line.substring(idx, currIdx + 1);
+                    }
+                    currIdx++;
+                }
+
+                return '';
+              }
+            },
+
+        double_quote_string:
+            { kind: 'syntax_string'
+            , recognizer: function( line, idx ) {
+                if (line[idx] !== '"') return '';
+
+                var currIdx = idx + 1;
+                while (currIdx < line.length)
+                {
+                    if (line[currIdx] === '"') {
+                        return line.substring(idx, currIdx + 1);
+                    }
+                    currIdx++;
+                }
+
+                return '';
+              }
             }
-        ],
-            
-        keywords:{
-            "begin" :"syntax_conditional",
-            "end"   :"syntax_conditional",
-            "switch":"syntax_conditional",
-            "else"  :"syntax_conditional",
+    }
 
-            "for"    :"syntax_loop" ,
-            "while"  :"syntax_loop" ,
-            "do"     :"syntax_loop" 
+    function expand_keyword_groups( lst ) {
+        var ret = {};
+
+        for ( var group in lst )
+        {
+            var g = lst[group];
+            for ( var word in g.words )
+                ret[g.words[word]] = g.kind;
         }
+
+        return ret;
+    }
+
+    var rubyDef = {
+        parsers:[ generic_parsers.conf_comment
+                , generic_parsers.double_quote_string
+                , generic_parsers.simple_quote_string
+                , generic_parsers.integer
+                , generic_parsers.c_like_identifier
+                ],
+            
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_preproc'  , words:["def", "class", "undef", "module", "end"] }
+            , { kind:'syntax_keyword'  , words:["super", "yield", "alias", "undef" ] }
+            , { kind:'syntax_bool'     , words:["true", "false"] }
+            , { kind:'syntax_statement', words:[ "and", "break", "in", "next", "not", "or"
+                                               , "redo", "rescue", "retry", "return"] }
+            , { kind:'syntax_conditional', words: ["if", "case", "then", "else", "when", "elsif", "unless"] }
+            , { kind:'syntax_loop'       , words: ["while", "until", "for", "in"] }
+            , { kind:'syntax_constant'   , words: ["nil", "self", "__FILE__", "__LINE__"] }
+            ]),
         
+        regions:[]
     }
 
     var cDef = {
-        regions:[
-            { begin:"/*", end:"*/", kind:"syntax_comment", nested:false },
-            { begin:"//", end:"\n", kind:"syntax_comment", nested:false }
-        ],
+        regions:[{ begin:"/*", end:"*/", kind:"syntax_comment", nested:false }],
 
-        parsers:[
-            //{ recognizer: function( line, idx ) {
-                    //if (line[idx] !== '"') return '';
-              //}
-            //, kind: 'syntax_string'
-            //},
-
-            { recognizer: function( line, idx ) {
-                var currIdx = idx;
-
-                if (currIdx < line.length && !line[currIdx++].match(/[a-zA-Z]/))
-                    return '';
-
-                while (currIdx < line.length && line[currIdx].match(/[_a-zA-Z0-9]/))
-                    { currIdx++; }
-
-                return line.substring(idx, currIdx);
-              }
-
-            , kind: 'syntax_identifier'
-            }
-        ],
+        parsers:[generic_parsers.c_like_identifier],
             
         keywords:{
-            "if"    :"syntax_conditional",
-            "switch":"syntax_conditional",
-            "else"  :"syntax_conditional",
+            'if'    :'syntax_conditional',
+            'switch':'syntax_conditional',
+            'else'  :'syntax_conditional',
 
-            "for"    :"syntax_loop" ,
-            "while"  :"syntax_loop" ,
-            "do"     :"syntax_loop" 
+            'for'    :'syntax_loop' ,
+            'while'  :'syntax_loop' ,
+            'do'     :'syntax_loop' 
         }
     };
     
+    function instantiate_from_filename(filename)
+    {
+        if (filename.match(/\.rb$/))
+            return new createHighlighter( rubyDef );
+        else if (filename.match(/\.c$/))
+            return new createHighlighter( cDef );
+
+        return new createHighlighter( cDef );
+    }
+
     return {
-        c_highlighter: function () { return new createHighlighter( rubyDef /*cDef */); }
+        c_highlighter: function () { return new createHighlighter( cDef ); },
+        ruby_highlighter: function() { return new createHighlighter( rubyDef ); },
+
+        from_filename: instantiate_from_filename
     };
 })();

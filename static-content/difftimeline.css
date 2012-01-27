@@ -342,23 +342,3 @@ pre .line_number
     border: 1px solid #777777;
 }
 
-
-.syntax_loop {
-    color: red;
-}
-
-.syntax_conditional {
-    color: blue;
-}
-
-.syntax_identifier {
-    color: grey;
-}
-
-.syntax_string {
-    color: orange;
-}
-
-.syntax_comment {
-    color: green;
-}

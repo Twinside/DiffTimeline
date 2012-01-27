@@ -1,0 +1,36 @@
+.syntax_loop {
+    color: red;
+}
+
+.syntax_conditional {
+    color: blue;
+}
+
+.syntax_number {
+    color: purple;
+}
+
+.syntax_preproc {
+    color: lightblue;
+}
+
+.syntax_identifier {
+    color: black;
+}
+
+.syntax_bool {
+    color: azure;
+}
+
+.syntax_constant {
+    color: pink;
+}
+
+.syntax_string {
+    color: orange;
+}
+
+.syntax_comment {
+    color: green;
+}
+
