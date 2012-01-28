@@ -1,36 +1,48 @@
+pre.syntax_highlighted {
+    color #fdf6e3;
+}
+
 .syntax_loop {
-    color: red;
+    color: #859900;
 }
 
 .syntax_conditional {
-    color: blue;
+    color: #859900;
+}
+
+.syntax_keyword {
+    color: #859900;
 }
 
 .syntax_number {
-    color: purple;
+    color: #2aa198;
+}
+
+.syntax_statement {
+    color: #859900;
 }
 
 .syntax_preproc {
-    color: lightblue;
+    color: #cb4b16;
 }
 
 .syntax_identifier {
-    color: black;
+    color: #268bd2;
 }
 
 .syntax_bool {
-    color: azure;
+    color: #2aa198;
 }
 
 .syntax_constant {
-    color: pink;
+    color: #2aa198;
 }
 
 .syntax_string {
-    color: orange;
+    color: #2aa198;
 }
 
 .syntax_comment {
-    color: green;
+    color: #586e75;
 }
 

@@ -28,8 +28,9 @@ function img(src) {
     return ret;
 }
 
-function pre(content) {
+function pre(class_name, content) {
     ret = document.createElement('pre');
+    ret.setAttribute('class', class_name);
     ret.innerHTML = content;
     return ret;
 }
@@ -450,7 +451,7 @@ function back_to_the_past()
 
         var encoded = data.data.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
         var content = div_class('file_content');
-        content.appendChild(pre(''));
+        content.appendChild(pre('syntax_highlighted', ''));
 
         commit.appendChild(commit_info);
         commit.appendChild(content);
