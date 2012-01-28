@@ -97,12 +97,14 @@ function div_sub( cl, lst ) {
 ////////////////////////////////////////////////////////////
 var DiffManipulator = (function () {
     /** Generate an HTML representation of a diff and a file content.
+     * @param filename filename of the file, used for syntax detection
      * @param contextSize Int
      * @param isLineNumberRequired {Bool}
      * @param data {String} file content.
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
-    var generate_compact_html = function (contextSize, isLineNumberRequired, data, diff) {
+    var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff) {
+        var highlighter = TinySyntaxHighlighter.from_filename(filename);
         var lines = data.split("\n");
         var begs = {
             '+': '<div class="diff_addition">',
@@ -125,6 +127,7 @@ var DiffManipulator = (function () {
         }
 
         var last_outputted_line = -1;
+        var colorized;
 
         var i;
         for ( i = 0; i < diff.length; i++ )
@@ -139,29 +142,39 @@ var DiffManipulator = (function () {
                 processed_lines.push("...");
 
             for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ )
-                processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
+            {
+                colorized = highlighter.colorLine(lines[lineNum]);
+                processed_lines.push(line_number_string(lineNum) + colorized);
+            }
 
             // output the real diff
             if (d.end - d.beg == 0)
             {
+                colorized = highlighter.colorLine(lines[d.beg]);
                 processed_lines.push(begs[d.way] + line_number_string(d.beg) +
-                                     lines[d.beg] + ends[d.way]);
+                                     colorized  + ends[d.way]);
             }
             else
             {
-                processed_lines.push( begs[d.way] + line_number_string(d.beg) +
-                                    lines[d.beg]);
+                colorized = highlighter.colorLine(lines[d.beg]);
+                processed_lines.push( begs[d.way] + line_number_string(d.beg) + colorized);
 
                 for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
-                    processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
+                {
+                    colorized = highlighter.colorLine(lines[lineNum]);
+                    processed_lines.push(line_number_string(lineNum) + colorized);
+                }
 
-                processed_lines.push(line_number_string(d.end) + lines[d.end] + ends[d.way]);
+                colorized = highlighter.colorLine(lines[d.end]);
+                processed_lines.push(line_number_string(d.end) + colorized + ends[d.way]);
             }
 
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
             var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
-            for ( var lineNum = d.end + 1; lineNum <= context_end; lineNum++ )
-                processed_lines.push(line_number_string(lineNum) + lines[lineNum]);
+            for ( var lineNum = d.end + 1; lineNum <= context_end; lineNum++ ) {
+                colorized = highlighter.colorLine(lines[lineNum]);
+                processed_lines.push(line_number_string(lineNum) + colorized);
+            }
 
             last_outputted_line = context_end;
         }
@@ -381,7 +394,8 @@ function render_file(filename, prev_diff, diff, data)
     var ranges = DiffManipulator.calculateFoldSet(rems, adds);
 
     if (application_state.view_mode === 'compact')
-        return DiffManipulator.generateCompactHtml(application_state.context_size, true, data, ranges);
+        return DiffManipulator.generateCompactHtml(filename, application_state.context_size,
+                                                   true, data, ranges);
     else // render full
     {
         var lines = add_line_number(filename, data.split('\n'));
@@ -420,7 +434,31 @@ function fetch_image(e)
     miniatures.insertBefore(img(src), miniatures.childNodes[0]);
 }
 
-function back_to_the_past() 
+function create_html_elements_for_commit(last_commit) {
+
+    var container = document.getElementById('container');
+
+    var commit = div_class('commit');
+    commit.setAttribute('id', last_commit.key);
+
+    var commitmsg = build_commit_message_node(last_commit.key,
+                                              last_commit.message);
+
+    var deltas = build_commit_delta(last_commit.path);
+    var commit_info = div_sub("commitinfo", [commitmsg, deltas]);
+
+    var content = div_class('file_content');
+    content.appendChild(pre('syntax_highlighted', ''));
+
+    commit.appendChild(commit_info);
+    commit.appendChild(content);
+
+    var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
+
+    container.insertBefore(commit, container.childNodes[0]);
+}
+
+function back_to_the_past()
 {
     var last_commit = last_infos[0];
                  // commit: Hash
@@ -440,42 +478,30 @@ function back_to_the_past()
             return;
         }
 
-        var container = document.getElementById('container');
-
-        var commit = div_class('commit');
-        commit.setAttribute('id', last_commit.parent_commit);
-
-        var commitmsg = build_commit_message_node(last_commit.parent_commit, data.message);
-        var deltas = build_commit_delta(data.path);
-        var commit_info = div_sub("commitinfo", [commitmsg, deltas]);
-
-        var encoded = data.data.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
-        var content = div_class('file_content');
-        content.appendChild(pre('syntax_highlighted', ''));
-
-        commit.appendChild(commit_info);
-        commit.appendChild(content);
-
-        var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
-
-        container.insertBefore(commit, container.childNodes[0]);
-
-
         var new_commit = {
                        file: last_commit.file  
             ,          diff: data.diff
-            ,          data: encoded
+            ,          data: data.data
             ,       filekey: data.filekey
             ,           key: last_commit.parent_commit
+            ,       message: data.message
             , parent_commit: data.parent_commit
+            ,          path: data.path
         };
+
+        create_html_elements_for_commit( new_commit );
         last_infos.unshift( new_commit );
 
         render_commit( 0 );
         render_commit( 1 );
 
-        fetch_image(new_commit);
+        // fetch_image(new_commit);
     });
+}
+
+function render_initial_document() {
+    create_html_elements_for_commit( last_infos[0] );
+    render_commit(0);
 }
 
 function leave_server()

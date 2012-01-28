@@ -25,6 +25,10 @@ var TinySyntaxHighlighter = (function () {
         return Math.min( spaceIndex, tabIndex );
     }
 
+    var html_encodize = function(snipp) {
+        return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
+    }
+
     var colorLine = function ( line ) {
         var maxIndex = line.length;
         var currentIndex = 0;
@@ -39,11 +43,14 @@ var TinySyntaxHighlighter = (function () {
 
         while (currentIndex < maxIndex)
         {
-            while (line[currentIndex] === ' ' || line[currentIndex] === '\t')
+            while (currentIndex < maxIndex &&
+                   line[currentIndex] === ' ' || line[currentIndex] === '\t')
             {
                 ret += line[currentIndex];
                 currentIndex++;
             }
+
+            if (currentIndex >= maxIndex) break;
 
             for ( var i in this.def.regions )
             {
@@ -79,7 +86,7 @@ var TinySyntaxHighlighter = (function () {
                     }
                     else
                     {
-                        ret += '<span class="' + parser.kind + '">' + parserRet + '</span>';
+                        ret += '<span class="' + parser.kind + '">' + html_encodize(parserRet) + '</span>';
                     }
 
                     currentIndex += parserRet.length;
@@ -89,7 +96,7 @@ var TinySyntaxHighlighter = (function () {
             }
 
             if (!consumed)
-                { ret += line[currentIndex++]; }
+                { ret += html_encodize(line[currentIndex++]); }
 
             consumed = false;
         }

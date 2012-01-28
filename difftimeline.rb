@@ -271,83 +271,21 @@ END
             return serve_not_found_error()
         end
 
-        encoded_data = html_encode_file(file.data)
+        base_application_state = <<END
+        var last_infos = [ { file: "#{@tracked_path}"
+                           , key: "#{current_head}"
+                           , filekey: "#{file.sha}"
+                           , parent_commit: "#{commit.parents_sha[0]}"
+                           , data: #{file.data.to_json}
+                           , message: #{commit.message.to_json}
+                           , diff: []
+                           , path: []
+                           } ];
 
-        html_doc = <<END
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-        <title>#{@tracked_path}</title>
-        <link href="screen.css" type="text/css" rel="stylesheet" />
-        <link href="difftimeline.css" type="text/css" rel="stylesheet" />
-        <link href="syntax-highlight.css" type="text/css" rel="stylesheet" />
-        <!-- Loading from local path to be able to work offline -->
-        <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
-        <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
-        <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
-        <script language="javascript" type="text/javascript" src="tinysyntaxhighlighter.js"></script>
-        <script language="javascript" type="text/javascript">
-            var last_infos = [ { file: "#{@tracked_path}"
-                               , key: "#{current_head}"
-                               , filekey: "#{file.sha}"
-                               , parent_commit: "#{commit.parents_sha[0]}"
-                               , data: #{encoded_data.to_json}
-                               , diff: [] } ];
-        </script>
-    </head>
-    <body onUnload="leave_server()">
-        <div class="message_carret" id="message_display"></div>
-        <div class="legend">
-            <table>
-                <tr>
-                    <td><div class="diff_addition">&nbsp;&nbsp;</td><td>Addition</td>
-                    <td><div class="diff_deletion">&nbsp;&nbsp;</td><td>Deletion</td>
-                    <td><div class="diff_addition">
-                        <div class="diff_deletion">&nbsp;&nbsp;</div></td><td>Added then removed</td>
-                    <td><div class="diff_deletion"><div class="diff_addition">&nbsp;&nbsp;</div></td><td>Removed then added</td>
-
-                </tr>
-            </table>
-        </div>
-        <div class="toolbar">
-            <div class="btn_toggleview"
-                 onClick="toggle_diff_full()"
-                 title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
-            <div class="btn_returnpast"
-                 onClick="back_to_the_past()"
-                 title="Fetch previous version">&lt;</div>
-            <div>
-                <span class="label">Context size</span><br />
-                <textarea readonly="true" rows="1">2</textarea>
-                <div>
-                    <button type="button" onClick="increase_context_size()">+</button>
-                    <button type="button" onClick="decrease_context_size()">-</button>
-                </div>
-            </div>
-        </div>
-        <div id="container" class="container">
-            <div class="commit" id="#{commit.sha}">
-                <div class="commitinfo">
-                    <div class="commitmsg">
-                        <span class="id">#{commit.sha.short}</span>
-                        <hr />
-                        <h4 title="#{commit.message}">#{first_line(commit.message)}<h4>
-                    </div>
-                    <div class="commit_list">&nbsp;</div>
-                </div>
-                <div class="file_content">
-                    <pre>#{encoded_data}</pre>
-                </div>
-            </div>
-        </div>
-        <div id="miniatures" class="miniatures">
-            &lt;mooh&gt;
-        </div>
-    </body>
-</html>
+        render_initial_document();
 END
-        [200, {'Content-Type' => 'text/html'}, [html_doc]]
+
+        [200, {'Content-Type' => 'text/javascript'}, [base_application_state]]
     end
 end
 
@@ -423,6 +361,9 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
   elsif command == 'quit'
       puts "Leaving"
       exit 0
+  elsif command == 'initial_info.js'
+      puts '> Serving initial_info.js'
+      state.serve_base_page
   else
     requested_file = requested.to_s.slice(1, requested.size)
 
@@ -431,7 +372,7 @@ Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
         serve_file(exec_path + 'static-content/' + requested_file)
     elsif requested == '/'
         puts "> Sending base page"
-        state.serve_base_page
+        serve_file(exec_path + 'static-content/base_page.html')
     else
         [404, {}, []]
     end
