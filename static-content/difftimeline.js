@@ -17,19 +17,19 @@ var btn_toggle_text = {
 //              HTML generation
 /////////////////////////////////////////////////////////////////////
 function div_class(classname) {
-    ret = document.createElement('div');
+    var ret = document.createElement('div');
     ret.setAttribute('class', classname);
     return ret;
 }
 
 function img(src) {
-    ret = document.createElement('img');
+    var ret = document.createElement('img');
     ret.setAttribute('src', src);
     return ret;
 }
 
 function pre(class_name, content) {
-    ret = document.createElement('pre');
+    var ret = document.createElement('pre');
     ret.setAttribute('class', class_name);
     ret.innerHTML = content;
     return ret;
