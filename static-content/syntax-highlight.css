@@ -1,8 +1,13 @@
 .syntax_highlighted {
+    color: #586e75;
     background: #fdf6e3;
 }
 
-.syntax_loop {
+.syntax_comment {
+    color: #839496;
+}
+
+.syntax_repeat {
     color: #859900;
 }
 
@@ -42,7 +47,22 @@
     color: #2aa198;
 }
 
-.syntax_comment {
-    color: #586e75;
+.syntax_type {
+    color: #b58900;
 }
 
+.syntax_storage_class {
+    color: #b58900;
+}
+
+.syntax_structure {
+    color: #b58900;
+}
+
+.syntax_label {
+    color: #859900;
+}
+
+.syntax_operator {
+    color: #859900;
+}
