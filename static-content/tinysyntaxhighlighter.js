@@ -257,6 +257,30 @@ var TinySyntaxHighlighter = (function () {
         return region;
     }
 
+    var haskellDef = {
+        begin:'', end:'',
+
+        regions: [make_region_recursive({ begin:"{-", end:"-}", kind:"syntax_comment"
+                                        , regions:[], parsers:[], keywords:[] })],
+
+        parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.double_quote_string
+                , generic_parsers.integer
+                ],
+
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ['if', 'then', 'else'] }
+            , { kind:'syntax_statement', words:['do', 'case', 'of', 'let', 'in'  ] }
+            , { kind:'syntax_module', words:['module'] }
+            , { kind:'syntax_typedef', words:['import'] }
+            , { kind:'syntax_type'
+              , words:[ 'Int', 'Integer', 'Char', 'Bool', 'Float'
+                      , 'Double', 'IO', 'Void', 'Addr', 'Array'
+                      , 'String', 'Maybe', 'Either', 'Ratio', 'Complex'
+                      , 'Ordering', 'IOError', 'IOResult', 'ExitCode']}
+            ])
+    };
+
     /** @const */
     var cDef = {
         begin:'', end:'',
@@ -326,6 +350,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter( cDef );
         else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/))
             return new create_highlighter( cppDef );
+        else if (filename.match(/\.hs$/))
+            return new create_highlighter( haskellDef );
 
         return new create_empty_highlighter();
     }
@@ -333,6 +359,7 @@ var TinySyntaxHighlighter = (function () {
     return {
         c_highlighter: function () { return new create_highlighter( cDef ); },
         cpp_highlighter: function () { return new create_highlighter( cppDef ); },
+        haskell_highlighter: function() { return new create_highlighter( haskellDef ); },
         ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
         empty_highlighter: function() { return new create_empty_highlighter(); },
 
