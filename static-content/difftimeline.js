@@ -393,12 +393,14 @@ function render_file(filename, prev_diff, diff, data)
     var adds = DiffManipulator.filterAdds(prev_diff);
     var ranges = DiffManipulator.calculateFoldSet(rems, adds);
 
+    var clean_cr_lf_data = data.replace(/\r/g, '');
+
     if (application_state.view_mode === 'compact')
         return DiffManipulator.generateCompactHtml(filename, application_state.context_size,
-                                                   true, data, ranges);
+                                                   true, clean_cr_lf_data, ranges);
     else // render full
     {
-        var lines = add_line_number(filename, data.split('\n'));
+        var lines = add_line_number(filename, clean_cr_lf_data.split('\n'));
         var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
         var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
         return diffed_content.join('\n');
