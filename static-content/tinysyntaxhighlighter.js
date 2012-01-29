@@ -271,32 +271,52 @@ var TinySyntaxHighlighter = (function () {
                 ],
             
         keywords:expand_keyword_groups(
-            [ { kind:'syntax_conditional', words: ["if", "else", "switch"] }
-            , { kind:'syntax_statement', words: ["goto", "break", "return", "continue", "asm"] }
-            , { kind:'syntax_label', words:["case", "default"] }
-            , { kind:'syntax_repeat', words:["while", "for", "do"] }
-            , { kind:'syntax_structure', words: ["struct", "union", "enum", "typedef"] }
+            [ { kind:'syntax_conditional', words: ['if', 'else', 'switch'] }
+            , { kind:'syntax_statement', words: ['goto', 'break', 'return', 'continue', 'asm'] }
+            , { kind:'syntax_label', words:['case', 'default'] }
+            , { kind:'syntax_repeat', words:['while', 'for', 'do'] }
+            , { kind:'syntax_structure', words: ['struct', 'union', 'enum', 'typedef'] }
             , { kind:'syntax_storage_class'
-              , words: ["static", "register", "auto", "volatile",
-                        "extern", "const", "inline"] }
+              , words: ['static', 'register', 'auto', 'volatile',
+                        'extern', 'const', 'inline'] }
             , { kind:'syntax_type'
-              , words:[ "int", "long", "short", "char", "void", "signed", "unsigned"
-                      , "float", "double", "size_t", "ssize_t", "off_t", "wchar_t"
-                      , "ptrdiff_t", "sig_atomic_t", "fp2408.339os_t", "clock_t", "time_t"
-                      , "va_list", "jmp_buf", "FILE", "DIR", "div_t", "ldiv_t"
-                      , "mbstate_t", "wctrans_t", "wint_t", "wctype_t", "bool"
-                      , "complex", "int8_t", "int16_t", "int32_t", "int64_t"
-                      , "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int_least8_t"
-                      , "int_least16_t", "int_least32_t", "int_least64_t"
-                      , "uint_least8_t", "uint_least16_t", "uint_least32_t"
-                      , "uint_least64_t", "int_fast8_t", "int_fast16_t"
-                      , "int_fast32_t", "int_fast64_t", "uint_fast8_t"
-                      , "uint_fast16_t", "uint_fast32_t", "uint_fast64_t", "intptr_t"
-                      , "uintptr_t", "intmax_t", "uintmax_t", "__label__"
-                      , "__complex__", "__volatile__"]
+              , words:[ 'int', 'long', 'short', 'char', 'void', 'signed', 'unsigned'
+                      , 'float', 'double', 'size_t', 'ssize_t', 'off_t', 'wchar_t'
+                      , 'ptrdiff_t', 'sig_atomic_t', 'fp2408.339os_t', 'clock_t', 'time_t'
+                      , 'va_list', 'jmp_buf', 'FILE', 'DIR', 'div_t', 'ldiv_t'
+                      , 'mbstate_t', 'wctrans_t', 'wint_t', 'wctype_t', 'bool'
+                      , 'complex', 'int8_t', 'int16_t', 'int32_t', 'int64_t'
+                      , 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'int_least8_t'
+                      , 'int_least16_t', 'int_least32_t', 'int_least64_t'
+                      , 'uint_least8_t', 'uint_least16_t', 'uint_least32_t'
+                      , 'uint_least64_t', 'int_fast8_t', 'int_fast16_t'
+                      , 'int_fast32_t', 'int_fast64_t', 'uint_fast8_t'
+                      , 'uint_fast16_t', 'uint_fast32_t', 'uint_fast64_t', 'intptr_t'
+                      , 'uintptr_t', 'intmax_t', 'uintmax_t', '__label__'
+                      , '__complex__', '__volatile__']
               }
             ])
     };
+
+    var cppDef = (function() {
+        var cppOnlyDef = {
+            keywords:expand_keyword_groups(
+                [ { kind:'syntax_statement', words:['new', 'delete', 'this', 'friend', 'using'] }
+                , { kind:'syntax_statement', words:["public", "protected", "private"] }
+                , { kind:'syntax_type', words:["inline", "virtual", "explicit", "export", "bool", "wchar_t"] }
+                , { kind:'syntax_exception', words:["throw", "try", "catch"] }
+                , { kind:'syntax_operator', words:["operator", "typeid", "and", "bitor", "or", "xor"
+                                                  ,"compl" ,"bitand", "and_eq", "or_eq", "xor_eq", "not"
+                                                  , "not_eq"]}
+                , { kind:'syntax_structure', words:["class", "typename", "template", "namespace"] }
+                ]
+            )
+        };
+
+        $.extend(true, cppOnlyDef, cDef);
+
+        return cppOnlyDef;
+    })();
     
     function instantiate_from_filename(filename)
     {
@@ -304,12 +324,15 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter( rubyDef );
         else if (filename.match(/\.c$/))
             return new create_highlighter( cDef );
+        else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/))
+            return new create_highlighter( cppDef );
 
         return new create_empty_highlighter();
     }
 
     return {
         c_highlighter: function () { return new create_highlighter( cDef ); },
+        cpp_highlighter: function () { return new create_highlighter( cppDef ); },
         ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
         empty_highlighter: function() { return new create_empty_highlighter(); },
 
