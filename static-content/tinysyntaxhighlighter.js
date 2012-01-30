@@ -348,7 +348,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter( rubyDef );
         else if (filename.match(/\.c$/))
             return new create_highlighter( cDef );
-        else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/))
+        else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/) ||
+                 filename.match(/\.h$/)   || filename.match(/\.hpp$/))
             return new create_highlighter( cppDef );
         else if (filename.match(/\.hs$/))
             return new create_highlighter( haskellDef );
