@@ -157,6 +157,24 @@ var TinySyntaxHighlighter = (function () {
               }
             },
 
+        c_like_preproc:
+            { kind: 'syntax_preproc'
+            , recognizer: function( line, idx ) {
+                    if (line[idx] !== '#') return '';
+
+                    var currIdx = idx + 1;
+                    while (currIdx < line.length && line[currIdx].match(/ \t/))
+                        currIdx++;
+
+                    if (currIdx >= line.length) return '';
+
+                    while (currIdx < line.length && line[currIdx].match(/[a-zA-Z0-9_]/))
+                        currIdx++;
+
+                    return line.substring(idx, currIdx);
+                }
+            },
+
         simple_quote_string:
             { kind: 'syntax_string'
             , recognizer: function( line, idx ) {
@@ -280,6 +298,7 @@ var TinySyntaxHighlighter = (function () {
                  , regions:[], parsers:[], keywords:[] }],
 
         parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.c_like_preproc
                 , generic_parsers.double_quote_string
                 , generic_parsers.integer
                 , generic_parsers.monoline_comment('//')
