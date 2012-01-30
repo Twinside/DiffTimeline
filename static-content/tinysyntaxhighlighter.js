@@ -131,14 +131,6 @@ var TinySyntaxHighlighter = (function () {
     };
 
     var generic_parsers = {
-        conf_comment:
-            { kind: 'syntax_comment'
-            , recognizer: function( line, idx ) {
-                    if (line[idx] !== '#') return '';
-                    return line.substring(idx, line.length - 1);
-              }
-            },
-
         integer:
             { kind: 'syntax_number'
             , recognizer: function( line, idx ) {
@@ -201,17 +193,15 @@ var TinySyntaxHighlighter = (function () {
               }
             },
 
-        cpp_monoline_comment:
-            { kind:'syntax_comment'
-            , recognizer: function( line, idx ) {
-                if (idx + 1 < line.length &&
-                    line[idx] === '/' && line[idx + 1] === '/') {
-                    return line.substring(idx, line.length - 1);
+        monoline_comment: function( commentPrefix ) {
+            return { kind:'syntax_comment'
+                   , recognizer: function( line, idx ) {
+                        return (isTokenPrefixOf( commentPrefix, line, idx ) 
+                               ? line.substring(idx, line.length)
+                               : '');
+                   }
                 }
-
-                return '';
-              }
-            }
+        }
     }
 
     function expand_keyword_groups( lst ) {
@@ -231,7 +221,7 @@ var TinySyntaxHighlighter = (function () {
     var rubyDef = {
         begin:'', end:'',
 
-        parsers:[ generic_parsers.conf_comment
+        parsers:[ generic_parsers.monoline_comment('#')
                 , generic_parsers.double_quote_string
                 , generic_parsers.simple_quote_string
                 , generic_parsers.integer
@@ -264,6 +254,7 @@ var TinySyntaxHighlighter = (function () {
                                         , regions:[], parsers:[], keywords:[] })],
 
         parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.monoline_comment('--')
                 , generic_parsers.double_quote_string
                 , generic_parsers.integer
                 ],
@@ -291,7 +282,7 @@ var TinySyntaxHighlighter = (function () {
         parsers:[ generic_parsers.c_like_identifier
                 , generic_parsers.double_quote_string
                 , generic_parsers.integer
-                , generic_parsers.cpp_monoline_comment
+                , generic_parsers.monoline_comment('//')
                 ],
             
         keywords:expand_keyword_groups(
