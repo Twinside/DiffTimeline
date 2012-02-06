@@ -29,8 +29,6 @@ if ARGV.size <= 0
     exit(1)
 end
 
-exec_path = Pathname(__FILE__).realpath.parent
-
 class RepositoryNotFound < RuntimeError
 end
 
@@ -46,7 +44,9 @@ end
 
 class DiffTimelineState
     def initialize
+        @is_client_launched = false
         @current_dir = Pathname.new(Dir.pwd)
+        @exec_path = Pathname(__FILE__).realpath.parent
         repo_dir = find_nearest_git_repo()
 
         raise RepositoryNotFound if repo_dir.nil?
@@ -57,6 +57,19 @@ class DiffTimelineState
             @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
         else
             @codeoverview_exec = '~/.vim/bundle/vim-codeoverview/plugin/codeoverview'
+        end
+    end
+
+    def exec_path
+        @exec_path
+    end
+
+    def launch_client(port)
+        if !@is_client_launched
+            puts 'Launching client'
+            # Serious race condition, but it will be ok to test
+            Launchy.open("http://127.0.0.1:#{port}")
+            @is_client_launched = true
         end
     end
 
@@ -292,6 +305,7 @@ end
 state = nil
 begin
     state = DiffTimelineState.new()
+    puts '> Found git repository'
 rescue RepositoryNotFound
     puts "Error : no git repository found"
     exit(1)
@@ -321,13 +335,6 @@ def serve_file(filename)
     [200, {'Content-Type' => kind}, [ret]]
 end
 
-# Serious race condition, but it will be ok to test
-Launchy.open('http://127.0.0.1:8080')
-
-static_files = [ 'difftimeline.css', 'difftimeline.js', 'jquery-1.6.4.min.js',
-                 'screen.css', 'favicon.ico', 'underscore-min.js',
-                 'tinysyntaxhighlighter.js', 'syntax-highlight.css']
-
 def first_filename(p)
     p.each_filename { |v| return v }
 end
@@ -347,35 +354,66 @@ def file_rest(p)
     ret.join("/")
 end
 
-Net::HTTP::Server.run(:host => '127.0.0.1', :port => 8080) do |request,socket|
-  requested = request[:uri][:path].to_s
-  command = first_filename(Pathname.new(requested))
-  puts "Requested: #{requested} (#{command})"
+def server_process(state, port, request, socket)
+  static_files = [ 'difftimeline.css', 'difftimeline.js', 'jquery-1.6.4.min.js',
+                 'screen.css', 'favicon.ico', 'underscore-min.js',
+                 'tinysyntaxhighlighter.js', 'syntax-highlight.css']
 
-  if command == 'ask_parent'
-      req_file = file_rest(Pathname(requested))
-      state.load_parent(req_file, request[:uri][:query])
-  elsif command == 'miniature'
-      req_file = file_rest(Pathname(requested))
-      state.load_miniature(req_file, request[:uri][:query])
-  elsif command == 'quit'
-      puts "Leaving"
-      exit 0
-  elsif command == 'initial_info.js'
-      puts '> Serving initial_info.js'
-      state.serve_base_page
-  else
-    requested_file = requested.to_s.slice(1, requested.size)
+  begin
+    requested = request[:uri][:path].to_s
+    command = first_filename(Pathname.new(requested))
 
-    if static_files.index(requested_file) != nil
-        puts "> Serving file #{requested_file}\n"
-        serve_file(exec_path + 'static-content/' + requested_file)
-    elsif requested == '/'
-        puts "> Sending base page"
-        serve_file(exec_path + 'static-content/base_page.html')
+    if command == 'ask_parent'
+        req_file = file_rest(Pathname(requested))
+        state.load_parent(req_file, request[:uri][:query])
+    elsif command == 'miniature'
+        req_file = file_rest(Pathname(requested))
+        state.load_miniature(req_file, request[:uri][:query])
+    elsif command == 'quit'
+        puts "Leaving"
+        exit 0
+    elsif command == 'initial_info.js'
+        puts '> Serving initial_info.js'
+        state.serve_base_page
     else
-        [404, {}, []]
+        requested_file = requested.to_s.slice(1, requested.size)
+        static_index = 0
+        static_index = static_files.index(requested_file)
+
+        if static_index  != nil
+            puts "> Serving file #{requested_file}\n"
+            serve_file(state.exec_path + 'static-content/' + requested_file)
+        elsif requested == '/'
+            puts "> Sending base page"
+            serve_file(state.exec_path + 'static-content/base_page.html')
+        else
+            [404, {}, []]
+        end
     end
+  rescue StandardError => e
+      puts "Difftimeline error " + e.to_s
   end
 end
 
+
+def success_launcher(app_state, port)
+    puts 'Ok state '
+   Proc.new { app_state.launch_client(port) }
+end
+
+def launch_server(application_state, port)
+    success_callback = lambda { application_state.launch_client(port) }
+    begin
+        puts("> Trying to launch on port #{port}")
+        Net::HTTP::Server.run( :host => '127.0.0.1',
+                               :port => port,
+                               :success_opener => success_callback  ) do |request,socket|
+            server_process(application_state, port, request, socket)
+        end
+    rescue Errno::EADDRINUSE
+        puts "> Port #{port} already in use, trying port #{port + 1}"
+        launch_server(application_state, port + 1)
+    end
+end
+
+launch_server(state, 8080)
