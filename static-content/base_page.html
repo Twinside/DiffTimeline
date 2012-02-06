@@ -11,11 +11,12 @@
         <div class="legend">
             <table>
                 <tr>
-                    <td><div class="diff_addition">&nbsp;&nbsp;</td><td>Addition</td>
-                    <td><div class="diff_deletion">&nbsp;&nbsp;</td><td>Deletion</td>
+                    <td><div class="diff_addition">&nbsp;&nbsp;</div></td><td>Addition</td>
+                    <td><div class="diff_deletion">&nbsp;&nbsp;</div></td><td>Deletion</td>
                     <td><div class="diff_addition">
-                        <div class="diff_deletion">&nbsp;&nbsp;</div></td><td>Added then removed</td>
-                    <td><div class="diff_deletion"><div class="diff_addition">&nbsp;&nbsp;</div></td><td>Removed then added</td>
+                        <div class="diff_deletion">&nbsp;&nbsp;</div></div></td><td>Added then removed</td>
+                    <td><div class="diff_deletion">
+                        <div class="diff_addition">&nbsp;&nbsp;</div></div></td><td>Removed then added</td>
 
                 </tr>
             </table>
@@ -35,6 +36,17 @@
                     <button type="button" onClick="decrease_context_size()">-</button>
                 </div>
             </div>
+
+            <form>
+                <table>
+                    <tr>
+                        <td><small>Syntax<br/>highlight</small></td>
+                    </tr>
+                    <tr>
+                        <td><input type="checkbox" name="chkHighlight" checked="yes"/></td>
+                    </tr>
+                </table>
+            </form>
         </div>
         <div id="container" class="container" />
         <br/>
