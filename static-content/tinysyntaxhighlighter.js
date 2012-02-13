@@ -315,6 +315,36 @@ var TinySyntaxHighlighter = (function () {
             ])
     };
 
+    var javascriptDef = {
+        begin:'', end:'',
+
+        regions:[{ begin:"/*", end:"*/", kind:"syntax_comment"
+                 , regions:[], parsers:[], keywords:[] }],
+
+        parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.double_quote_string
+                , generic_parsers.simple_quote_string
+                , generic_parsers.integer
+                , generic_parsers.monoline_comment('//')
+                ],
+
+        keywords:expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ['if', 'else', 'switch'] }
+            , { kind:'syntax_repeat', words:['while', 'for', 'do', 'in'] }
+            , { kind:'syntax_statement', words: ['return', 'with'] }
+            , { kind:'syntax_label', words:['case', 'default', 'break', 'continue'] }
+            , { kind:'syntax_exception', words:["throw", "try", "catch", "finally"] }
+            , { kind:'syntax_bool'     , words:["true", "false"] }
+            , { kind:'syntax_operator' , words:['new', 'delete', 'instanceof', 'typeof'] }
+            , { kind:'syntax_function' , words:['function'] }
+
+            , { kind:'syntax_identifier', words:['arguments', 'this', 'var', 'let'] }
+            , { kind:'syntax_type'
+              , words:['Array', 'Boolean', 'Date', 'Function', 'Number', 'Object', 'String', 'RegExp']
+              }
+            ])
+    };
+
     /** @const */
     var cDef = {
         begin:'', end:'',
@@ -362,6 +392,7 @@ var TinySyntaxHighlighter = (function () {
             keywords:expand_keyword_groups(
                 [ { kind:'syntax_statement', words:['new', 'delete', 'this', 'friend', 'using'] }
                 , { kind:'syntax_statement', words:["public", "protected", "private"] }
+                , { kind:'syntax_bool'     , words:["true", "false"] }
                 , { kind:'syntax_type', words:["inline", "virtual", "explicit", "export", "bool", "wchar_t"] }
                 , { kind:'syntax_exception', words:["throw", "try", "catch"] }
                 , { kind:'syntax_operator', words:["operator", "typeid", "and", "bitor", "or", "xor"
@@ -390,6 +421,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter( haskellDef );
         else if (filename.match(/\.py$/))
             return new create_highlighter( pythonDef );
+        else if (filename.match(/\.js$/))
+            return new create_highlighter( javascriptDef );
 
         return new create_empty_highlighter();
     }
@@ -400,6 +433,7 @@ var TinySyntaxHighlighter = (function () {
         haskell_highlighter: function() { return new create_highlighter( haskellDef ); },
         ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
         python_highlighter: function() { return new create_highlighter( pythonDef ); },
+        javascript_highlighter: function () { return new create_highlighter( javascriptDef ); },
         empty_highlighter: function() { return new create_empty_highlighter(); },
 
         from_filename: instantiate_from_filename
