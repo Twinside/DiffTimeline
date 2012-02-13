@@ -116,7 +116,7 @@ var TinySyntaxHighlighter = (function () {
      * @constructor
      */
     var create_empty_highlighter = function() {
-        this.colorLine = function( line ) { return line };
+        this.colorLine = html_encodize;
         return this;
     };
 
