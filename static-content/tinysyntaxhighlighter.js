@@ -260,6 +260,31 @@ var TinySyntaxHighlighter = (function () {
         regions:[]
     };
 
+    var pythonDef = {
+        begin:'', end:'',
+
+        parsers:[ generic_parsers.monoline_comment('#')
+                , generic_parsers.double_quote_string
+                , generic_parsers.simple_quote_string
+                , generic_parsers.integer
+                , generic_parsers.c_like_identifier
+                ],
+            
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_preproc'  , words:["from", "import"] }
+            , { kind:'syntax_bool'     , words:["True", "False"] }
+            , { kind:'syntax_statement', words: ["None","as", "assert", "break"
+                                                ,"continue", "del", "exec", "global", "lambda"
+                                                ,"nonlocal", "pass", "print", "return", "with"
+                                                ,"yield", "class", "def"]}
+            , { kind:'syntax_conditional', words: ["if", "else", "elif"] }
+            , { kind:'syntax_repeat'     , words: ["while", "for"] }
+            , { kind:'syntax_exception', words:["except", "finally", "raise", "try"] }
+            ]),
+        
+        regions:[]
+    };
+
     function make_region_recursive(region) {
         region.regions.push(region);
         return region;
@@ -363,6 +388,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter( cppDef );
         else if (filename.match(/\.hs$/))
             return new create_highlighter( haskellDef );
+        else if (filename.match(/\.py$/))
+            return new create_highlighter( pythonDef );
 
         return new create_empty_highlighter();
     }
@@ -372,6 +399,7 @@ var TinySyntaxHighlighter = (function () {
         cpp_highlighter: function () { return new create_highlighter( cppDef ); },
         haskell_highlighter: function() { return new create_highlighter( haskellDef ); },
         ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
+        python_highlighter: function() { return new create_highlighter( pythonDef ); },
         empty_highlighter: function() { return new create_empty_highlighter(); },
 
         from_filename: instantiate_from_filename
