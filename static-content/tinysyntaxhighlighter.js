@@ -115,16 +115,18 @@ var TinySyntaxHighlighter = (function () {
     /** Create a highlighter which just pass-through the line
      * @constructor
      */
-    var create_empty_highlighter = function() {
-        this.colorLine = function( line ) { return line };
+    var create_empty_highlighter = function(with_line_number) {
+        this.with_line_number = with_line_number;
+        this.colorLine = html_encodize;
         return this;
     };
 
     /** Create a highlighter for a give language
      * @constructor
      */
-    var create_highlighter = function( highlight_def ) {
+    var create_highlighter = function( with_line_number, highlight_def ) {
         this.activeStack = [highlight_def];
+        this.with_line_number = with_line_number;
         this.def = highlight_def;
         this.colorLine = colorLine;
         return this;
@@ -281,7 +283,7 @@ var TinySyntaxHighlighter = (function () {
             [ { kind:'syntax_conditional', words: ['if', 'then', 'else'] }
             , { kind:'syntax_statement', words:['do', 'case', 'of', 'let', 'in'  ] }
             , { kind:'syntax_module', words:['module'] }
-            , { kind:'syntax_typedef', words:['import'] }
+            , { kind:'syntax_preproc', words:['import'] }
             , { kind:'syntax_type'
               , words:[ 'Int', 'Integer', 'Char', 'Bool', 'Float'
                       , 'Double', 'IO', 'Void', 'Addr', 'Array'
@@ -352,27 +354,36 @@ var TinySyntaxHighlighter = (function () {
         return cppOnlyDef;
     })();
     
-    function instantiate_from_filename(filename)
+    function instantiate_from_filename(with_line_number, filename)
     {
         if (filename.match(/\.rb$/))
-            return new create_highlighter( rubyDef );
+            return new create_highlighter(with_line_number, rubyDef );
         else if (filename.match(/\.c$/))
-            return new create_highlighter( cDef );
+            return new create_highlighter(with_line_number, cDef );
         else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/) ||
                  filename.match(/\.h$/)   || filename.match(/\.hpp$/))
-            return new create_highlighter( cppDef );
+            return new create_highlighter(with_line_number, cppDef );
         else if (filename.match(/\.hs$/))
-            return new create_highlighter( haskellDef );
+            return new create_highlighter(with_line_number, haskellDef );
 
-        return new create_empty_highlighter();
+        return new create_empty_highlighter(with_line_number);
     }
 
     return {
-        c_highlighter: function () { return new create_highlighter( cDef ); },
-        cpp_highlighter: function () { return new create_highlighter( cppDef ); },
-        haskell_highlighter: function() { return new create_highlighter( haskellDef ); },
-        ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
-        empty_highlighter: function() { return new create_empty_highlighter(); },
+        c_highlighter: function (with_line_number)
+            { return new create_highlighter( with_line_number, cDef ); },
+
+        cpp_highlighter: function (with_line_number)
+            { return new create_highlighter( with_line_number, cppDef ); },
+
+        haskell_highlighter: function(with_line_number)
+            { return new create_highlighter( with_line_number, haskellDef ); },
+
+        ruby_highlighter: function(with_line_number)
+            { return new create_highlighter( with_line_number, rubyDef ); },
+
+        empty_highlighter: function(with_line_number)
+            { return new create_empty_highlighter(with_line_number); },
 
         from_filename: instantiate_from_filename
     };

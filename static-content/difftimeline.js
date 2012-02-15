@@ -3,6 +3,7 @@
 /////////////////////////////////////////////////////////////////////
 var application_state = {  
     view_mode: 'full',
+    apply_syntax_coloration: true,
     context_size: 2,
     max_commit_delta_show: 15,
     commit_delta_margin: 6
@@ -104,7 +105,7 @@ var DiffManipulator = (function () {
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
     var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff) {
-        var highlighter = TinySyntaxHighlighter.from_filename(filename);
+        var highlighter = TinySyntaxHighlighter.from_filename(false, filename);
         var lines = data.split("\n");
         var begs = {
             '+': '<div class="diff_addition">',
@@ -123,7 +124,7 @@ var DiffManipulator = (function () {
         var processed_lines = [];
         var line_number_string = function (i) {
             if (!isLineNumberRequired) return '';
-            return '<span class="line_number">' + (i + 1).toString() + '</span>'
+            return '<span class="syntax_line_number">' + (i + 1).toString() + '</span>'
         }
 
         var last_outputted_line = -1;
@@ -360,11 +361,11 @@ function render_commit( commit_number )
 function add_line_number( filename, lines )
 {
     var ret = [];
-    var highlighter = TinySyntaxHighlighter.from_filename(filename);
+    var highlighter = TinySyntaxHighlighter.from_filename(false, filename);
 
     for ( var i = 0; i < lines.length; i++ )
     {
-        ret.push('<span class="line_number">' + (i + 1).toString() + '</span>' +
+        ret.push('<span class="syntax_line_number">' + (i + 1).toString() + '</span>' +
                  highlighter.colorLine(lines[i]));
     }
 

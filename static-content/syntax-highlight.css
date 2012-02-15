@@ -66,3 +66,13 @@
 .syntax_operator {
     color: #859900;
 }
+
+.syntax_line_number
+{
+    width: 25px;
+    display: inline-block;
+    background-color: #EEE8D5;
+    color:            #93A1A1;
+    margin-right: 5px;
+}
+
