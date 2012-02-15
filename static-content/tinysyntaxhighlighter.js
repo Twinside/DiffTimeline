@@ -420,21 +420,16 @@ var TinySyntaxHighlighter = (function () {
                  filename.match(/\.h$/)   || filename.match(/\.hpp$/))
             return new create_highlighter(with_line_number, cppDef );
         else if (filename.match(/\.hs$/))
-<<<<<<< HEAD
             return new create_highlighter(with_line_number, haskellDef );
-=======
-            return new create_highlighter( haskellDef );
         else if (filename.match(/\.py$/))
-            return new create_highlighter( pythonDef );
+            return new create_highlighter(with_line_number, pythonDef );
         else if (filename.match(/\.js$/))
-            return new create_highlighter( javascriptDef );
->>>>>>> f8fa55202b22a7230699ada7edf9f98bf8d2ee50
+            return new create_highlighter(with_line_number, javascriptDef );
 
         return new create_empty_highlighter(with_line_number);
     }
 
     return {
-<<<<<<< HEAD
         c_highlighter: function (with_line_number)
             { return new create_highlighter( with_line_number, cDef ); },
 
@@ -449,15 +444,6 @@ var TinySyntaxHighlighter = (function () {
 
         empty_highlighter: function(with_line_number)
             { return new create_empty_highlighter(with_line_number); },
-=======
-        c_highlighter: function () { return new create_highlighter( cDef ); },
-        cpp_highlighter: function () { return new create_highlighter( cppDef ); },
-        haskell_highlighter: function() { return new create_highlighter( haskellDef ); },
-        ruby_highlighter: function() { return new create_highlighter( rubyDef ); },
-        python_highlighter: function() { return new create_highlighter( pythonDef ); },
-        javascript_highlighter: function () { return new create_highlighter( javascriptDef ); },
-        empty_highlighter: function() { return new create_empty_highlighter(); },
->>>>>>> f8fa55202b22a7230699ada7edf9f98bf8d2ee50
 
         from_filename: instantiate_from_filename
     };
