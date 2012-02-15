@@ -59,7 +59,6 @@ pre
 
 .diff_deletion
 {
-    white-space: pre;
     font-family: Consolas, Inconsolata, Monospace;
     background-color: #FFDDDD;
     width: 100%;
@@ -70,7 +69,6 @@ pre
 
 .diff_addition
 {
-    white-space: pref;
     font-family: Consolas, Inconsolata, Monospace;
     background-color: #DDFFDD;
     width: 100%;
