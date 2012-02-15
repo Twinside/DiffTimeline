@@ -44,6 +44,11 @@ body
     /*background: #EEEEEE;*/
 }
 
+.file_content .syntax_highlighted
+{
+    margin: 0px;
+}
+
 /** File content style, diff_deletion & diff_addition
  * are inlined into <pre> tags. */
 pre
@@ -82,16 +87,6 @@ pre
 .diff_addition .diff_deletion
 {
     background-color: #FFFFDD;
-}
-
-pre .line_number
-{
-    width: 25px;
-    display: inline-block;
-    background-color: #DDDDDD;
-    color:            #777777;
-
-    margin-right: 5px;
 }
 
 /** The back to the past button, big blue */
