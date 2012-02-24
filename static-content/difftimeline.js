@@ -12,7 +12,7 @@ var application_state = {
 var btn_toggle_text = {
     full: '&#x25bc;<br/>&#x25b2;',
     compact:  '&#x25b2;<br/>&#x25bc;'
-}
+};
 
 /////////////////////////////////////////////////////////////////////
 //              HTML generation
@@ -450,13 +450,24 @@ function retrieve_commit_detail(commit_id) {
         }
 
         var ret = '';
+        var kindSymbol = {
+            'modification': '~ ',
+            'addition':'+ ',
+            'deletion':'- '
+        };
+
         for ( var change in data )
         {
             var e = data[change];
-            ret += e['kind'] + " " + e['name'] + '\n';
+            var kind = e['kind'];
+
+            if (kindSymbol.hasOwnProperty(kind))
+                ret += '<div class="' + kind + '">' + kindSymbol[kind] + e['name'] + '</div>';
+            else
+                ret += '<div class="unknown">' + kind + " " + e['name'] + '</div>\n';
         }
 
-        $('#' + commit_id + ' .commit_detail').html('<pre>' + ret + '</pre>');
+        $('#' + commit_id + ' .commit_detail').html(ret);
     });
 }
 
