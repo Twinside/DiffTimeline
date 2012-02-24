@@ -227,6 +227,30 @@ class DiffTimelineState
         end
     end
 
+    def load_commit(commit)
+        commit_ref = GitRead::ShaRef.new(commit)
+        commit = @repository.access_object(commit_ref)
+
+        if commit.nil?
+            puts "Commit not found #{commit}"
+            raise QueryingError, send_error_message("Commit not found #{commit}")
+        elsif commit.class != GitRead::Commit
+            puts "#{commit} is not a commit."
+            raise QueryingError, send_error_message("#{commit} is not a commit.")
+        end
+
+        prev_commit = @repository.access_object(commit.parents_sha[0])
+        if prev_commit.nil?
+            puts "No parent for #{commit}"
+            raise QueryingError, send_error_message("Parent commit not found #{commit}")
+        elsif commit.class != GitRead::Commit
+            puts "#{commit} parent is not a commit."
+            raise QueryingError, send_error_message("#{commit} parent is not a commit.")
+        end
+
+        [200, { 'Content-Type' => 'text/json' }, [rez.to_json]]
+    end
+
     def load_parent(file_req, query_string)
         query = split_query_string(query_string.to_s)
         query['path'] = file_req
@@ -366,6 +390,10 @@ def server_process(state, port, request, socket)
     if command == 'ask_parent'
         req_file = file_rest(Pathname(requested))
         state.load_parent(req_file, request[:uri][:query])
+    elsif command == 'ask_commit'
+        req_commit = Pathname(requested).basename.to_s
+        puts "> ask_commit #{req_commit}"
+        state.load_commit(req_commit)
     elsif command == 'miniature'
         req_file = file_rest(Pathname(requested))
         state.load_miniature(req_file, request[:uri][:query])

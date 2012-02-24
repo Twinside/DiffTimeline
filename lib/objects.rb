@@ -20,6 +20,10 @@ module GitRead
                 @data = data
             end
         end
+
+        def diff_against(context, tree, rez)
+            rez << { :modification => { :name => context.to_s, :hash => @sha.to_s } }
+        end
     end
 
     # Represent a git commit, with the parents, the
@@ -58,6 +62,16 @@ module GitRead
 
         def tree
             @repository.access_object(@tree_sha)
+        end
+
+        def diff(c)
+            a = []
+            diff_against(Pathname.new('/'), c, a)
+            a
+        end
+
+        def diff_against(context, other_commit, rez)
+            tree.diff_against(context, other_commit.tree, rez)
         end
 
     private
@@ -113,6 +127,66 @@ module GitRead
             file_list = []
             Pathname.new(path).each_filename { |f| file_list << f }
             access_inner_path(@repository, 0, file_list)
+        end
+
+        def diff_against(context, tree, rez)
+            other_listing = tree.listing
+
+            # puts "tree diff context:#{context}"
+
+            max_this = @listing.length
+            max_other = other_listing.length
+            this_read_index = 0
+            other_read_index = 0
+
+            while this_read_index < max_this && other_read_index < max_other
+                name_this = @listing[this_read_index][NAME_IDX]
+                hash_this = @listing[this_read_index][SHA_IDX]
+                name_other = other_listing[other_read_index][NAME_IDX]
+                hash_other = other_listing[other_read_index][SHA_IDX]
+
+                if name_this == name_other
+                    # puts "#{name_this} == #{name_other} (#{hash_this} #{hash_other})"
+                    if hash_this != hash_other
+                        # puts "#{hash_this} != #{hash_other}"
+                        this_obj = @repository.access_object(hash_this)
+                        other_obj = @repository.access_object(hash_other)
+
+                        this_obj.diff_against(context + name_this, other_obj, rez)
+                    end
+
+                    this_read_index += 1
+                    other_read_index += 1
+                elsif name_this < name_other
+                    puts "#{name_this} < #{name_other}"
+                    rez << { :deletion => { :name => context + name_this, :hash => hash_this } }
+                    this_read_index += 1
+                else # name_this > name_other
+                    puts "#{name_this} > #{name_other}"
+                    rez << { :addition => { :name => context + name_other, :hash => hash_other } }
+                    other_read_index += 1
+                end
+            end
+
+            while this_read_index < max_this
+                name_this = @listing[this_read_index][NAME_IDX]
+                hash_this = @listing[this_read_index][SHA_IDX]
+                rez << { :deletion => { :name => context + name_this, :hash => hash_this } }
+                this_read_index += 1
+            end
+
+            while other_read_index < max_other
+                name_other = other_listing[other_read_index][NAME_IDX]
+                hash_other = other_listing[other_read_index][SHA_IDX]
+                rez << { :addition => { :name => context + name_other, :hash => hash_other } }
+                other_read_index += 1
+            end
+
+            rez
+        end
+
+        def listing
+            @listing
         end
 
     protected
