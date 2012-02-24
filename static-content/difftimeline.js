@@ -451,9 +451,9 @@ function retrieve_commit_detail(commit_id) {
 
         var ret = '';
         var kindSymbol = {
-            'modification': '~ ',
-            'addition':'+ ',
-            'deletion':'- '
+            'modification': '~',
+            'addition':'+',
+            'deletion':'-'
         };
 
         for ( var change in data )
@@ -462,7 +462,7 @@ function retrieve_commit_detail(commit_id) {
             var kind = e['kind'];
 
             if (kindSymbol.hasOwnProperty(kind))
-                ret += '<div class="' + kind + '">' + kindSymbol[kind] + e['name'] + '</div>';
+                ret += '<div class="' + kind + '"><span class="commit_diff_symbol">' + kindSymbol[kind] + '</span> ' + e['name'] + '</div>';
             else
                 ret += '<div class="unknown">' + kind + " " + e['name'] + '</div>\n';
         }

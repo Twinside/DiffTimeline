@@ -335,3 +335,61 @@ pre
     border: 1px solid #777777;
 }
 
+/* ================================================ */
+/* Commit detail rules                              */
+/* ================================================ */
+.modification {
+    background-color: #FFFFFF;
+    border: 1px solid #EEEEEE;
+    padding: 7px;
+    margin: 5px;
+   -webkit-border-radius: 2px;
+   -moz-border-radius: 2px;
+   border-radius: 2px;
+}
+
+.addition {
+    background-color: #EEFFEE;
+    border: 1px solid #DDEEDD;
+    padding: 7px;
+    margin: 5px;
+   -webkit-border-radius: 2px;
+   -moz-border-radius: 2px;
+   border-radius: 2px;
+}
+
+.deletion {
+   background-color: #ffeeee;
+   border: 1px solid #eedddd;
+   padding: 7px;
+   margin: 5px;
+   -webkit-border-radius: 2px;
+   -moz-border-radius: 2px;
+   border-radius: 2px;
+}
+
+.commit_diff_symbol {
+   display: inline-block;
+   font-size: 16px;
+   font-weight: bold;
+   border: 1px solid #7B90B5;
+
+   width: 22px;
+   height: 22px;
+   text-align: center;
+   margin-right: 20px;
+   -webkit-border-radius: 5px;
+   -moz-border-radius: 5px;
+   border-radius: 5px;
+
+   color: white;
+
+   background: #b8c6df; /* Old browsers */
+   background: -moz-linear-gradient(top, #b8c6df 0%, #6d88b7 100%); /* FF3.6+ */
+   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b8c6df), color-stop(100%,#6d88b7)); /* Chrome,Safari4+ */
+   background: -webkit-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* Chrome10+,Safari5.1+ */
+   background: -o-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* Opera 11.10+ */
+   background: -ms-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* IE10+ */
+   background: linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* W3C */
+}
+
