@@ -248,6 +248,7 @@ class DiffTimelineState
             raise QueryingError, send_error_message("#{commit} parent is not a commit.")
         end
 
+        rez = prev_commit.diff(commit)
         [200, { 'Content-Type' => 'text/json' }, [rez.to_json]]
     end
 
@@ -264,7 +265,8 @@ class DiffTimelineState
                   "parent_commit" => commit.parents_sha[0],
                   "message" => commit.message,
                   "diff" => diff.diff_set,
-                  "path" => commit_path
+                  "path" => commit_path,
+                  "key" => commit.sha.to_s
                 }
             end
         rescue QueryingError => e

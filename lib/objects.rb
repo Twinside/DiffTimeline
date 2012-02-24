@@ -22,7 +22,7 @@ module GitRead
         end
 
         def diff_against(context, tree, rez)
-            rez << { :modification => { :name => context.to_s, :hash => @sha.to_s } }
+            rez << { :kind => :modification, :name => context.to_s, :hash => @sha.to_s }
         end
     end
 
@@ -159,11 +159,11 @@ module GitRead
                     other_read_index += 1
                 elsif name_this < name_other
                     puts "#{name_this} < #{name_other}"
-                    rez << { :deletion => { :name => context + name_this, :hash => hash_this } }
+                    rez << { :kind => :deletion, :name => context + name_this, :hash => hash_this }
                     this_read_index += 1
                 else # name_this > name_other
                     puts "#{name_this} > #{name_other}"
-                    rez << { :addition => { :name => context + name_other, :hash => hash_other } }
+                    rez << { :kind => :addition, :name => context + name_other, :hash => hash_other }
                     other_read_index += 1
                 end
             end
@@ -171,14 +171,14 @@ module GitRead
             while this_read_index < max_this
                 name_this = @listing[this_read_index][NAME_IDX]
                 hash_this = @listing[this_read_index][SHA_IDX]
-                rez << { :deletion => { :name => context + name_this, :hash => hash_this } }
+                rez << { :kind => :deletion, :name => context + name_this, :hash => hash_this }
                 this_read_index += 1
             end
 
             while other_read_index < max_other
                 name_other = other_listing[other_read_index][NAME_IDX]
                 hash_other = other_listing[other_read_index][SHA_IDX]
-                rez << { :addition => { :name => context + name_other, :hash => hash_other } }
+                rez << { :kind => :addition, :name => context + name_other, :hash => hash_other }
                 other_read_index += 1
             end
 

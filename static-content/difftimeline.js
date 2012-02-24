@@ -437,6 +437,29 @@ function fetch_image(e)
     miniatures.insertBefore(img(src), miniatures.childNodes[0]);
 }
 
+function retrieve_commit_detail(commit_id) {
+    $.getJSON('ask_commit/' + commit_id, {}, function(data) {
+        if (data === null) {
+            show_error({error: 'Communication error with the server'});
+            return;
+        }
+
+        if (data['error']) { 
+            show_error( data );
+            return;
+        }
+
+        var ret = '';
+        for ( var change in data )
+        {
+            var e = data[change];
+            ret += e['kind'] + " " + e['name'] + '\n';
+        }
+
+        $('#' + commit_id + ' .commit_detail').html('<pre>' + ret + '</pre>');
+    });
+}
+
 function create_html_elements_for_commit(last_commit) {
 
     var container = document.getElementById('container');
@@ -448,13 +471,17 @@ function create_html_elements_for_commit(last_commit) {
                                               last_commit.message);
 
     var deltas = build_commit_delta(last_commit.path);
-    var commit_info = div_sub("commitinfo", [commitmsg, deltas]);
+    var commit_detail = div_class("commit_detail");
+    var commit_info = div_sub("commitinfo", [commitmsg, deltas, commit_detail]);
 
     var content = div_class('file_content');
     content.appendChild(pre('syntax_highlighted', ''));
 
     commit.appendChild(commit_info);
     commit.appendChild(content);
+    commit.onclick = function() {
+        retrieve_commit_detail(last_commit.key);
+    };
 
     var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
 
@@ -486,7 +513,7 @@ function back_to_the_past()
             ,          diff: data.diff
             ,          data: data.data
             ,       filekey: data.filekey
-            ,           key: last_commit.parent_commit
+            ,           key: data.key
             ,       message: data.message
             , parent_commit: data.parent_commit
             ,          path: data.path
