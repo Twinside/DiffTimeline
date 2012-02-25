@@ -29,27 +29,6 @@ var btn_toggle_text = {
     compact:  '&#x25b2;<br/>&#x25bc;'
 };
 
-/////////////////////////////////////////////////////////////////////
-//              HTML generation
-/////////////////////////////////////////////////////////////////////
-function div_class(classname) {
-    var ret = document.createElement('div');
-    ret.setAttribute('class', classname);
-    return ret;
-}
-
-function a( name ) {
-    var ret = document.createElement('span');
-    ret.innerHTML = name;
-    return ret;
-}
-
-function span(classname) {
-    var ret = document.createElement('span');
-    ret.setAttribute('class', classname);
-    return ret;
-}
-
 function show_error( data )
 {
     $('.message_carret').html( data.error )
@@ -407,17 +386,14 @@ function retrieve_commit_detail(commit_id) {
             return;
         }
 
-        var ret = '';
-        var kindSymbol = {
-            'modification': '~',
-            'addition':'+',
-            'deletion':'-'
+        var kind_formater = {
+            'modification': ich.commit_file_modification,
+            'addition':ich.commit_file_addition,
+            'deletion':ich.commit_file_deletion
         };
 
         var detail = $('#' + commit_id + ' .commit_detail');
-        var btn = a('full commit');
-        btn.onclick = function() { fetch_full_commit(commit_id); }
-        detail.append(btn);
+        detail.append(ich.commit_button_file({commit: commit_id}));
 
         for ( var change in data )
         {
@@ -425,20 +401,10 @@ function retrieve_commit_detail(commit_id) {
             var kind = e['kind'];
 
             var file_diff;
-            if (kindSymbol.hasOwnProperty(kind))
-            {
-                file_diff = div_class(kind);
-                var symb = span("commit_diff_symbol");
-                symb.innerHTML = kindSymbol[kind];
-                file_diff.appendChild(symb);
-                file_diff.appendChild(document.createTextNode(e['name']));
-            }
+            if (kind_formater.hasOwnProperty(kind))
+                detail.append(kind_formater[kind](e));
             else
-            {  
-                file_diff = div_class("unknown");
-                file_diff.appendChild(document.createTextNode(kind + " " + e['name']));
-            }
-            detail.append(file_diff);
+                detail.append(ich.commit_file_unknown(e));
         }
     });
 }

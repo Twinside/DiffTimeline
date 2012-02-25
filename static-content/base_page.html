@@ -8,6 +8,32 @@
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="ICanHaz.min.js"></script>
 
+        <script id="commit_file_deletion" type="text/html">
+            <div class="deletion">
+                <span class="commit_diff_symbol">-</span> {{name}}
+            </div>
+        </script>
+
+        <script id="commit_file_addition" type="text/html">
+            <div class="addition">
+                <span class="commit_diff_symbol">+</span> {{name}}
+            </div>
+        </script>
+
+        <script id="commit_file_modification" type="text/html">
+            <div class="modification">
+                <span class="commit_diff_symbol">~</span> {{name}}
+            </div>
+        </script>
+
+        <script id="commit_file_unknown" type="text/html">
+            <div class="modification">{{kind}} {{name}}</div>
+        </script>
+
+        <script id="commit_button_file" type="text/html">
+            <a onclick="fetch_full_commit('{{commit}}')">full commit</a>
+        </script>
+
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
