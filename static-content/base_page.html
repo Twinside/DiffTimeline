@@ -5,6 +5,36 @@
         <title>DiffTimeline</title>
         <link href="screen.css" type="text/css" rel="stylesheet" />
         <link href="difftimeline.css" type="text/css" rel="stylesheet" />
+        <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
+        <script language="javascript" type="text/javascript" src="ICanHaz.min.js"></script>
+
+        <script id="commitfile" type="text/html">
+            <div class="commit" id="{{key}}">
+                <div class="commitinfo">
+                    <div class="commitmsg">
+                        <span class="id">{{key}}</span><hr />
+                        <h4 title="{{message}}">{{short_message}}</h4>
+                    </div>
+
+                    <div class="commit_list">
+                        {{#path}}
+                        <div class="delta_commit_circle">
+                            <div>{{message}}</div>
+                        </div>
+                        {{/path}}
+                    </div>
+
+                    <div class="commit_detail"></div>
+
+                    <span class="more_info"
+                        onClick="retrieve_commit_detail('{{key}}');">&#x25bc;</span>
+                </div>
+
+                <div class="file_content">
+                    <pre class="syntax_highlighted"></pre>
+                </div>
+            </div>
+        </script>
     </head>
     <body onUnload="leave_server()">
         <div class="message_carret" id="message_display"></div>
@@ -26,7 +56,7 @@
                  onClick="toggle_diff_full()"
                  title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
             <div class="btn_returnpast"
-                 onClick="back_to_the_past()"
+                 onClick="application_state.get_previous()"
                  title="Fetch previous version">&lt;</div>
             <div>
                 <span class="label">Context size</span><br />
@@ -57,7 +87,6 @@
     </body>
     <!-- Loading from local path to be able to work offline -->
     <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
-    <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
     <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
     <script language="javascript" type="text/javascript" src="tinysyntaxhighlighter.js"></script>
     <link href="syntax-highlight.css" type="text/css" rel="stylesheet" />

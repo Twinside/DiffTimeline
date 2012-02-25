@@ -6,7 +6,22 @@ var application_state = {
     apply_syntax_coloration: true,
     context_size: 2,
     max_commit_delta_show: 15,
-    commit_delta_margin: 6
+    current_path: [],
+    commit_delta_margin: 6,
+
+    render_all: function() {
+        var last_path = this.current_path[ this.current_path.length - 1 ];
+
+        if (last_path['kind'] === 'file')
+            render_all_files( last_infos[last_path.val] );
+    },
+
+    get_previous: function() {
+        var last_path = this.current_path[ this.current_path.length - 1 ];
+
+        if (last_path['kind'] === 'file')
+            back_to_the_past(last_infos[last_path.val], last_path.val );
+    }
 };
 
 var btn_toggle_text = {
@@ -23,74 +38,21 @@ function div_class(classname) {
     return ret;
 }
 
-function img(src) {
-    var ret = document.createElement('img');
-    ret.setAttribute('src', src);
+function a( name ) {
+    var ret = document.createElement('span');
+    ret.innerHTML = name;
     return ret;
 }
 
-function pre(class_name, content) {
-    var ret = document.createElement('pre');
-    ret.setAttribute('class', class_name);
-    ret.innerHTML = content;
+function span(classname) {
+    var ret = document.createElement('span');
+    ret.setAttribute('class', classname);
     return ret;
 }
 
 function show_error( data )
 {
     $('.message_carret').html( data.error )
-}
-
-function build_commit_delta(lst) {
-    var node = div_class('commit_list');
-    var commit_renderer = function (interval_commit) {
-        var new_commit = div_class('delta_commit_circle');
-
-        var msg_tooltip = document.createElement('div');
-        msg_tooltip.innerHTML = interval_commit.message;
-        new_commit.appendChild(msg_tooltip);
-        node.appendChild(new_commit);
-    }
-
-    if (lst.length < application_state.max_commit_delta_show)
-    {
-        for ( var i = lst.length - 1; i >= 0; i-- )
-            { commit_renderer( lst[i] ); }
-    }
-    else // we show the first n and last n
-    {
-        var commit_context_size = application_state.commit_delta_margin;
-        var low_bound = lst.length - 1 - commit_context_size;
-
-        for ( var i = lst.length - 1; i >= low_bound; i-- )
-            { commit_renderer( lst[i] ); }
-        
-        var ellipsis = div_class('ellipsis');
-        var msg_tooltip = document.createElement('div');
-        msg_tooltip.innerHTML = lst.length + " commits";
-        ellipsis.innerHTML = "...";
-        ellipsis.appendChild(msg_tooltip);
-        node.appendChild(ellipsis);
-
-        for (i = commit_context_size; i >= 0; i--)
-            { commit_renderer( lst[i] ); }
-    }
-
-    return node;
-}
-
-function build_commit_message_node(commit, message) {
-    var msg = div_class('commitmsg');
-    var short_message = message.split("\n")[0];
-    msg.innerHTML = '<span class="id">' + commit + '</span><hr /><h4 title="' + message + '">' + short_message + '</h4>';
-
-    return msg;
-}
-
-function div_sub( cl, lst ) {
-    var node = div_class(cl);
-    for ( var i in lst ) { node.appendChild( lst[i] ); }
-    return node;
 }
 
 ////////////////////////////////////////////////////////////
@@ -346,16 +308,20 @@ var DiffManipulator = (function () {
     };
 })();
 
-function render_commit( commit_number )
+function render_commit( commit_collection, commit_number )
 {
-    var current_commit = last_infos[commit_number];
-    var prevs = commit_number <= 0 ? [] : last_infos[commit_number - 1].diff;
+    var current_commit = commit_collection[commit_number];
+    var prevs = commit_number <= 0 ? [] : commit_collection[commit_number - 1].diff;
     var neo_content = render_file( current_commit.file
                                  , prevs
                                  , current_commit.diff
                                  , current_commit.data);
 
     $('#' + current_commit.key + ' .file_content pre').html(neo_content);
+}
+
+function clear_display() {
+    $('.container > *').remove();
 }
 
 function add_line_number( filename, lines )
@@ -377,7 +343,7 @@ function increase_context_size()
     application_state.context_size = application_state.context_size + 1;
     $('.toolbar div textarea').text(application_state.context_size);
     if (application_state.view_mode === 'compact')
-        { render_all_files(); }
+        { application_state.render_all(); }
 }
 
 function decrease_context_size()
@@ -385,7 +351,7 @@ function decrease_context_size()
     application_state.context_size = Math.max(0, application_state.context_size - 1);
     $('.toolbar div textarea').text(application_state.context_size);
     if (application_state.view_mode === 'compact')
-        { render_all_files(); }
+        { application_state.render_all(); }
 }
 
 function render_file(filename, prev_diff, diff, data)
@@ -408,10 +374,10 @@ function render_file(filename, prev_diff, diff, data)
     }
 }
 
-function render_all_files()
+function render_all_files( commit_collection )
 {
-    for ( var i in last_infos )
-        { render_commit(i); }
+    for ( var i in commit_collection )
+        { render_commit(commit_collection, i); }
 }
 
 function toggle_diff_full()
@@ -426,15 +392,7 @@ function toggle_diff_full()
     $('.btn_toggleview').html(
         btn_toggle_text[application_state.view_mode]);
 
-    render_all_files();
-}
-
-function fetch_image(e)
-{
-    var miniatures = document.getElementById('miniatures');
-    var src = ('miniature/' + e.file + '?commit=' + e.parent_commit + '&last_file=' +
-                e.filekey);
-    miniatures.insertBefore(img(src), miniatures.childNodes[0]);
+    application_state.render_all();
 }
 
 function retrieve_commit_detail(commit_id) {
@@ -456,52 +414,48 @@ function retrieve_commit_detail(commit_id) {
             'deletion':'-'
         };
 
+        var detail = $('#' + commit_id + ' .commit_detail');
+        var btn = a('full commit');
+        btn.onclick = function() { fetch_full_commit(commit_id); }
+        detail.append(btn);
+
         for ( var change in data )
         {
             var e = data[change];
             var kind = e['kind'];
 
+            var file_diff;
             if (kindSymbol.hasOwnProperty(kind))
-                ret += '<div class="' + kind + '"><span class="commit_diff_symbol">' + kindSymbol[kind] + '</span> ' + e['name'] + '</div>';
+            {
+                file_diff = div_class(kind);
+                var symb = span("commit_diff_symbol");
+                symb.innerHTML = kindSymbol[kind];
+                file_diff.appendChild(symb);
+                file_diff.appendChild(document.createTextNode(e['name']));
+            }
             else
-                ret += '<div class="unknown">' + kind + " " + e['name'] + '</div>\n';
+            {  
+                file_diff = div_class("unknown");
+                file_diff.appendChild(document.createTextNode(kind + " " + e['name']));
+            }
+            detail.append(file_diff);
         }
-
-        $('#' + commit_id + ' .commit_detail').html(ret);
     });
 }
 
-function create_html_elements_for_commit(last_commit) {
-
-    var container = document.getElementById('container');
-
-    var commit = div_class('commit');
-    commit.setAttribute('id', last_commit.key);
-
-    var commitmsg = build_commit_message_node(last_commit.key,
-                                              last_commit.message);
-
-    var deltas = build_commit_delta(last_commit.path);
-    var commit_detail = div_class("commit_detail");
-    var commit_info = div_sub("commitinfo", [commitmsg, deltas, commit_detail]);
-
-    var content = div_class('file_content');
-    content.appendChild(pre('syntax_highlighted', ''));
-
-    commit.appendChild(commit_info);
-    commit.appendChild(content);
-    commit.onclick = function() {
-        retrieve_commit_detail(last_commit.key);
-    };
-
-    var add_content = $('#' + last_commit.key + ' .file_content').get()[0];
-
-    container.insertBefore(commit, container.childNodes[0]);
+function fetch_full_commit(commit_id) {
+    alert('gotchar ' + commit_id);
 }
 
-function back_to_the_past()
+function create_html_elements_for_commit(last_commit) {
+    last_commit.short_message = last_commit.message.split("\n")[0];
+    var processed = ich.commitfile(last_commit);
+    $(".container").prepend( processed );
+}
+
+function back_to_the_past(commit_collection, path)
 {
-    var last_commit = last_infos[0];
+    var last_commit = commit_collection[0];
                  // commit: Hash
     var params = { commit: last_commit.parent_commit
                  // last_file: Hash
@@ -531,18 +485,17 @@ function back_to_the_past()
         };
 
         create_html_elements_for_commit( new_commit );
-        last_infos.unshift( new_commit );
+        commit_collection.unshift( new_commit );
 
-        render_commit( 0 );
-        render_commit( 1 );
-
-        // fetch_image(new_commit);
+        render_commit( commit_collection, 0 );
+        render_commit( commit_collection, 1 );
     });
 }
 
-function render_initial_document() {
-    create_html_elements_for_commit( last_infos[0] );
-    render_commit(0);
+function render_initial_document( filename ) {
+    var infos = last_infos[filename];
+    create_html_elements_for_commit( infos[0] );
+    render_commit( infos, 0 );
 }
 
 function leave_server()
@@ -550,3 +503,4 @@ function leave_server()
     $.ajax( {url:"quit", async:false} );
 }
 
+ich.grabTemplates();
