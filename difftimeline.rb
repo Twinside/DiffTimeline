@@ -227,7 +227,7 @@ class DiffTimelineState
         end
     end
 
-    def load_commit(commit)
+    def load_commit(deep, commit)
         commit_ref = GitRead::ShaRef.new(commit)
         commit = @repository.access_object(commit_ref)
 
@@ -248,7 +248,11 @@ class DiffTimelineState
             raise QueryingError, send_error_message("#{commit} parent is not a commit.")
         end
 
-        rez = prev_commit.diff(commit)
+        if deep
+            rez = prev_commit.diff_with_content(commit)
+        else
+            rez = prev_commit.diff(commit)
+        end
         [200, { 'Content-Type' => 'text/json' }, [rez.to_json]]
     end
 
@@ -311,17 +315,19 @@ END
         end
 
         base_application_state = <<END
-        var last_infos = [ { file: "#{@tracked_path}"
-                           , key: "#{current_head}"
-                           , filekey: "#{file.sha}"
-                           , parent_commit: "#{commit.parents_sha[0]}"
-                           , data: #{file.data.to_json}
-                           , message: #{commit.message.to_json}
-                           , diff: []
-                           , path: []
-                           } ];
+        var last_infos = { "#{@tracked_path}": 
+                           [ { file: "#{@tracked_path}"
+                             , key: "#{current_head}"
+                             , filekey: "#{file.sha}"
+                             , parent_commit: "#{commit.parents_sha[0]}"
+                             , data: #{file.data.to_json}
+                             , message: #{commit.message.to_json}
+                             , diff: []
+                             , path: []
+                             } ] };
 
-        render_initial_document();
+        application_state['current_path'] = [{ kind:'file', val:"#{@tracked_path}"}];
+        render_initial_document( "#{@tracked_path}" );
 END
 
         [200, {'Content-Type' => 'text/javascript'}, [base_application_state]]
@@ -382,6 +388,7 @@ end
 
 def server_process(state, port, request, socket)
   static_files = [ 'difftimeline.css', 'difftimeline.js', 'jquery-1.6.4.min.js',
+                 'ICanHaz.min.js',
                  'screen.css', 'favicon.ico', 'underscore-min.js',
                  'tinysyntaxhighlighter.js', 'syntax-highlight.css']
 
@@ -395,7 +402,11 @@ def server_process(state, port, request, socket)
     elsif command == 'ask_commit'
         req_commit = Pathname(requested).basename.to_s
         puts "> ask_commit #{req_commit}"
-        state.load_commit(req_commit)
+        state.load_commit(false, req_commit)
+    elsif command == 'commit'
+        req_commit = Pathname(requested).basename.to_s
+        puts "> ask_commit #{req_commit}"
+        state.load_commit(true, req_commit)
     elsif command == 'miniature'
         req_file = file_rest(Pathname(requested))
         state.load_miniature(req_file, request[:uri][:query])

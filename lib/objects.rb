@@ -1,4 +1,5 @@
 require 'pathname'
+require_relative 'diff'
 require_relative 'sha_ref'
 
 module GitRead
@@ -21,8 +22,16 @@ module GitRead
             end
         end
 
-        def diff_against(context, tree, rez)
-            rez << { :kind => :modification, :name => context.to_s, :hash => @sha.to_s }
+        def diff_against(deep, context, other, rez)
+            if deep
+                diff = GitRead::Diff.diff_strings(@data, other.data)
+                rez << { :kind => :modification, 
+                         :name => context.to_s, 
+                         :hash => @sha.to_s, 
+                         :diff => diff }
+            else
+                rez << { :kind => :modification, :name => context.to_s, :hash => @sha.to_s }
+            end
         end
     end
 
@@ -64,14 +73,20 @@ module GitRead
             @repository.access_object(@tree_sha)
         end
 
-        def diff(c)
+        def diff_with_content(c)
             a = []
-            diff_against(Pathname.new('/'), c, a)
+            diff_against(true, Pathname.new('/'), c, a)
             a
         end
 
-        def diff_against(context, other_commit, rez)
-            tree.diff_against(context, other_commit.tree, rez)
+        def diff(c)
+            a = []
+            diff_against(false, Pathname.new('/'), c, a)
+            a
+        end
+
+        def diff_against(deep, context, other_commit, rez)
+            tree.diff_against(deep, context, other_commit.tree, rez)
         end
 
     private
@@ -129,7 +144,7 @@ module GitRead
             access_inner_path(@repository, 0, file_list)
         end
 
-        def diff_against(context, tree, rez)
+        def diff_against(deep, context, tree, rez)
             other_listing = tree.listing
 
             # puts "tree diff context:#{context}"
@@ -152,7 +167,7 @@ module GitRead
                         this_obj = @repository.access_object(hash_this)
                         other_obj = @repository.access_object(hash_other)
 
-                        this_obj.diff_against(context + name_this, other_obj, rez)
+                        this_obj.diff_against(deep, context + name_this, other_obj, rez)
                     end
 
                     this_read_index += 1
