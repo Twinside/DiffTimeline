@@ -24,13 +24,18 @@ module GitRead
 
         def diff_against(deep, context, other, rez)
             if deep
-                diff = GitRead::Diff.diff_strings(@data, other.data)
+                lines_a = @data.lines.to_a
+                lines_b = other.data.lines.to_a
+                diff = GitRead::Diff.new(lines_a, lines_b)
+
                 rez << { :kind => :modification, 
                          :name => context.to_s, 
                          :hash => @sha.to_s, 
-                         :diff => diff }
+                         :diff => diff.compact_diff }
             else
-                rez << { :kind => :modification, :name => context.to_s, :hash => @sha.to_s }
+                rez << { :kind => :modification,
+                         :name => context.to_s,
+                         :hash => @sha.to_s }
             end
         end
     end

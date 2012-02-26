@@ -50,6 +50,25 @@ module GitRead
             end
         end
 
+        def compact_diff
+            ret = []
+            @diff_set.each do |d|
+                case d.cmd
+                when :rem_line
+                    ret << { :way => '-',
+                             :orig_idx => d.orig_idx,
+                             :dest_idx => d.dest_idx,
+                             :data => @orig[d.orig_idx .. d.orig_idx + d.size - 1]}
+                when :add_line
+                    ret << { :way => '+',
+                             :orig_idx => d.orig_idx,
+                             :dest_idx => d.dest_idx,
+                             :data => @dest[d.dest_idx .. d.dest_idx + d.size - 1] }
+                end
+            end
+            ret
+        end
+
         # ([String], [String]) -> Diff
         # you should probably use diffFiles
         def initialize( orig, dest )

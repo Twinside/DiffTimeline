@@ -249,7 +249,11 @@ class DiffTimelineState
         end
 
         if deep
-            rez = prev_commit.diff_with_content(commit)
+            rez = { :message => commit.message,
+                    :parents_sha => commit.parents_sha,
+                    :key => commit.sha,
+                    :author => commit.author,
+                    :file_changes => prev_commit.diff_with_content(commit) }
         else
             rez = prev_commit.diff(commit)
         end
@@ -405,7 +409,7 @@ def server_process(state, port, request, socket)
         state.load_commit(false, req_commit)
     elsif command == 'commit'
         req_commit = Pathname(requested).basename.to_s
-        puts "> ask_commit #{req_commit}"
+        puts "> commit #{req_commit}"
         state.load_commit(true, req_commit)
     elsif command == 'miniature'
         req_file = file_rest(Pathname(requested))

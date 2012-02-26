@@ -410,7 +410,49 @@ function retrieve_commit_detail(commit_id) {
 }
 
 function fetch_full_commit(commit_id) {
-    alert('gotchar ' + commit_id);
+    $.getJSON('commit/' + commit_id, {}, function(data) {
+        clear_display();
+
+        orig_node = ich.commit_detailed(data);
+
+        var kind_formater = {
+            'modification': function(e) {
+                var hl = TinySyntaxHighlighter.from_filename(true, e.name);
+                var rez_node = ich.commit_file_modification_detailed(e);
+                var code_node = rez_node.find('pre');
+
+                var curr_diff;
+                var acc = ""
+                for ( var i = 0; i < e.diff.length; i++ )
+                {
+                    curr_diff = e.diff[i];
+
+                    for ( var l = 0; l < curr_diff.data.length; l++ )
+                        acc += hl.colorLine(curr_diff.data[l])
+                }
+
+                code_node.html(acc);
+
+                return rez_node;
+            },
+            'addition':ich.commit_file_addition,
+            'deletion':ich.commit_file_deletion
+        };
+
+        for ( var change in data.file_changes )
+        {
+            var e = data.file_changes[change];
+            var kind = e['kind'];
+
+            var file_diff;
+            if (kind_formater.hasOwnProperty(kind))
+                orig_node.append(kind_formater[kind](e));
+            else
+                orig_node.append(ich.commit_file_unknown(e));
+        }
+
+        $('.container').append(orig_node);
+    });
 }
 
 function create_html_elements_for_commit(last_commit) {

@@ -1,10 +1,10 @@
 .syntax_highlighted {
-    color: #586e75;
-    background: #fdf6e3;
+    color: #586e75 !important;
+    background: #fdf6e3 !important;
 }
 
 .syntax_comment {
-    color: #839496;
+    color: #839496 !important;
 }
 
 .syntax_repeat {
