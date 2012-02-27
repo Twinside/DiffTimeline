@@ -1,5 +1,17 @@
 require 'bindata'
 
+class String
+  unless method_defined? :byteslice
+    ##
+    # Does the same thing as String#slice but
+    # operates on bytes instead of characters.
+    #
+    def byteslice(*args)
+      unpack('C*').slice(*args).pack('C*')
+    end
+  end
+end
+
 module GitRead
     class DeltaSrc
         attr_reader :offset, :size
@@ -9,7 +21,7 @@ module GitRead
         end
 
         def content(str)
-            str[@offset .. (@offset + @size - 1)]
+            str.byteslice(@offset, @size)
         end
     end
 

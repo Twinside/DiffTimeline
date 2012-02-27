@@ -8,6 +8,8 @@
         <link href="difftimeline.css" type="text/css" rel="stylesheet" />
         <script language="javascript" type="text/javascript" src="jquery-1.6.4.min.js"></script>
         <script language="javascript" type="text/javascript" src="ICanHaz.min.js"></script>
+        <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
+        <script language="javascript" type="text/javascript" src="tinysyntaxhighlighter.js"></script>
 
         <script id="commit_file_deletion" type="text/html">
             <div class="deletion">
@@ -85,6 +87,7 @@
                 </div>
             </div>
         </script>
+        <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
     </head>
     <body onUnload="leave_server()">
         <div class="message_carret" id="message_display"></div>
@@ -135,11 +138,6 @@
             &nbsp;
         </div> -->
     </body>
-    <!-- Loading from local path to be able to work offline -->
-    <script language="javascript" type="text/javascript" src="difftimeline.js"></script>
-    <script language="javascript" type="text/javascript" src="underscore-min.js"></script>
-    <script language="javascript" type="text/javascript" src="tinysyntaxhighlighter.js"></script>
-
     <!-- Pseudo file created on the fly containing the initial application state-->
     <script language="javascript" type="text/javascript" src="initial_info.js"></script>
 </html>

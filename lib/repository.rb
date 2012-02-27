@@ -37,7 +37,16 @@ module GitRead
         def access_object_raw(sha)
             loose_file = @base + 'objects/' + sha.loose_path
             if File.exist?(loose_file)
-                RawBlob.new(:unknown, access_loose_object_raw(sha, loose_file))
+                data = access_loose_object_raw(sha, loose_file)
+                raw_kind = GitRead.determine_data_type(data)
+
+                idx = data.index("\x00")
+                if !idx
+                    throw
+                end
+
+                data_without_header = data.slice!(idx + 1 .. data.length)
+                RawBlob.new(raw_kind, data_without_header)
             else
                 access_packed_object_raw(sha)
             end
@@ -113,12 +122,12 @@ module GitRead
                 origin = read_packed_object_raw(sha, real_offset, file)
 
             when PackFileEntryHeader::OBJ_REF_DELTA
-                puts "OBJ_REF_DELTA"
-                to_read = [header.read_size, file_size - offset - header.read_size].min
-                deflated_data = file.read(to_read)
-
                 ref = ShaRef.new(BinSha.read(file).bits)
                 origin = access_object_raw(ref)
+
+                to_read = [header.uncompressed_size + INFLATE_SIZE_MARGIN,
+                            file_size - offset - header.read_size].min
+                deflated_data = file.read(to_read)
             else
                 throw
             end

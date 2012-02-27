@@ -152,8 +152,6 @@ module GitRead
         def diff_against(deep, context, tree, rez)
             other_listing = tree.listing
 
-            # puts "tree diff context:#{context}"
-
             max_this = @listing.length
             max_other = other_listing.length
             this_read_index = 0
@@ -166,9 +164,7 @@ module GitRead
                 hash_other = other_listing[other_read_index][SHA_IDX]
 
                 if name_this == name_other
-                    # puts "#{name_this} == #{name_other} (#{hash_this} #{hash_other})"
                     if hash_this != hash_other
-                        # puts "#{hash_this} != #{hash_other}"
                         this_obj = @repository.access_object(hash_this)
                         other_obj = @repository.access_object(hash_other)
 
@@ -178,11 +174,9 @@ module GitRead
                     this_read_index += 1
                     other_read_index += 1
                 elsif name_this < name_other
-                    puts "#{name_this} < #{name_other}"
                     rez << { :kind => :deletion, :name => context + name_this, :hash => hash_this }
                     this_read_index += 1
                 else # name_this > name_other
-                    puts "#{name_this} > #{name_other}"
                     rez << { :kind => :addition, :name => context + name_other, :hash => hash_other }
                     other_read_index += 1
                 end
@@ -243,9 +237,11 @@ module GitRead
                 rights = Regexp.last_match(1)
 
                 idx = data.index("\x00")
-                filename = data.slice(rights.length + 1 .. idx - 1)
-                sha = data.slice(idx + 1 .. idx + 20).unpack('C20')
-                @listing << [rights, filename, ShaRef.new(sha)]
+                if not rights.nil?
+                    filename = data.slice(rights.length + 1 .. idx - 1)
+                    sha = data.slice(idx + 1 .. idx + 20).unpack('C20')
+                    @listing << [rights, filename, ShaRef.new(sha)]
+                end
 
                 # cut away what we read
                 data = data.slice!(idx + 21, data.length)
@@ -256,6 +252,19 @@ module GitRead
     BLOB_PREFIX = "blob "
     COMMIT_PREFIX = "commit "
     TREE_PREFIX = "tree "
+
+    def GitRead.determine_data_type(str)
+        case 
+        when str.start_with?(BLOB_PREFIX) 
+            PackFileEntryHeader::OBJ_BLOB
+        when str.start_with?(COMMIT_PREFIX) 
+            PackFileEntryHeader::OBJ_COMMIT
+        when str.start_with?(TREE_PREFIX) 
+            PackFileEntryHeader::OBJ_TREE
+        else 
+            :unknown
+        end
+    end
 
     # (ShaRef, Type, String) -> (GitObject | nil)
     def GitRead.read_pack_object(repo, sha, obj_type, data)
