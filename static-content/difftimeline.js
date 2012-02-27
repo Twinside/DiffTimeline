@@ -16,12 +16,31 @@ var application_state = {
             render_all_files( last_infos[last_path.val] );
     },
 
+    push_state: function(kind, value) {
+        clear_display();
+        this.current_path.push( {kind:kind, val: value});
+    },
+
     get_previous: function() {
         var last_path = this.current_path[ this.current_path.length - 1 ];
 
-        if (last_path['kind'] === 'file')
-            back_to_the_past(last_infos[last_path.val], last_path.val );
+        switch ( last_path['kind'] )
+        {
+        case 'file':
+            fetch_previous_file(last_infos[last_path.val], last_path.val );
+            break;
+
+        case 'commit':
+            fetch_full_commit(last_path.val[0]);
+            break;
+        }
+    },
+
+    push_last_commit: function(v) {
+        this.current_path[ this.current_path.length - 1 ].val.unshift(v);
     }
+
+
 };
 
 var btn_toggle_text = {
@@ -398,9 +417,13 @@ function retrieve_commit_detail(commit_id) {
     });
 }
 
+function switch_to_commit(commit_id) {
+    application_state.push_state('commit', [commit_id]);
+    fetch_full_commit(commit_id);
+}
+
 function fetch_full_commit(commit_id) {
     $.getJSON('commit/' + commit_id, {}, function(data) {
-        clear_display();
 
         orig_node = ich.commit_detailed(data);
 
@@ -415,16 +438,20 @@ function fetch_full_commit(commit_id) {
                 for ( var i = 0; i < e.diff.length; i++ )
                 {
                     curr_diff = e.diff[i];
-                    if (curr_diff.way == '+')
+                    if (curr_diff.way == '+') {
+                        acc += '<div class="diff_addition">';
                         hl.set_current_line_number(curr_diff.dest_idx);
-                    else
+                    }
+                    else {
+                        acc +=  '<div class="diff_deletion">';
                         hl.set_current_line_number(curr_diff.orig_idx);
+                    }
 
                     for ( var l = 0; l < curr_diff.data.length; l++ )
                         acc += hl.colorLine(curr_diff.data[l])
 
                     if (i < e.diff.length - 1)
-                        acc += "\n...\n";
+                        acc += "</div>\n...\n";
                 }
 
                 code_node.html(acc);
@@ -447,7 +474,9 @@ function fetch_full_commit(commit_id) {
                 orig_node.append(ich.commit_file_unknown(e));
         }
 
-        $('.container').append(orig_node);
+        application_state.push_last_commit(data.parents_sha[0]);
+
+        $('.container').prepend(orig_node);
     });
 }
 
@@ -457,7 +486,7 @@ function create_html_elements_for_commit(last_commit) {
     $(".container").prepend( processed );
 }
 
-function back_to_the_past(commit_collection, path)
+function fetch_previous_file(commit_collection, path)
 {
     var last_commit = commit_collection[0];
                  // commit: Hash
