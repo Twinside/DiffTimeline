@@ -26,8 +26,8 @@ var TinySyntaxHighlighter = (function () {
     var colorLine = function ( line ) {
         var maxIndex = line.length;
         var currentIndex = 0;
-        var ret = "";
         var consumed = false;
+        var ret = this.compute_line_number();
 
         for ( var j in this.activeStack )
         {
@@ -112,12 +112,36 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     };
 
+    var basic_highlighter = function(line) {
+        var ret = this.compute_line_number();
+        return ret + html_encodize(line);
+    }
+
     /** Create a highlighter which just pass-through the line
      * @constructor
      */
     var create_empty_highlighter = function(with_line_number) {
-        this.colorLine = html_encodize;
+        this.colorLine = basic_highlighter;
         this.with_line_number = with_line_number;
+        if (with_line_number) {
+          this.current_line = 1;
+          this.set_current_line_number = function (i) {
+            this.current_line = i;
+          };
+
+          this.compute_line_number = function () {
+            var ret = '';
+            if (this.with_line_number) {
+              this.current_line = this.current_line + 1;
+              return '<span class="syntax_line_number">' + (this.current_line - 1)+ '</span>';
+            }
+            return '';
+          };
+        }
+        else
+        {
+          this.compute_line_number = function () { return ''; };
+        }
         return this;
     };
 
@@ -125,10 +149,10 @@ var TinySyntaxHighlighter = (function () {
      * @constructor
      */
     var create_highlighter = function( with_line_number, highlight_def ) {
+        create_empty_highlighter.call( this, with_line_number );
         this.activeStack = [highlight_def];
-        this.with_line_number = with_line_number;
-        this.def = highlight_def;
         this.colorLine = colorLine;
+        this.def = highlight_def;
         return this;
     };
 

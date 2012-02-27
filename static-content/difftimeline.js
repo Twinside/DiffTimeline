@@ -426,9 +426,16 @@ function fetch_full_commit(commit_id) {
                 for ( var i = 0; i < e.diff.length; i++ )
                 {
                     curr_diff = e.diff[i];
+                    if (curr_diff.way == '+')
+                        hl.set_current_line_number(curr_diff.dest_idx);
+                    else
+                        hl.set_current_line_number(curr_diff.orig_idx);
 
                     for ( var l = 0; l < curr_diff.data.length; l++ )
                         acc += hl.colorLine(curr_diff.data[l])
+
+                    if (i < e.diff.length - 1)
+                        acc += "\n...\n";
                 }
 
                 code_node.html(acc);
