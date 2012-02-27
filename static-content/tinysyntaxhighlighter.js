@@ -140,6 +140,7 @@ var TinySyntaxHighlighter = (function () {
         }
         else
         {
+          this.set_current_line_number = function (i) {};
           this.compute_line_number = function () { return ''; };
         }
         return this;

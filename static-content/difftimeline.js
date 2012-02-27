@@ -46,7 +46,7 @@ var DiffManipulator = (function () {
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
     var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff) {
-        var highlighter = TinySyntaxHighlighter.from_filename(false, filename);
+        var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
         var lines = data.split("\n");
         var begs = {
             '+': '<div class="diff_addition">',
@@ -63,11 +63,6 @@ var DiffManipulator = (function () {
         };
 
         var processed_lines = [];
-        var line_number_string = function (i) {
-            if (!isLineNumberRequired) return '';
-            return '<span class="syntax_line_number">' + (i + 1).toString() + '</span>'
-        }
-
         var last_outputted_line = -1;
         var colorized;
 
@@ -83,39 +78,36 @@ var DiffManipulator = (function () {
             if (context_begin > last_outputted_line + 1 && i != 0)
                 processed_lines.push("...");
 
+            highlighter.set_current_line_number(context_begin);
             for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ )
             {
-                colorized = highlighter.colorLine(lines[lineNum]);
-                processed_lines.push(line_number_string(lineNum) + colorized);
+                processed_lines.push(highlighter.colorLine(lines[lineNum]));
             }
 
             // output the real diff
             if (d.end - d.beg == 0)
             {
+                highlighter.set_current_line_number(d.beg);
                 colorized = highlighter.colorLine(lines[d.beg]);
-                processed_lines.push(begs[d.way] + line_number_string(d.beg) +
-                                     colorized  + ends[d.way]);
+                processed_lines.push(begs[d.way] + colorized  + ends[d.way]);
             }
             else
             {
+                highlighter.set_current_line_number(d.beg);
                 colorized = highlighter.colorLine(lines[d.beg]);
-                processed_lines.push( begs[d.way] + line_number_string(d.beg) + colorized);
+                processed_lines.push( begs[d.way] + colorized);
 
                 for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
-                {
-                    colorized = highlighter.colorLine(lines[lineNum]);
-                    processed_lines.push(line_number_string(lineNum) + colorized);
-                }
+                    processed_lines.push(highlighter.colorLine(lines[lineNum]));
 
-                colorized = highlighter.colorLine(lines[d.end]);
-                processed_lines.push(line_number_string(d.end) + colorized + ends[d.way]);
+                processed_lines.push(highlighter.colorLine(lines[d.end]) + ends[d.way]);
             }
 
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
             var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
+            highlighter.set_current_line_number(d.end + 1);
             for ( var lineNum = d.end + 1; lineNum <= context_end; lineNum++ ) {
-                colorized = highlighter.colorLine(lines[lineNum]);
-                processed_lines.push(line_number_string(lineNum) + colorized);
+                processed_lines.push(highlighter.colorLine(lines[lineNum]));
             }
 
             last_outputted_line = context_end;
@@ -303,16 +295,13 @@ function clear_display() {
     $('.container > *').remove();
 }
 
-function add_line_number( filename, lines )
+function add_syntax_coloration( filename, lines )
 {
     var ret = [];
-    var highlighter = TinySyntaxHighlighter.from_filename(false, filename);
+    var highlighter = TinySyntaxHighlighter.from_filename(true, filename);
 
     for ( var i = 0; i < lines.length; i++ )
-    {
-        ret.push('<span class="syntax_line_number">' + (i + 1).toString() + '</span>' +
-                 highlighter.colorLine(lines[i]));
-    }
+        ret.push(highlighter.colorLine(lines[i]));
 
     return ret;
 }
@@ -346,7 +335,7 @@ function render_file(filename, prev_diff, diff, data)
                                                    true, clean_cr_lf_data, ranges);
     else // render full
     {
-        var lines = add_line_number(filename, clean_cr_lf_data.split('\n'));
+        var lines = add_syntax_coloration(filename, clean_cr_lf_data.split('\n'));
         var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
         var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
         return diffed_content.join('\n');
