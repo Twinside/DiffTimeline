@@ -10,6 +10,8 @@ unless Kernel.respond_to?(:require_relative)
 end
 
 require 'rubygems'
+require "bundler/setup"
+
 require 'net/http/server'
 require 'launchy'
 require 'pp'
@@ -45,13 +47,24 @@ end
 class DiffTimelineState
     def initialize
         @is_client_launched = false
-        @current_dir = Pathname.new(Dir.pwd)
         @exec_path = Pathname(__FILE__).realpath.parent
+        @is_app = ARGV[0] == '--app'
+
+        if @is_app
+            puts 'Launching in app mode'
+            requested_filename = Pathname.new(ARGV[1]).basename
+            @current_dir = Pathname.new(ARGV[1]).parent.cleanpath
+        else
+            requested_filename = Pathname.new(ARGV[0])
+            @current_dir = Pathname.new(Dir.pwd)
+        end
+
         repo_dir = find_nearest_git_repo()
 
         raise RepositoryNotFound if repo_dir.nil?
 
-        @tracked_path = (@current_dir + Pathname.new(ARGV[0])).cleanpath.relative_path_from(Pathname.new(repo_dir))
+        puts "> Git repository : #{repo_dir}"
+        @tracked_path = (@current_dir + requested_filename).cleanpath.relative_path_from(Pathname.new(repo_dir))
         @repository = GitRead::CachedRepository.new(repo_dir)
         if RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
             @codeoverview_exec = 'C:\\Users\\Vince\\vimfiles\\bundle\\vim-codeoverview\\plugin\\codeoverview.exe'
@@ -75,7 +88,7 @@ class DiffTimelineState
 
     def find_nearest_git_repo
         currDir = Dir.pwd
-        Pathname.new(Dir.pwd).ascend do |v|
+        Pathname.new(@current_dir).ascend do |v|
             gitDir = v + '.git'
             return v if File.exists?(gitDir)
         end
@@ -402,14 +415,17 @@ def server_process(state, port, request, socket)
 
     if command == 'ask_parent'
         req_file = file_rest(Pathname(requested))
+        $stdout.flush
         state.load_parent(req_file, request[:uri][:query])
     elsif command == 'ask_commit'
         req_commit = Pathname(requested).basename.to_s
         puts "> ask_commit #{req_commit}"
+        $stdout.flush
         state.load_commit(false, req_commit)
     elsif command == 'commit'
         req_commit = Pathname(requested).basename.to_s
         puts "> commit #{req_commit}"
+        $stdout.flush
         state.load_commit(true, req_commit)
     elsif command == 'miniature'
         req_file = file_rest(Pathname(requested))
@@ -419,6 +435,7 @@ def server_process(state, port, request, socket)
         exit 0
     elsif command == 'initial_info.js'
         puts '> Serving initial_info.js'
+        $stdout.flush
         state.serve_base_page
     else
         requested_file = requested.to_s.slice(1, requested.size)
@@ -427,9 +444,11 @@ def server_process(state, port, request, socket)
 
         if static_index  != nil
             puts "> Serving file #{requested_file}\n"
+            $stdout.flush
             serve_file(state.exec_path + 'static-content/' + requested_file)
         elsif requested == '/'
             puts "> Sending base page"
+            $stdout.flush
             serve_file(state.exec_path + 'static-content/base_page.html')
         else
             [404, {}, []]
