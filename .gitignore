@@ -1,4 +1,7 @@
 doc
 tags
 Gemfile.lock
-
+vendor
+Difftimeline.app
+.bundle
+.DS_STORE
