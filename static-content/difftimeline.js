@@ -16,9 +16,26 @@ var application_state = {
             render_all_files( last_infos[last_path.val] );
     },
 
+    create_all: function() {
+        var last_path = this.current_path[ this.current_path.length - 1 ];
+
+        if (last_path['kind'] === 'file')
+            create_html_elements_for_all_files( last_infos[last_path.val] );
+    },
+
     push_state: function(kind, value) {
         clear_display();
         this.current_path.push( {kind:kind, val: value});
+    },
+
+    pop_state: function( n ) {
+
+        while (this.current_path.length - 1 != n)
+            this.current_path.pop();
+
+        clear_display();
+        this.create_all();
+        this.render_all();
     },
 
     get_previous: function() {
@@ -39,7 +56,6 @@ var application_state = {
     push_last_commit: function(v) {
         this.current_path[ this.current_path.length - 1 ].val.unshift(v);
     }
-
 
 };
 
@@ -417,9 +433,18 @@ function retrieve_commit_detail(commit_id) {
     });
 }
 
+function append_breadcrumb( name ) {
+    $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:0}));
+}
+
+function switch_break(id) {
+    application_state.pop_state(id);
+}
+
 function switch_to_commit(commit_id) {
     application_state.push_state('commit', [commit_id]);
     fetch_full_commit(commit_id);
+    append_breadcrumb(commit_id);
 }
 
 function fetch_full_commit(commit_id) {
@@ -480,7 +505,15 @@ function fetch_full_commit(commit_id) {
     });
 }
 
-function create_html_elements_for_commit(last_commit) {
+function create_html_elements_for_all_files(commits) {
+    for ( var i in commits )
+    {
+        var e = commits[i];
+        create_html_elements_for_file(e);
+    }
+}
+
+function create_html_elements_for_file(last_commit) {
     last_commit.short_message = last_commit.message.split("\n")[0];
     var processed = ich.commitfile(last_commit);
     $(".container").prepend( processed );
@@ -517,7 +550,7 @@ function fetch_previous_file(commit_collection, path)
             ,          path: data.path
         };
 
-        create_html_elements_for_commit( new_commit );
+        create_html_elements_for_file( new_commit );
         commit_collection.unshift( new_commit );
 
         render_commit( commit_collection, 0 );
@@ -527,8 +560,9 @@ function fetch_previous_file(commit_collection, path)
 
 function render_initial_document( filename ) {
     var infos = last_infos[filename];
-    create_html_elements_for_commit( infos[0] );
+    create_html_elements_for_file( infos[0] );
     render_commit( infos, 0 );
+    $("#breadcrumb").append(ich.breadcrumbelem({id:0, name:filename}));
 }
 
 function leave_server()

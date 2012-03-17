@@ -60,6 +60,10 @@
             <a onclick="switch_to_commit('{{commit}}')">full commit</a>
         </script>
 
+        <script id="breadcrumbelem" type="text/html">
+            <span>&nbsp;&gt;&gt;</span>
+            <a onclick="switch_break({{id}})">{{name}}</a>
+        </script>
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
@@ -131,6 +135,9 @@
                 </table>
             </form>
         </div>
+        <div id="breadcrumb">
+        </div>
+
         <div id="container" class="container" />
         <br/>
         <!--

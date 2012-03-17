@@ -9,6 +9,7 @@ body
 .container
 {
     width: 30000px;
+    top:   30px;
     left:  100px;
     position: relative;
     z-index: 0;
@@ -391,5 +392,12 @@ pre
    background: -o-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* Opera 11.10+ */
    background: -ms-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* IE10+ */
    background: linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* W3C */
+}
+
+/* breadcrumb */
+#breadcrumb
+{
+    position: absolute;
+    left: 100px;
 }
 
