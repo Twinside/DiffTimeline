@@ -1,77 +1,96 @@
 /////////////////////////////////////////////////////////////////////
 //              Initial state
 /////////////////////////////////////////////////////////////////////
-var application_state = {  
-    view_mode: 'full',
-    apply_syntax_coloration: true,
-    context_size: 2,
-    max_commit_delta_show: 15,
-    current_path: [],
-    commit_delta_margin: 6,
+/**
+ * @constructor
+ */
+var application_state = (function () {  
+    var view_mode = 'full';
+    var apply_syntax_coloration = true;
+    var context_size = 2;
+    var max_commit_delta_show = 15;
+    var states = [];
+    var commit_delta_margin = 6;
 
-    render_all: function() {
-        var last_path = this.current_path[ this.current_path.length - 1 ];
+    var btn_toggle_text = {
+        full: '&#x25bc;<br/>&#x25b2;',
+        compact:  '&#x25b2;<br/>&#x25bc;'
+    };
 
-        if (last_path['kind'] === 'file')
-            render_all_files( last_infos[last_path.val] );
-    },
 
-    create_all: function() {
-        var last_path = this.current_path[ this.current_path.length - 1 ];
+    return {
+        active_view_mode: function() { return view_mode; },
+        active_context_size: function() { return context_size; },
 
-        if (last_path['kind'] === 'file')
-            create_html_elements_for_all_files( last_infos[last_path.val] );
-    },
+        send_state_message: function(message) {
+            var last_path = states[ states.length - 1 ];
+            last_path.send_message(message);
+        },
 
-    push_state: function(kind, value) {
-        clear_display();
-        this.current_path.push( {kind:kind, val: value});
-    },
+        render_all: function() {
+            var last_path = states[ states.length - 1 ];
+            last_path.render_all();
+        },
 
-    pop_state: function( n ) {
+        push_state: function(obj) {
+            this.clear_display();
+            states.push( obj );
+        },
 
-        while (this.current_path.length - 1 != n)
-            this.current_path.pop();
+        get_previous: function() {
+            var last_path = states[ states.length - 1 ];
+            last_path.fetch_previous();
+        },
 
-        clear_display();
-        this.create_all();
-        this.render_all();
-    },
+        switch_commit: function(id) {
+            this.clear_display();
+            states.push(new CommitRenderer(id));
+        },
 
-    get_previous: function() {
-        var last_path = this.current_path[ this.current_path.length - 1 ];
+        push_last_commit: function(v) {
+            states[ states.length - 1 ].val.unshift(v);
+        },
 
-        switch ( last_path['kind'] )
-        {
-        case 'file':
-            fetch_previous_file(last_infos[last_path.val], last_path.val );
-            break;
+        clear_display: function () {
+            $('.container > *').remove();
+        },
 
-        case 'commit':
-            fetch_full_commit(last_path.val[0]);
-            break;
+        increase_context_size: function() {
+            context_size = context_size + 1;
+            $('.toolbar div textarea').text(context_size);
+
+            if (view_mode === 'compact') { this.render_all(); }
+        },
+
+        decrease_context_size: function() {
+            context_size = Math.max(0, context_size - 1);
+            $('.toolbar div textarea').text(context_size);
+
+            if (view_mode === 'compact') { this.render_all(); }
+        },
+
+        toggle_diff_full: function() {
+            var ranges = null;
+
+            if (view_mode === 'full') view_mode = 'compact';
+            else view_mode = 'full';
+
+            $('.btn_toggleview').html(btn_toggle_text[view_mode]);
+            this.render_all();
+        },
+
+        start_file: function(file_obj) {
+            states.push( new FileRenderer(file_obj) );
         }
-    },
-
-    push_last_commit: function(v) {
-        this.current_path[ this.current_path.length - 1 ].val.unshift(v);
-    }
-
-};
-
-var btn_toggle_text = {
-    full: '&#x25bc;<br/>&#x25b2;',
-    compact:  '&#x25b2;<br/>&#x25bc;'
-};
-
-function show_error( data )
-{
-    $('.message_carret').html( data.error )
-}
+    };
+})();
 
 ////////////////////////////////////////////////////////////
 ////  Diff handling
 ////////////////////////////////////////////////////////////
+/**
+ * @constructor
+ */
 var DiffManipulator = (function () {
     /** Generate an HTML representation of a diff and a file content.
      * @param filename filename of the file, used for syntax detection
@@ -314,260 +333,284 @@ var DiffManipulator = (function () {
     };
 })();
 
-function render_commit( commit_collection, commit_number )
-{
-    var current_commit = commit_collection[commit_number];
-    var prevs = commit_number <= 0 ? [] : commit_collection[commit_number - 1].diff;
-    var neo_content = render_file( current_commit.file
-                                 , prevs
-                                 , current_commit.diff
-                                 , current_commit.data);
+////////////////////////////////////////////////////////////
+////  Commit
+////////////////////////////////////////////////////////////
+/**
+ * @constructor
+ */
+var Commit = function(key, data) {
+    this.key = key;
+    this.parents_sha = data.parents_sha;
+    this.file_changes = data.file_changes;
+    this.message = data.message;
 
-    $('#' + current_commit.key + ' .file_content pre').html(neo_content);
-}
+    var kind_formater = {
+        'modification': function(e) {
+            var hl = TinySyntaxHighlighter.from_filename(true, e.name);
+            var rez_node = ich.commit_file_modification_detailed(e);
+            var code_node = rez_node.find('pre');
 
-function clear_display() {
-    $('.container > *').remove();
-}
-
-function add_syntax_coloration( filename, lines )
-{
-    var ret = [];
-    var highlighter = TinySyntaxHighlighter.from_filename(true, filename);
-
-    for ( var i = 0; i < lines.length; i++ )
-        ret.push(highlighter.colorLine(lines[i]));
-
-    return ret;
-}
-
-function increase_context_size()
-{
-    application_state.context_size = application_state.context_size + 1;
-    $('.toolbar div textarea').text(application_state.context_size);
-    if (application_state.view_mode === 'compact')
-        { application_state.render_all(); }
-}
-
-function decrease_context_size()
-{
-    application_state.context_size = Math.max(0, application_state.context_size - 1);
-    $('.toolbar div textarea').text(application_state.context_size);
-    if (application_state.view_mode === 'compact')
-        { application_state.render_all(); }
-}
-
-function render_file(filename, prev_diff, diff, data)
-{
-    var rems = DiffManipulator.filterRems(diff);
-    var adds = DiffManipulator.filterAdds(prev_diff);
-    var ranges = DiffManipulator.calculateFoldSet(rems, adds);
-
-    var clean_cr_lf_data = data.replace(/\r/g, '');
-
-    if (application_state.view_mode === 'compact')
-        return DiffManipulator.generateCompactHtml(filename, application_state.context_size,
-                                                   true, clean_cr_lf_data, ranges);
-    else // render full
-    {
-        var lines = add_syntax_coloration(filename, clean_cr_lf_data.split('\n'));
-        var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
-        var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
-        return diffed_content.join('\n');
-    }
-}
-
-function render_all_files( commit_collection )
-{
-    for ( var i in commit_collection )
-        { render_commit(commit_collection, i); }
-}
-
-function toggle_diff_full()
-{
-    var ranges = null;
-
-    if (application_state.view_mode === 'full')
-        application_state.view_mode = 'compact';
-    else
-        application_state.view_mode = 'full';
-
-    $('.btn_toggleview').html(
-        btn_toggle_text[application_state.view_mode]);
-
-    application_state.render_all();
-}
-
-function retrieve_commit_detail(commit_id) {
-    $.getJSON('ask_commit/' + commit_id, {}, function(data) {
-        if (data === null) {
-            show_error({error: 'Communication error with the server'});
-            return;
-        }
-
-        if (data['error']) { 
-            show_error( data );
-            return;
-        }
-
-        var kind_formater = {
-            'modification': ich.commit_file_modification,
-            'addition':ich.commit_file_addition,
-            'deletion':ich.commit_file_deletion
-        };
-
-        var detail = $('#' + commit_id + ' .commit_detail');
-        detail.append(ich.commit_button_file({commit: commit_id}));
-
-        for ( var change in data )
-        {
-            var e = data[change];
-            var kind = e['kind'];
-
-            var file_diff;
-            if (kind_formater.hasOwnProperty(kind))
-                detail.append(kind_formater[kind](e));
-            else
-                detail.append(ich.commit_file_unknown(e));
-        }
-    });
-}
-
-function append_breadcrumb( name ) {
-    $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:0}));
-}
-
-function switch_break(id) {
-    application_state.pop_state(id);
-}
-
-function switch_to_commit(commit_id) {
-    application_state.push_state('commit', [commit_id]);
-    fetch_full_commit(commit_id);
-    append_breadcrumb(commit_id);
-}
-
-function fetch_full_commit(commit_id) {
-    $.getJSON('commit/' + commit_id, {}, function(data) {
-
-        orig_node = ich.commit_detailed(data);
-
-        var kind_formater = {
-            'modification': function(e) {
-                var hl = TinySyntaxHighlighter.from_filename(true, e.name);
-                var rez_node = ich.commit_file_modification_detailed(e);
-                var code_node = rez_node.find('pre');
-
-                var curr_diff;
-                var acc = ""
-                for ( var i = 0; i < e.diff.length; i++ )
-                {
-                    curr_diff = e.diff[i];
-                    if (curr_diff.way == '+') {
-                        acc += '<div class="diff_addition">';
-                        hl.set_current_line_number(curr_diff.dest_idx);
-                    }
-                    else {
-                        acc +=  '<div class="diff_deletion">';
-                        hl.set_current_line_number(curr_diff.orig_idx);
-                    }
-
-                    for ( var l = 0; l < curr_diff.data.length; l++ )
-                        acc += hl.colorLine(curr_diff.data[l])
-
-                    if (i < e.diff.length - 1)
-                        acc += "</div>\n...\n";
+            var curr_diff;
+            var acc = ""
+            for ( var i = 0; i < e.diff.length; i++ )
+            {
+                curr_diff = e.diff[i];
+                if (curr_diff.way == '+') {
+                    acc += '<div class="diff_addition">';
+                    hl.set_current_line_number(curr_diff.dest_idx);
+                }
+                else {
+                    acc +=  '<div class="diff_deletion">';
+                    hl.set_current_line_number(curr_diff.orig_idx);
                 }
 
-                code_node.html(acc);
+                for ( var l = 0; l < curr_diff.data.length; l++ )
+                    acc += hl.colorLine(curr_diff.data[l])
 
-                return rez_node;
-            },
-            'addition':ich.commit_file_addition,
-            'deletion':ich.commit_file_deletion
-        };
+                if (i < e.diff.length - 1)
+                    acc += "</div>\n...\n";
+            }
 
-        for ( var change in data.file_changes )
-        {
-            var e = data.file_changes[change];
+            code_node.html(acc);
+
+            return rez_node;
+        },
+        'addition':ich.commit_file_addition,
+        'deletion':ich.commit_file_deletion
+    };
+
+    this.create_dom = function() {
+        this.orig_node = ich.commit_detailed(this);
+        $('.container').prepend(this.orig_node);
+    }
+
+    this.render = function() {
+        for ( var change in this.file_changes ) {
+            var e = this.file_changes[change];
             var kind = e['kind'];
 
             var file_diff;
             if (kind_formater.hasOwnProperty(kind))
-                orig_node.append(kind_formater[kind](e));
+                this.orig_node.append(kind_formater[kind](e));
             else
-                orig_node.append(ich.commit_file_unknown(e));
+                this.orig_node.append(ich.commit_file_unknown(e));
         }
-
-        application_state.push_last_commit(data.parents_sha[0]);
-
-        $('.container').prepend(orig_node);
-    });
-}
-
-function create_html_elements_for_all_files(commits) {
-    for ( var i in commits )
-    {
-        var e = commits[i];
-        create_html_elements_for_file(e);
     }
-}
+    
+    return this;
+};
 
-function create_html_elements_for_file(last_commit) {
-    last_commit.short_message = last_commit.message.split("\n")[0];
-    var processed = ich.commitfile(last_commit);
-    $(".container").prepend( processed );
-}
+/**
+ * @constructor
+ */
+var CommitRenderer = (function(init_key) {
+    this.collection = [];
+    this.keys = {};
 
-function fetch_previous_file(commit_collection, path)
+    this.render_all = function() {}
+
+    this.fetch_commit = function( id ) {
+        var this_obj = this;
+
+        $.getJSON('commit/' + id, {}, function(data) {
+            var new_commit = new Commit(id, data);
+
+            new_commit.create_dom();
+            new_commit.render();
+
+            this_obj.collection.push(new_commit);
+            this_obj.keys[id] = new_commit;
+        });
+    }
+
+    this.fetch_previous = function() {
+        var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
+        this.fetch_commit(prev_id);
+    }
+
+    this.fetch_commit(init_key);
+
+    return this;
+});
+
+/**
+ * @constructor
+ */
+var FileBlob = (function (filename, data) {
+    var add_syntax_coloration = function( filename, lines )
+    {
+        var ret = [];
+        var highlighter = TinySyntaxHighlighter.from_filename(true, filename);
+
+        for ( var i = 0; i < lines.length; i++ )
+            ret.push(highlighter.colorLine(lines[i]));
+
+        return ret;
+    }
+
+    this.file = filename;
+    this.diff = data.diff;
+    this.data = data.data;
+    this.filekey = data.filekey;
+    this.key = data.key;
+    this.message = data.message;
+    this.parent_commit = data.parent_commit;
+    this.path = data.path;
+
+    this.fetch_details = function() {
+        var this_obj = this;
+
+        $.getJSON('ask_commit/' + this.key, {}, function(data) {
+            if (data === null) {
+                show_error({error: 'Communication error with the server'});
+                return;
+            }
+
+            if (data['error']) { 
+                show_error( data );
+                return;
+            }
+
+            var kind_formater = {
+                'modification': ich.commit_file_modification,
+                'addition':ich.commit_file_addition,
+                'deletion':ich.commit_file_deletion
+            };
+
+            var detail = $('#' + this_obj.key + ' .commit_detail');
+            detail.append(ich.commit_button_file({commit: this_obj.key}));
+
+            for ( var change in data )
+            {
+                var e = data[change];
+                var kind = e['kind'];
+
+                var file_diff;
+                if (kind_formater.hasOwnProperty(kind))
+                    detail.append(kind_formater[kind](e));
+                else
+                    detail.append(ich.commit_file_unknown(e));
+            }
+        });
+    };
+
+    this.render_file_data = function(prev_diff) {
+        var filename = this.file;
+        var diff     = this.diff;
+        var data     = this.data;
+
+        var rems = DiffManipulator.filterRems(diff);
+        var adds = DiffManipulator.filterAdds(prev_diff);
+        var ranges = DiffManipulator.calculateFoldSet(rems, adds);
+
+        var clean_cr_lf_data = data.replace(/\r/g, '');
+
+        if (application_state.active_view_mode() === 'compact')
+            return DiffManipulator.generateCompactHtml(filename,
+                                                    application_state.active_context_size(),
+                                                    true, clean_cr_lf_data, ranges);
+        else // render full
+        {
+            var lines = add_syntax_coloration(filename, clean_cr_lf_data.split('\n'));
+            var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
+            var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
+            return diffed_content.join('\n');
+        }
+    }
+
+
+    this.create_dom = function() {
+        this.short_message = this.message.split("\n")[0];
+        var processed = ich.commitfile(this);
+
+        $(".container").prepend( processed );
+    }
+
+    this.render = function(prev_diff) {
+        var rendered = this.render_file_data(prev_diff);
+        $("#" + this.key + " .syntax_highlighted").html(rendered);
+    }
+
+    return this;
+});
+
+/**
+ * @constructor
+ */
+var FileRenderer = (function(init_data) {
+    var init_file = new FileBlob(init_data.file, init_data);
+
+    this.collection = [init_file];
+
+    this.keys = {};
+    this.keys[init_file.key] = init_file;
+
+    init_file.create_dom();
+    init_file.render([]);
+
+    this.render_all = function( commit_collection ) {
+        var i;
+        var prev_diff = [];
+
+        for ( i = 0; i < this.collection.length; i++ ) {
+            this.collection[i].render(prev_diff);
+            prev_diff = this.collection[i].diff;
+        }
+    }
+
+    this.fetch_details = function(commit_id) {
+        this.keys[commit_id].fetch_details();
+    }
+
+    this.send_message = function( msg ) {
+        if (msg.action === 'fetch_detail')
+            return this.fetch_details(msg.key);
+    }
+
+    this.fetch_previous = function() {
+        var last_commit = this.collection[0];
+
+        // commit: Hash
+        var params = { commit: last_commit.parent_commit
+                     // last_file: Hash
+                     , last_file: last_commit.filekey 
+                     };
+
+        var this_obj = this;
+
+        $.getJSON('ask_parent/' + last_commit.file, params, function(data) {
+            if (data === null) {
+                show_error({error: 'Communication error with the server'});
+                return;
+            }
+
+            if (data['error']) { 
+                show_error( data );
+                return;
+            }
+
+            var new_commit = new FileBlob(last_commit.file, data);
+
+            new_commit.create_dom();
+            this_obj.collection.unshift( new_commit );
+
+            this_obj.keys[new_commit.key] = new_commit;
+            this_obj.collection[0].render([]);
+            this_obj.collection[1].render(new_commit.diff);
+        });
+    }
+
+    return this;
+});
+
+function show_error( data )
 {
-    var last_commit = commit_collection[0];
-                 // commit: Hash
-    var params = { commit: last_commit.parent_commit
-                 // last_file: Hash
-                 , last_file: last_commit.filekey 
-                 };
-
-    $.getJSON('ask_parent/' + last_commit.file, params, function(data) {
-        if (data === null) {
-            show_error({error: 'Communication error with the server'});
-            return;
-        }
-
-        if (data['error']) { 
-            show_error( data );
-            return;
-        }
-
-        var new_commit = {
-                       file: last_commit.file  
-            ,          diff: data.diff
-            ,          data: data.data
-            ,       filekey: data.filekey
-            ,           key: data.key
-            ,       message: data.message
-            , parent_commit: data.parent_commit
-            ,          path: data.path
-        };
-
-        create_html_elements_for_file( new_commit );
-        commit_collection.unshift( new_commit );
-
-        render_commit( commit_collection, 0 );
-        render_commit( commit_collection, 1 );
-    });
+    $('.message_carret').html( data.error )
 }
 
-function render_initial_document( filename ) {
-    var infos = last_infos[filename];
-    create_html_elements_for_file( infos[0] );
-    render_commit( infos, 0 );
-    $("#breadcrumb").append(ich.breadcrumbelem({id:0, name:filename}));
-}
 
 function leave_server()
-{
-    $.ajax( {url:"quit", async:false} );
-}
+    { $.ajax( {url:"quit", async:false} ); }
 
 ich.grabTemplates();

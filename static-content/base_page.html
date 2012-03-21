@@ -57,7 +57,7 @@
         </script>
 
         <script id="commit_button_file" type="text/html">
-            <a onclick="switch_to_commit('{{commit}}')">full commit</a>
+            <a onclick="application_state.switch_commit('{{commit}}')">full commit</a>
         </script>
 
         <script id="breadcrumbelem" type="text/html">
@@ -83,7 +83,8 @@
                     <div class="commit_detail"></div>
 
                     <span class="more_info"
-                        onClick="retrieve_commit_detail('{{key}}');">&#x25bc;</span>
+                        onClick="application_state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        </span>
                 </div>
 
                 <div class="file_content">
@@ -110,7 +111,7 @@
         </div>
         <div class="toolbar">
             <div class="btn_toggleview"
-                 onClick="toggle_diff_full()"
+                 onClick="application_state.toggle_diff_full()"
                  title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
             <div class="btn_returnpast"
                  onClick="application_state.get_previous()"
@@ -119,8 +120,10 @@
                 <span class="label">Context size</span><br />
                 <textarea readonly="true" rows="1">2</textarea>
                 <div>
-                    <button type="button" onClick="increase_context_size()">+</button>
-                    <button type="button" onClick="decrease_context_size()">-</button>
+                    <button type="button"
+                            onClick="application_state.increase_context_size()">+</button>
+                    <button type="button"
+                            onClick="application_state.decrease_context_size()">-</button>
                 </div>
             </div>
 

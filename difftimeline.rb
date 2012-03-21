@@ -332,19 +332,17 @@ END
         end
 
         base_application_state = <<END
-        var last_infos = { "#{@tracked_path}": 
-                           [ { file: "#{@tracked_path}"
-                             , key: "#{current_head}"
-                             , filekey: "#{file.sha}"
-                             , parent_commit: "#{commit.parents_sha[0]}"
-                             , data: #{file.data.to_json}
-                             , message: #{commit.message.to_json}
-                             , diff: []
-                             , path: []
-                             } ] };
-
-        application_state['current_path'] = [{ kind:'file', val:"#{@tracked_path}"}];
-        render_initial_document( "#{@tracked_path}" );
+        application_state.start_file(
+           { file: "#{@tracked_path}"
+           , key: "#{current_head}"
+           , filekey: "#{file.sha}"
+           , parent_commit: "#{commit.parents_sha[0]}"
+           , data: #{file.data.to_json}
+           , message: #{commit.message.to_json}
+           , diff: []
+           , path: []
+           }
+        );
 END
 
         [200, {'Content-Type' => 'text/javascript'}, [base_application_state]]
