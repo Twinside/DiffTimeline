@@ -1,6 +1,17 @@
 /////////////////////////////////////////////////////////////////////
 //              Initial state
 /////////////////////////////////////////////////////////////////////
+var breadcrumb = (function() {
+    var count = 0;
+
+    return {
+        append_breadcrumb: function( name ) {
+            $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:count}));
+            count++;
+        } 
+    };
+
+})();
 /**
  * @constructor
  */
@@ -32,11 +43,6 @@ var application_state = (function () {
             last_path.render_all();
         },
 
-        push_state: function(obj) {
-            this.clear_display();
-            states.push( obj );
-        },
-
         get_previous: function() {
             var last_path = states[ states.length - 1 ];
             last_path.fetch_previous();
@@ -45,10 +51,14 @@ var application_state = (function () {
         switch_commit: function(id) {
             this.clear_display();
             states.push(new CommitRenderer(id));
+            breadcrumb.append_breadcrumb(id);
         },
 
         push_last_commit: function(v) {
             states[ states.length - 1 ].val.unshift(v);
+        },
+
+        jump_context: function(idx) {
         },
 
         clear_display: function () {
@@ -81,6 +91,7 @@ var application_state = (function () {
 
         start_file: function(file_obj) {
             states.push( new FileRenderer(file_obj) );
+            breadcrumb.append_breadcrumb(file_obj.file);
         }
     };
 })();
