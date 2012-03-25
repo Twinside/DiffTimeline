@@ -13,25 +13,29 @@
 
         <script id="commit_file_deletion" type="text/html">
             <div class="deletion">
-                <span class="commit_diff_symbol">-</span> {{name}}
+                <span class="commit_diff_symbol"
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}','{{key}}')">-</span> {{name}}
             </div>
         </script>
 
         <script id="commit_file_addition" type="text/html">
             <div class="addition">
-                <span class="commit_diff_symbol">+</span> {{name}}
+                <span class="commit_diff_symbol"
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">+</span> {{name}}
             </div>
         </script>
 
         <script id="commit_file_modification" type="text/html">
             <div class="modification">
-                <span class="commit_diff_symbol">~</span> {{name}}
+                <span class="commit_diff_symbol"
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
             </div>
         </script>
         
         <script id="commit_file_modification_detailed" type="text/html">
             <div class="modification">
-                <span class="commit_diff_symbol">~</span> {{name}}
+                <span class="commit_diff_symbol"
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
                 <div>
                     <pre class="syntax_highlighted"></pre>
                 </div>
@@ -62,7 +66,7 @@
 
         <script id="breadcrumbelem" type="text/html">
             <span>&nbsp;&gt;&gt;</span>
-            <a onclick="application_state.jump_context({{id}})">{{name}}</a>
+            <a onclick="breadcrumb.click_index({{id}})">{{name}}</a>
         </script>
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">

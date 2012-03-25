@@ -3,12 +3,18 @@
 /////////////////////////////////////////////////////////////////////
 var breadcrumb = (function() {
     var count = 0;
+    var current_index = 0;
 
     return {
         append_breadcrumb: function( name ) {
             $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:count}));
             count++;
-        } 
+        },
+
+        click_index: function( idx ) {
+            current_index = idx;
+            application_state.jump_context(idx);
+        }
     };
 
 })();
@@ -52,6 +58,13 @@ var application_state = (function () {
         get_previous: function() {
             var last_path = states[ states.length - 1 ];
             last_path.fetch_previous();
+        },
+
+        switch_file: function(file, fkey, start_commit) {
+            this.clear_display();
+            states.push(
+                FileRenderer.create_from_arg(file, fkey, start_commit));
+            breadcrumb.append_breadcrumb(file);
         },
 
         switch_commit: function(id) {
@@ -111,7 +124,7 @@ var application_state = (function () {
         },
 
         start_file: function(file_obj) {
-            states.push( new FileRenderer(file_obj) );
+            states.push( FileRenderer.create_from_data(file_obj) );
             breadcrumb.append_breadcrumb(file_obj.file);
         }
     };
@@ -421,6 +434,7 @@ var Commit = function(key, data) {
         for ( var change in this.file_changes ) {
             var e = this.file_changes[change];
             var kind = e['kind'];
+            e.key = this.key;
 
             var file_diff;
             if (kind_formater.hasOwnProperty(kind))
@@ -436,7 +450,7 @@ var Commit = function(key, data) {
 /**
  * @constructor
  */
-var CommitRenderer = (function(init_key) {
+var CommitRenderer = function(init_key) {
     this.collection = [];
     this.keys = {};
 
@@ -475,12 +489,12 @@ var CommitRenderer = (function(init_key) {
     this.fetch_commit(init_key);
 
     return this;
-});
+};
 
 /**
  * @constructor
  */
-var FileBlob = (function (filename, data) {
+var FileBlob = function (filename, data) {
     var add_syntax_coloration = function( filename, lines )
     {
         var ret = [];
@@ -528,6 +542,7 @@ var FileBlob = (function (filename, data) {
             {
                 var e = data[change];
                 var kind = e['kind'];
+                e.key = this_obj.key;
 
                 var file_diff;
                 if (kind_formater.hasOwnProperty(kind))
@@ -575,82 +590,108 @@ var FileBlob = (function (filename, data) {
     }
 
     return this;
-});
+};
 
 /**
  * @constructor
  */
-var FileRenderer = (function(init_data) {
-    var init_file = new FileBlob(init_data.file, init_data);
+var FileRenderer = (function() {
 
-    this.collection = [init_file];
+    var fetch_file = function(file, commit, filekey, f) {
+        var params = { commit: commit, last_file: filekey };
+        $.getJSON('ask_parent/' + file, params, f);
+    };
 
-    this.keys = {};
-    this.keys[init_file.key] = init_file;
+    var init = function(init_data) {
+        var init_file = new FileBlob(init_data.file, init_data);
 
-    init_file.create_dom();
-    init_file.render([]);
+        this.collection = [init_file];
+        this.keys[init_file.key] = init_file;
 
-    this.create_all_dom = function() {
-        for ( var i = 0; i < this.collection.length; i++ ) {
-            this.collection[i].create_dom();
+        init_file.create_dom();
+        init_file.render([]);
+
+        return this;
+    }
+
+    var init_methods = function(init_data) {
+
+        this.collection = [];
+        this.keys = {};
+
+        this.create_all_dom = function() {
+            for ( var i = 0; i < this.collection.length; i++ ) {
+                this.collection[i].create_dom();
+            }
+        };
+
+        this.render_all = function() {
+            var i;
+            var prev_diff = [];
+
+            for ( i = 0; i < this.collection.length; i++ ) {
+                this.collection[i].render(prev_diff);
+                prev_diff = this.collection[i].diff;
+            }
+        };
+
+        this.fetch_details = function(commit_id) {
+            this.keys[commit_id].fetch_details();
+        };
+
+        this.send_message = function( msg ) {
+            if (msg.action === 'fetch_detail')
+                return this.fetch_details(msg.key);
+        };
+
+        this.fetch_previous = function() {
+            var last_commit = this.collection[0];
+            var this_obj = this;
+
+            fetch_file(last_commit.file, last_commit.parent_commit,
+                       last_commit.filekey, function(data) {
+                                
+                if (data === null) {
+                    show_error({error: 'Communication error with the server'});
+                    return;
+                }
+
+                if (data['error']) { 
+                    show_error( data );
+                    return;
+                }
+
+                var new_commit = new FileBlob(last_commit.file, data);
+
+                new_commit.create_dom();
+                this_obj.collection.unshift( new_commit );
+
+                this_obj.keys[new_commit.key] = new_commit;
+                this_obj.collection[0].render([]);
+                this_obj.collection[1].render(new_commit.diff);
+            });
+        };
+        return this;
+    };
+
+    return {
+        create_from_data: function(init_data) { 
+            var inited = new init_methods();
+            return init.call(inited, init_data);
+        },
+
+        create_from_arg: function(file, filekey, commit) {
+            var rez = new init_methods();
+
+            fetch_file(file, commit, filekey, function(data) { 
+                data.file = file;
+                init.call(rez, data);
+            });
+
+            return rez;
         }
     };
-
-    this.render_all = function() {
-        var i;
-        var prev_diff = [];
-
-        for ( i = 0; i < this.collection.length; i++ ) {
-            this.collection[i].render(prev_diff);
-            prev_diff = this.collection[i].diff;
-        }
-    };
-
-    this.fetch_details = function(commit_id) {
-        this.keys[commit_id].fetch_details();
-    };
-
-    this.send_message = function( msg ) {
-        if (msg.action === 'fetch_detail')
-            return this.fetch_details(msg.key);
-    };
-
-    this.fetch_previous = function() {
-        var last_commit = this.collection[0];
-
-        // commit: Hash
-        var params = { commit: last_commit.parent_commit
-                     // last_file: Hash
-                     , last_file: last_commit.filekey 
-                     };
-
-        var this_obj = this;
-
-        $.getJSON('ask_parent/' + last_commit.file, params, function(data) {
-            if (data === null) {
-                show_error({error: 'Communication error with the server'});
-                return;
-            }
-
-            if (data['error']) { 
-                show_error( data );
-                return;
-            }
-
-            var new_commit = new FileBlob(last_commit.file, data);
-
-            new_commit.create_dom();
-            this_obj.collection.unshift( new_commit );
-
-            this_obj.keys[new_commit.key] = new_commit;
-            this_obj.collection[0].render([]);
-            this_obj.collection[1].render(new_commit.diff);
-        });
-    };
-
-    return this;
-});
+})();
 
 function show_error( data )
 {
