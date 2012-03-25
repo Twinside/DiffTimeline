@@ -21,6 +21,7 @@ var application_state = (function () {
     var context_size = 2;
     var max_commit_delta_show = 15;
     var states = [];
+    var forward_states = [];
     var commit_delta_margin = 6;
 
     var btn_toggle_text = {
@@ -36,6 +37,11 @@ var application_state = (function () {
         send_state_message: function(message) {
             var last_path = states[ states.length - 1 ];
             last_path.send_message(message);
+        },
+
+        create_all_dom: function() {
+            var last_path = states[ states.length - 1 ];
+            last_path.create_all_dom();
         },
 
         render_all: function() {
@@ -59,6 +65,21 @@ var application_state = (function () {
         },
 
         jump_context: function(idx) {
+            if (states.length - 1 == idx) return;
+
+            var i;
+
+            if (idx < states.length - 1) {
+                while (idx != states.length - 1)
+                    forward_states.push(states.pop());
+            } else {
+                while (idx != states.length - 1)
+                    states.push(forward_states.pop());
+            }
+
+            this.clear_display();
+            this.create_all_dom();
+            this.render_all();
         },
 
         clear_display: function () {
@@ -419,7 +440,18 @@ var CommitRenderer = (function(init_key) {
     this.collection = [];
     this.keys = {};
 
-    this.render_all = function() {}
+    this.render_all = function() {
+        for ( var i = 0; i < this.collection.length; i++ ) {
+            this.collection[i].render();
+        }
+    };
+
+
+    this.create_all_dom = function() {
+        for ( var i = 0; i < this.collection.length; i++ ) {
+            this.collection[i].create_dom();
+        }
+    };
 
     this.fetch_commit = function( id ) {
         var this_obj = this;
@@ -530,7 +562,6 @@ var FileBlob = (function (filename, data) {
         }
     }
 
-
     this.create_dom = function() {
         this.short_message = this.message.split("\n")[0];
         var processed = ich.commitfile(this);
@@ -560,7 +591,13 @@ var FileRenderer = (function(init_data) {
     init_file.create_dom();
     init_file.render([]);
 
-    this.render_all = function( commit_collection ) {
+    this.create_all_dom = function() {
+        for ( var i = 0; i < this.collection.length; i++ ) {
+            this.collection[i].create_dom();
+        }
+    };
+
+    this.render_all = function() {
         var i;
         var prev_diff = [];
 
@@ -568,16 +605,16 @@ var FileRenderer = (function(init_data) {
             this.collection[i].render(prev_diff);
             prev_diff = this.collection[i].diff;
         }
-    }
+    };
 
     this.fetch_details = function(commit_id) {
         this.keys[commit_id].fetch_details();
-    }
+    };
 
     this.send_message = function( msg ) {
         if (msg.action === 'fetch_detail')
             return this.fetch_details(msg.key);
-    }
+    };
 
     this.fetch_previous = function() {
         var last_commit = this.collection[0];
@@ -610,7 +647,7 @@ var FileRenderer = (function(init_data) {
             this_obj.collection[0].render([]);
             this_obj.collection[1].render(new_commit.diff);
         });
-    }
+    };
 
     return this;
 });
