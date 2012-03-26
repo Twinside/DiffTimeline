@@ -65,8 +65,10 @@
         </script>
 
         <script id="breadcrumbelem" type="text/html">
-            <span>&nbsp;&gt;&gt;</span>
-            <a onclick="breadcrumb.click_index({{id}})">{{name}}</a>
+            <span>
+                <span>&nbsp;&gt;&gt;</span>
+                <a onclick="breadcrumb.click_index({{id}})">{{name}}</a>
+            </span>
         </script>
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">

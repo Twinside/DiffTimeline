@@ -7,8 +7,14 @@ var breadcrumb = (function() {
 
     return {
         append_breadcrumb: function( name ) {
+            if (current_index < count - 1)
+            {
+                $('#breadcrumb > span').slice(current_index + 1).remove();
+                count = current_index + 1;
+            }
+
             $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:count}));
-            count++;
+            current_index = count++;
         },
 
         click_index: function( idx ) {
