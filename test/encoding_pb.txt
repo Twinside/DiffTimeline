@@ -1,3 +1,5 @@
 Text with ASCII only
 
 fichier texte en ascii seulement
+
+alors, on fait péter les accents en latin1 à pépère.
