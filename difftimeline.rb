@@ -280,8 +280,10 @@ class DiffTimelineState
             encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
                 diff = GitRead::Diff.diff_strings(file.data, last_file.data)
+                utf8 = Encoding.find("utf-8")
 
-                { "data" => file.data,
+                { "data" => file.data.encode(utf8, { :invalid => :replace,
+                                                     :undef => :replace }),
                   "filekey" => file.sha,
                   "parent_commit" => commit.parents_sha[0],
                   "message" => commit.message,
