@@ -65,7 +65,7 @@
         </script>
 
         <script id="breadcrumbelem" type="text/html">
-            <span>
+            <span class="breadcrumb_elem">
                 <span>&nbsp;&gt;&gt;</span>
                 <a onclick="breadcrumb.click_index({{id}})">{{name}}</a>
             </span>
@@ -80,17 +80,17 @@
 
                     <div class="commit_list">
                         {{#path}}
-                        <div class="delta_commit_circle">
+                        <div class="delta_commit_circle"
+                             onclick="application_state.switch_commit('{{commit}}')">
                             <div>{{message}}</div>
                         </div>
                         {{/path}}
                     </div>
 
-                    <div class="commit_detail"></div>
-
                     <span class="more_info"
                         onClick="application_state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
                         </span>
+                    <div class="commit_detail"></div>
                 </div>
 
                 <div class="file_content">
