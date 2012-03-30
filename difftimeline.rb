@@ -50,6 +50,12 @@ class DiffTimelineState
         @exec_path = Pathname(__FILE__).realpath.parent
         @is_app = ARGV[0] == '--app'
 
+        if RUBY_VERSION =~ /^1\.8.*/
+            @is_1_8 = true
+        else
+            @is_1_8 = false
+        end
+
         if @is_app
             puts 'Launching in app mode'
             requested_filename = Pathname.new(ARGV[1]).basename
@@ -276,6 +282,8 @@ class DiffTimelineState
     end
 
     def cleanup_encoding(str)
+        return str if @is_1_8
+
         default_encoding = Encoding.default_external
         utf8 = Encoding.find("utf-8")
 
@@ -290,8 +298,6 @@ class DiffTimelineState
             encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
                 diff = GitRead::Diff.diff_strings(file.data, last_file.data)
-                default_encoding = Encoding.default_external
-                utf8 = Encoding.find("utf-8")
 
                 encoding_conversion_param = { :invalid => :replace, :undef => :replace }
                 clean_data = self.cleanup_encoding(file.data)
@@ -351,7 +357,6 @@ END
             return serve_not_found_error()
         end
 
-        utf8 = Encoding.find("utf-8")
         clean_data = self.cleanup_encoding(file.data)
         clean_message = self.cleanup_encoding(commit.message)
 
