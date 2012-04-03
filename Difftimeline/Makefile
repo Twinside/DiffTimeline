@@ -1,0 +1,4 @@
+
+all:
+	yesod --dev devel
+
