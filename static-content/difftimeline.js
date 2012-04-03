@@ -22,8 +22,8 @@ var breadcrumb = (function() {
             application_state.jump_context(idx);
         }
     };
-
 })();
+
 /**
  * @constructor
  */

@@ -6,9 +6,18 @@ How to install dependencies
 
 Mac OSX run
 -----------
- * install Ruby 1.9 somehow
- * install manually each packages of the Gemfile via `gem1.9 install bundlename`
+ * Install Ruby 1.9 somehow
+ * Install bundler ( `gem install bundler` )
+ * Install all the missing gems ( `bundle install` )
 
+Linux
+=====
+ * install ruby 1.8 or 1.9, on debian like :
+     * `sudo apt-get install ruby1.8`
+     * `sudo apt-get install ruby1.9.1`
+ * install rubygems ( `sudo apt-get install rubygems1.9.1` )
+ * install bundler ( `sudo gem install bundler` )
+ * Install all the missing gems ( `bundle install` )
 
 Running
 -------
