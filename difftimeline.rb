@@ -50,6 +50,12 @@ class DiffTimelineState
         @exec_path = Pathname(__FILE__).realpath.parent
         @is_app = ARGV[0] == '--app'
 
+        if RUBY_VERSION =~ /^1\.8.*/
+            @is_1_8 = true
+        else
+            @is_1_8 = false
+        end
+
         if @is_app
             puts 'Launching in app mode'
             requested_filename = Pathname.new(ARGV[1]).basename
@@ -261,8 +267,10 @@ class DiffTimelineState
             raise QueryingError, send_error_message("#{commit} parent is not a commit.")
         end
 
+
         if deep
-            rez = { :message => commit.message,
+            clean_message = self.cleanup_encoding(commit.message)
+            rez = { :message => clean_message,
                     :parents_sha => commit.parents_sha,
                     :key => commit.sha,
                     :author => commit.author,
@@ -273,6 +281,16 @@ class DiffTimelineState
         [200, { 'Content-Type' => 'text/json' }, [rez.to_json]]
     end
 
+    def cleanup_encoding(str)
+        return str if @is_1_8
+
+        default_encoding = Encoding.default_external
+        utf8 = Encoding.find("utf-8")
+
+        encoding_conversion_param = { :invalid => :replace, :undef => :replace }
+        str.force_encoding(default_encoding).encode(utf8, encoding_conversion_param)
+    end
+
     def load_parent(file_req, query_string)
         query = split_query_string(query_string.to_s)
         query['path'] = file_req
@@ -280,15 +298,21 @@ class DiffTimelineState
             encoded = yield_query(query) do |commit_path, commit, last_file, file|
 
                 diff = GitRead::Diff.diff_strings(file.data, last_file.data)
-                utf8 = Encoding.find("utf-8")
 
-                { "data" => file.data.encode(utf8, { :invalid => :replace,
-                                                     :undef => :replace }),
+                encoding_conversion_param = { :invalid => :replace, :undef => :replace }
+                clean_data = self.cleanup_encoding(file.data)
+                clean_message = self.cleanup_encoding(commit.message)
+                clean_path = commit_path.map do |it|
+                    it['message']= self.cleanup_encoding(it['message'])
+                    it
+                end
+
+                { "data" => clean_data,
                   "filekey" => file.sha,
                   "parent_commit" => commit.parents_sha[0],
-                  "message" => commit.message,
+                  "message" => clean_message,
                   "diff" => diff.diff_set,
-                  "path" => commit_path,
+                  "path" => clean_path,
                   "key" => commit.sha.to_s
                 }
             end
@@ -333,14 +357,17 @@ END
             return serve_not_found_error()
         end
 
+        clean_data = self.cleanup_encoding(file.data)
+        clean_message = self.cleanup_encoding(commit.message)
+
         base_application_state = <<END
         application_state.start_file(
            { file: "#{@tracked_path}"
            , key: "#{current_head}"
            , filekey: "#{file.sha}"
            , parent_commit: "#{commit.parents_sha[0]}"
-           , data: #{file.data.to_json}
-           , message: #{commit.message.to_json}
+           , data: #{clean_data.to_json}
+           , message: #{clean_message.to_json}
            , diff: []
            , path: []
            }
