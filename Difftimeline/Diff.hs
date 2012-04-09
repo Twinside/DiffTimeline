@@ -1,10 +1,12 @@
 -- | Implement the LCS diff algorithm.
 -- As I already implemented it in another language, I'm
 -- being lazy and implement it in an imperative way.
-module Difftimeline.Diff( DiffDirection( .. )
+module Difftimeline.Diff( -- * Types
+                          DiffAction( .. )
                         , DiffCommand( .. )
                         , Index
 
+                          -- * Diff functions
                         , computeDiff
                         , computeTextDiff
                         , computeTextScript
@@ -18,20 +20,18 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
 
-import Text.Printf
-import Debug.Trace
-
 type Index = Int
 
-data DiffDirection = DiffAddition
-                   | DiffDeletion
-                   deriving (Eq, Show)
+-- | Represent the action to be taken for the diff
+data DiffAction = DiffAddition  -- ^ Data which should be inserted
+                | DiffDeletion  -- ^ Data which should be removed
+                deriving (Eq, Show)
 
 -- | Hold computed information about the diff
-data DiffCommand = DiffCommand {-# UNPACK #-}!DiffDirection  -- ^ Addition or deletion
-                               {-# UNPACK #-}!Int            -- ^ Index in the original vector
-                               {-# UNPACK #-}!Int            -- ^ Index in the destination vector
-                               {-# UNPACK #-}!Int            -- ^ Size
+data DiffCommand = DiffCommand {-# UNPACK #-}!DiffAction  -- ^ Addition or deletion
+                               {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
+                               {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
+                               {-# UNPACK #-}!Int         -- ^ Size of the modification
                  deriving (Eq, Show)
 
 -- | Merge diff commands which are contiguous of the same direction.
@@ -55,6 +55,7 @@ data DiffContext s a = DiffContext
     , arrayBias     :: Int
     }
 
+-- | Compute diff between string, line by line
 computeStringDiff :: String -> String -> [DiffCommand]
 computeStringDiff a b = computeTextDiff (T.pack a) (T.pack b)
 
@@ -65,16 +66,15 @@ computeTextDiff orig dest =
     computeDiff (V.fromList $ T.lines orig)
                 (V.fromList $ T.lines dest)
 
-computeTextScript :: T.Text -> T.Text -> [T.Text]
-computeTextScript orig dest = V.toList . V.concat $ map extract diffs
+-- | Compute the diff and extract the modification lines from the original text
+computeTextScript :: T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
+computeTextScript orig dest = map extract diffs
     where origArray = V.fromList $ T.lines orig
           destArray = V.fromList $ T.lines dest
           diffs = computeDiff origArray destArray
 
-          extract (DiffCommand DiffAddition oi di s) =
-              V.map (T.pack (printf "+ (%3d, %3d) " (oi + 1) (di + 1)) `T.append`) $ V.slice di s destArray
-          extract (DiffCommand DiffDeletion oi di s) =
-              V.map (T.pack (printf "- (%3d, %3d) " (oi + 1) (di + 1)) `T.append`) $ V.slice oi s origArray
+          extract c@(DiffCommand DiffAddition _oi  di s) = (c, V.slice di s destArray)
+          extract c@(DiffCommand DiffDeletion  oi _di s) = (c, V.slice oi s origArray)
 
 -- | Compute the script to pass from one vector to another using the
 -- Longuest common substring algorithm (implemented in the diff command)
@@ -102,6 +102,8 @@ computeDiff orig dest = compactCommands $ runST $ do
 (!!!) :: V.Vector e -> Int -> e
 (!!!) = (V.!)
 
+
+-- | Increase range in the vector
 increaseWithin :: (Index, Index) -> (Index, Index) -> MU.STVector s Index -> Index -> Index
                -> ST s (Index, Index)
 increaseWithin (mi, ma) (mini, maxi) vec bias nullVal = do
@@ -141,9 +143,11 @@ findMaxReachingSnakeBackward orig dest (xi, xMin) (yi, yMin) = inner xi yi
 inRange :: (Ord a) => a -> (a, a) -> Bool
 inRange x (mini, maxi) = mini <= x && x <= maxi
 
+-- | LCS perform the diff, the findMiddleSnake search the past of lowest
+-- resistance, most important calculus function.
 findMiddleSnake :: (Eq a) => DiffContext s a -> Index -> Index -> Index -> Index
                 -> ST s (Index, Index)
-findMiddleSnake ctxt xMin xMax yMin yMax = trace (printf "findMiddleSnake (%d, %d) (%d, %d)" xMin xMax yMin yMax) $ do
+findMiddleSnake ctxt xMin xMax yMin yMax = do
     let forwardMid =  xMin - yMin
         backwardMid = xMax - yMax
 
@@ -158,6 +162,8 @@ findMiddleSnake ctxt xMin xMax yMin yMax = trace (printf "findMiddleSnake (%d, %
     ((forwardSnake  ctxt) .<-.  forwardMid) $ xMin
     ((backwardSnake ctxt) .<-. backwardMid) $ xMax
 
+    -- The forwardPass and backwardPass simulate an infinite loop with
+    -- a return statement via mutual recursion.
     let forwardPass range backRange = do
             let snakeVec = forwardSnake ctxt
             newRange@(mini, maxi) <- increaseWithin range validDiagonal snakeVec bias (-1)
@@ -173,7 +179,7 @@ findMiddleSnake ctxt xMin xMax yMin yMax = trace (printf "findMiddleSnake (%d, %
                                 snake = findMaxReachingSnake (origData ctxt) (destData ctxt)
                                                              (x, xMax) (x - d, yMax) 
 
-                            (snakeVec .<-. d) $ trace (printf "max reaching forward %d" snake) snake
+                            (snakeVec .<-. d) snake
                             backVal <- backwardSnake ctxt .!!!. d
 
                             if isOdd && d `inRange` backRange && backVal <= snake
@@ -195,7 +201,7 @@ findMiddleSnake ctxt xMin xMax yMin yMax = trace (printf "findMiddleSnake (%d, %
                                 snake = findMaxReachingSnakeBackward (origData ctxt) (destData ctxt)
                                                                      (x, xMin) (x - d, yMin)
 
-                            (snakeVec .<-. d) $  trace (printf "max reaching backward %d" snake) snake
+                            (snakeVec .<-. d) snake
                             forwardVal <- forwardSnake ctxt .!!!. d
 
                             if not isOdd && d `inRange` forwardRange && snake <= forwardVal
@@ -206,8 +212,7 @@ findMiddleSnake ctxt xMin xMax yMin yMax = trace (printf "findMiddleSnake (%d, %
 
     forwardPass (forwardMid, forwardMid) (backwardMid, backwardMid)
 
-forwardAvancement :: (Eq a) => DiffContext s a -> (Index, Index) -> (Index, Index)
-                  -> (Index, Index)
+forwardAvancement :: (Eq a) => DiffContext s a -> Range -> Range -> (Index, Index)
 forwardAvancement (DiffContext { origData = oData, destData = dData })
                     (origBegin, origEnd) (destBegin, destEnd) = inner origBegin destBegin
   where inner orig dest | orig >= origEnd = (orig, dest)
@@ -215,8 +220,7 @@ forwardAvancement (DiffContext { origData = oData, destData = dData })
                         | oData !!! orig /= dData !!! dest = (orig, dest)
                         | otherwise = inner (orig + 1) $ dest + 1
 
-backwardAvancement :: (Eq a) => DiffContext s a -> (Index, Index) -> (Index, Index)
-                   -> (Index, Index)
+backwardAvancement :: (Eq a) => DiffContext s a -> Range -> Range -> (Index, Index)
 backwardAvancement (DiffContext { origData = oData, destData = dData })
                     (origBegin, origEnd) (destBegin, destEnd) = inner origEnd destEnd
   where inner orig dest | origBegin >= orig = (orig, dest)
@@ -224,9 +228,10 @@ backwardAvancement (DiffContext { origData = oData, destData = dData })
                         | oData !!! (orig -  1) /= dData !!! (dest - 1) = (orig, dest)
                         | otherwise = inner (orig - 1) $ dest - 1
 
-lcs :: (Eq a) => DiffContext s a -> (Index, Index) -> (Index, Index)
-    -> ST s [DiffCommand]
-lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) = trace (printf "lcs %s %s" (show origRange) (show destRange)) $
+-- | Main recursive function, apply a divide and conquer strategy to find
+-- diffs
+lcs :: (Eq a) => DiffContext s a -> Range -> Range -> ST s [DiffCommand]
+lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) =
     let (oBeg, dBeg) = forwardAvancement ctxt origRange destRange
         (oEnd, dEnd) = backwardAvancement ctxt (oBeg, origEnd) (dBeg, destEnd)
     in case (oBeg == oEnd, dBeg == dEnd) of
@@ -236,7 +241,6 @@ lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) = trace (printf "lcs %s %
                 return [DiffCommand DiffDeletion oBeg dBeg (oEnd - oBeg)]
             (False, False) -> do
                 (subBeg, subEnd) <- findMiddleSnake ctxt oBeg oEnd dBeg dEnd
-                trace (printf "snake_range %s" $ show (subBeg, subEnd)) $
-                    mappend <$> lcs ctxt (oBeg, subBeg) (dBeg, subEnd)
-                            <*> lcs ctxt (subBeg, oEnd) (subEnd, dEnd)
+                mappend <$> lcs ctxt (oBeg, subBeg) (dBeg, subEnd)
+                        <*> lcs ctxt (subBeg, oEnd) (subEnd, dEnd)
 
