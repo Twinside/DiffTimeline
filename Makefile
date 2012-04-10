@@ -1,9 +1,10 @@
-mup:
-	runhaskell -Wall hsDiffTest.hs
 
 moh:
-	ghc -c -Wall DiffTimeline/Diff.hs -package vector
+	ghc -c -Wall DiffTimeline/Diff.hs DiffTimeline/GitQuery.hs -package vector
 	# ghc -c -Wall DiffTimeline/Diff.hs DiffTimeline/GitQuery.hs -package vector
+
+mup:
+	runhaskell -Wall hsDiffTest.hs
 
 check:
 	java -jar compiler.jar \
