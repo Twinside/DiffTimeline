@@ -1,10 +1,13 @@
-module Difftimeline.GitQuery where
+module GitQuery where
+
+import Prelude
 
 import Control.Applicative
 import Control.Monad.IO.Class( liftIO )
 import Control.Monad.Trans.Maybe( MaybeT, runMaybeT  )
 
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as L
 import Data.List( find )
 import Data.Maybe( fromJust )
 import qualified Data.Text as T
@@ -14,7 +17,7 @@ import Data.Git.Repository( Git, findObject )
 import Data.Git.Object( GitObject(..), CommitInfo( .. ) )
 import Data.Git.Ref( Ref, fromHexString )
 
-import Difftimeline.Diff
+import Diff
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
@@ -34,21 +37,21 @@ findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
                 -> Ref              -- ^ Ref of the element in the path
                 -> Ref              -- ^ First commit ref
-                -> IO (CommitInfo, [CommitPath])
+                -> IO (CommitInfo, Ref, [CommitPath])
 findFirstCommit repository path currentFileRef firstCommit =
-  fromJust <$> (runMaybeT $ inner undefined firstCommit)
+  fromJust <$> (runMaybeT $ inner undefined undefined firstCommit)
     where getObj = maybeIO . accessObject repository
   
-          inner prevCommit currentCommit = do
+          inner prevCommit prevRef currentCommit = do
             (Commit info) <- getObj currentCommit
             t@(Tree _)    <- getObj $ commitTreeish info
             commitFileRef <- maybeIO $ findInTree repository path t
        
             if commitFileRef /= currentFileRef
-               then return (prevCommit, [])
+               then return (prevCommit, prevRef, [])
                else do
-               	(obj, commitPathRest) <- inner info $ commitParents info !! 0
-               	return (obj, CommitPath {
+               	(obj, r, commitPathRest) <- inner info currentCommit $ commitParents info !! 0
+               	return (obj, r, CommitPath {
                         pathCommitRef = currentCommit,
                         pathParentRef = (commitParents info) !! 0,
                         pathMessage = decodeUtf8 $ commitMessage info
@@ -72,19 +75,41 @@ findInTree git pathes = inner pathes . Just
           extractRef (_, _, ref) = ref
           findVal v lst = extractRef <$> find (\(_, n, _) -> v == n) lst
 
-{-findParentFile :: Git -> String -> String -> FilePath -> IO [Int]-}
-{-findParentFile repository lastFileStrSha commitStrSha path = inner-}
-  {-where prevFileSha = fromHexString lastFileStrSha-}
-        {-prevCommit = fromHexString commitStrSha-}
+findParentFile :: Git -> String -> String -> FilePath -> IO (Maybe ParentFile)
+findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
+  where prevFileSha = fromHexString lastFileStrSha
+        prevCommit = fromHexString commitStrSha
 
-        {-inner = do -}
-            {-commit <- accessObject repository prevCommit-}
+        bytePath = []
+
+        getObj = maybeIO . accessObject repository
+
+        inner = do 
+            Commit commit <- getObj prevCommit
+            t@(Tree _)    <- getObj $ commitTreeish commit
+            currentFileRef <- maybeIO $ findInTree repository bytePath t
+            Blob file <- getObj currentFileRef 
+
+            (firstNfo, firstRef, path) <-
+                    liftIO $ findFirstCommit repository bytePath currentFileRef prevCommit
+
+            let toStrict = B.concat . L.toChunks
+
+            return $ ParentFile
+                { fileData = decodeUtf8 $ toStrict file
+                , fileRef = currentFileRef
+                , parentRef = commitParents firstNfo
+                , fileMessage = decodeUtf8 $ commitMessage firstNfo
+                , commitRef = firstRef
+                , commitPath = path
+                , fileDiff = []
+                }
 
 
 data ParentFile = ParentFile
     { fileData    :: T.Text
     , fileRef     :: Ref
-    , parentRef   :: Ref
+    , parentRef   :: [Ref]
     , fileMessage :: T.Text
     , commitRef   :: Ref
     , commitPath  :: [CommitPath]

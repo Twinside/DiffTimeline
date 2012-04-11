@@ -1,7 +1,7 @@
 -- | Implement the LCS diff algorithm.
 -- As I already implemented it in another language, I'm
 -- being lazy and implement it in an imperative way.
-module Difftimeline.Diff( -- * Types
+module              Diff( -- * Types
                           DiffAction( .. )
                         , DiffCommand( .. )
                         , Index
@@ -13,6 +13,7 @@ module Difftimeline.Diff( -- * Types
                         , computeStringDiff 
                         ) where
 
+import Prelude
 import Data.Monoid( mappend )
 import Control.Applicative( (<$>), (<*>) )
 import Control.Monad.ST( ST, runST )

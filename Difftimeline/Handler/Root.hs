@@ -12,11 +12,7 @@ import Text.Julius( julius, renderJavascript )
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getRootR :: Handler RepHtml
-getRootR = do
-    defaultLayout $ do
-        h2id <- lift newIdent
-        setTitle "Difftimeline homepage"
-        $(widgetFile "homepage")
+getRootR = sendFile "text/html" "../static-content/base_page.html"
 
 getFileParentR :: String -> Handler RepJson
 getFileParentR file = jsonToRepJson $ object [("file_parent", file)]
@@ -30,7 +26,9 @@ getCommitR commitSha =
     jsonToRepJson $ object [("commit", commitSha)]
 
 getInitialInfoR :: Handler RepPlain
-getInitialInfoR = return . RepPlain . toContent . renderJavascript $ [julius|
+getInitialInfoR = do
+    _app <- getYesod
+    return . RepPlain . toContent . renderJavascript $ [julius|
         var first_state = { file: "test.c", // "@tracked_path"
             key: "0000000000000000000", // "current_head"
            filekey: "1111111111111111111", // file.sha

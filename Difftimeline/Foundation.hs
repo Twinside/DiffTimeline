@@ -22,6 +22,7 @@ import Settings (Extra (..), widgetFile)
 import Control.Monad.IO.Class (liftIO)
 import Web.ClientSession (getKey)
 import Text.Hamlet (hamletFile)
+import Data.Git.Repository( Git )
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -31,6 +32,7 @@ data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv Extra
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
+    , getRepository :: Git
     }
 
 -- Set up i18n messages. See the message folder.
