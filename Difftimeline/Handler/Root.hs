@@ -1,8 +1,10 @@
 module Handler.Root where
 
 import Import
+import qualified Data.ByteString as B
 import Yesod.Json
 import Text.Julius( julius, renderJavascript )
+import GitQuery
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -27,16 +29,19 @@ getCommitR commitSha =
 
 getInitialInfoR :: Handler RepPlain
 getInitialInfoR = do
-    _app <- getYesod
+    app <- getYesod
+    let repository = getRepository app
+        filename = "difftimeline.rb"
+    Just initialAnswer <- liftIO $ basePage repository [B.pack "difftimeline.rb"]
     return . RepPlain . toContent . renderJavascript $ [julius|
-        var first_state = { file: "test.c", // "@tracked_path"
-            key: "0000000000000000000", // "current_head"
-           filekey: "1111111111111111111", // file.sha
-           parent_commit: "2222222222222222222", // commit.parents_sha[0]
-           data: "// content\n// line1\n// line2\nint main(int argc, char argv[]) { return 0; }", // clean_data.to_json
-           message: "Test message", // clean_message.to_json
-           diff: [],
-           path: [] };
+        var first_state = { file: #{filename},
+                             key: #{commitRef initialAnswer},
+                         filekey: #{fileRef initialAnswer},
+                   parent_commit: #{head $ parentRef initialAnswer},
+                            data: #{fileData initialAnswer},
+                         message: #{fileMessage initialAnswer},
+                            diff: [],
+                            path: [] };
 
         application_state.start_file( first_state ); |] ("" :: Text)
 

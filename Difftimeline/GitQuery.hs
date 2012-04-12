@@ -13,8 +13,14 @@ import Data.Maybe( fromJust )
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8 )
 
-import Data.Git.Repository( Git, findObject )
-import Data.Git.Object( GitObject(..), CommitInfo( .. ) )
+import Data.Git( GitObject( .. )
+               , CommitInfo( .. )
+               , Git
+               , findObject
+               , CommitInfo( .. )
+               , readBranch
+               )
+
 import Data.Git.Ref( Ref, fromHexString )
 
 import Diff
@@ -44,7 +50,7 @@ findFirstCommit repository path currentFileRef firstCommit =
   
           inner prevCommit prevRef currentCommit = do
             (Commit info) <- getObj currentCommit
-            t@(Tree _)    <- getObj $ commitTreeish info
+            t@(Tree _)    <- getObj $ commitTree info
             commitFileRef <- maybeIO $ findInTree repository path t
        
             if commitFileRef /= currentFileRef
@@ -58,7 +64,7 @@ findFirstCommit repository path currentFileRef firstCommit =
                     } : commitPathRest)
       
 accessObject :: Git -> Ref -> IO (Maybe GitObject)
-accessObject g r = findObject g r True
+accessObject g r = findObject g r
 
 -- | Given a Tree object, try to find a path in it.
 -- This function should not call error
@@ -86,7 +92,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
 
         inner = do 
             Commit commit <- getObj prevCommit
-            t@(Tree _)    <- getObj $ commitTreeish commit
+            t@(Tree _)    <- getObj $ commitTree commit
             currentFileRef <- maybeIO $ findInTree repository bytePath t
             Blob file <- getObj currentFileRef 
 
@@ -105,7 +111,6 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
                 , fileDiff = []
                 }
 
-
 data ParentFile = ParentFile
     { fileData    :: T.Text
     , fileRef     :: Ref
@@ -115,3 +120,24 @@ data ParentFile = ParentFile
     , commitPath  :: [CommitPath]
     , fileDiff    :: [DiffCommand]
     }
+
+basePage :: Git -> [B.ByteString] -> IO (Maybe ParentFile)
+basePage repository path = runMaybeT $ do
+    let getObj = maybeIO . accessObject repository
+    headRef        <- liftIO $ readBranch repository "HEAD"
+    (Commit cInfo) <- getObj headRef
+    tree           <- getObj $ commitTree cInfo
+    fileRef        <- maybeIO $ findInTree repository path tree
+    (Blob content) <- getObj fileRef
+
+    let toStrict = B.concat . L.toChunks
+    return $ ParentFile {
+    	commitRef = headRef,
+    	commitPath = [],
+    	fileDiff = [],
+    	fileData = decodeUtf8 $ toStrict content,
+    	parentRef = commitParents cInfo,
+    	fileMessage = decodeUtf8 $ commitMessage cInfo
+    
+    }
+

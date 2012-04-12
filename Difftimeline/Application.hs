@@ -32,9 +32,10 @@ mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
 initRepository :: Logger -> IO Git
 initRepository logger= do
-    dir <- getCurrentDirectory
-    logString logger $ "Trying to open git" ++ (dir </> ".git")
-    openRepo dir
+    Just dir <- getCurrentDirectory >>= findRepository
+    let repoPath = dir </> ".git"
+    logString logger $ "Trying to open git: " ++ repoPath
+    openRepo repoPath
 
 -- This function allocates resources (such as a database connection pool),
 -- performs initialization and creates a WAI application. This is also the
