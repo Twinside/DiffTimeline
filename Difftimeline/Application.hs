@@ -21,7 +21,7 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 import Network.Wai (Application)
 
 import System.FilePath( (</>) )
-import Data.Git.Repository( Git, openRepo )
+import Data.Git.Repository( Git, openRepo, findRepository )
 -- Import all relevant handler modules here.
 import Handler.Root
 

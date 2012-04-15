@@ -2,6 +2,7 @@ module GitQuery where
 
 import Prelude
 
+import System.IO( stderr, hPutStrLn )
 import Control.Applicative
 import Control.Monad.IO.Class( liftIO )
 import Control.Monad.Trans.Maybe( MaybeT, runMaybeT  )
@@ -19,17 +20,21 @@ import Data.Git( GitObject( .. )
                , findObject
                , CommitInfo( .. )
                , readBranch
+               , getBranchNames
                )
 
 import Data.Git.Ref( Ref, fromHexString )
 
 import Diff
 
+import Yesod.Logger
+
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
     , pathParentRef     :: Ref
     , pathMessage       :: T.Text
     }
+    deriving (Eq, Show)
 
 maybeIO :: IO (Maybe a) -> MaybeT IO a
 maybeIO a = do
@@ -120,19 +125,26 @@ data ParentFile = ParentFile
     , commitPath  :: [CommitPath]
     , fileDiff    :: [DiffCommand]
     }
+    deriving (Eq, Show)
 
-basePage :: Git -> [B.ByteString] -> IO (Maybe ParentFile)
-basePage repository path = runMaybeT $ do
+basePage :: Logger -> Git -> [B.ByteString] -> IO (Maybe ParentFile)
+basePage logger repository path = runMaybeT $ do
     let getObj = maybeIO . accessObject repository
-    headRef        <- liftIO $ readBranch repository "HEAD"
+    liftIO $ logString logger "OK before read branch"
+    headLists <- liftIO $ getBranchNames repository
+    liftIO . logString logger $ show headLists
+    headRef        <- liftIO $ readBranch repository "master"
+    liftIO . logString logger $ show headRef
+    liftIO . hPutStrLn stderr $ "init ref : " ++ show headRef
     (Commit cInfo) <- getObj headRef
     tree           <- getObj $ commitTree cInfo
-    fileRef        <- maybeIO $ findInTree repository path tree
-    (Blob content) <- getObj fileRef
+    foundFileRef   <- maybeIO $ findInTree repository path tree
+    (Blob content) <- getObj foundFileRef
 
     let toStrict = B.concat . L.toChunks
     return $ ParentFile {
     	commitRef = headRef,
+    	fileRef = foundFileRef,
     	commitPath = [],
     	fileDiff = [],
     	fileData = decodeUtf8 $ toStrict content,
