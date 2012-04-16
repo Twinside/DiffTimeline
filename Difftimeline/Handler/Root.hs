@@ -2,15 +2,15 @@
 module Handler.Root where
 
 import Import
-import Control.Monad( when )
 import qualified Data.ByteString.Char8 as BC
 import Yesod.Json
 import Text.Julius( julius, renderJavascript, ToJavascript( .. ) )
 import GitQuery
-import Data.Git.Ref( Ref, toHexString )
+import Data.Git.Ref( Ref, toHex, toHexString )
 import qualified Data.Text as T
-
 import Yesod.Logger
+import Data.Text.Encoding( decodeUtf8 )
+import Diff
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -22,8 +22,55 @@ import Yesod.Logger
 getRootR :: Handler RepHtml
 getRootR = sendFile "text/html" "../static-content/base_page.html"
 
+refToText :: Ref -> T.Text
+refToText = decodeUtf8 . toHex
+
+diffToJson :: DiffCommand -> Value
+diffToJson (DiffCommand way bego begdest s) =
+  object [ "way" .= wayText way
+         , "orig_idx" .= bego
+         , "dest_idx" .= begdest
+         , "size"     .= s]
+    where wayText DiffAddition = "+" :: T.Text
+          wayText DiffDeletion = "-"
+
+commitPathToJson :: CommitPath -> Value
+commitPathToJson cp =
+    object [ "commit" .= refToText (pathCommitRef cp)
+           , "parent_commit" .= refToText (pathParentRef cp)
+           , "message" .= pathMessage cp
+           ]
+
+parentFileToJson :: ParentFile -> Value
+parentFileToJson p =
+    object ["data"          .= fileData p
+           ,"filekey"       .= (refToText $ fileRef p)
+           ,"parent_commit" .= (refToText . head $ parentRef p)
+           ,"message"       .= fileMessage p
+           ,"diff"          .= (array . map diffToJson $ fileDiff p)
+           ,"path"          .= map commitPathToJson (commitPath p)
+           ,"key"           .= refToText (commitRef p)
+           ]
+
 getFileParentR :: String -> Handler RepJson
-getFileParentR file = jsonToRepJson $ object [("file_parent", file)]
+getFileParentR file = do
+    app <- getYesod
+    params <- reqGetParams <$> getRequest
+    let logger = getLogger app
+    liftIO . logString logger $ "file : " ++ file
+    liftIO . logString logger $ "param : " ++ show params
+    let commitRefs = map snd $ filter (\(n, _) -> n == T.pack "commit[]") params
+        Just fRef = lookup (T.pack "last_file") params
+        repository = getRepository app
+
+    rez <- liftIO $ findParentFile repository
+                                    (T.unpack fRef)
+                                    (T.unpack $ head commitRefs) file
+
+    -- liftIO $ logLazyText logger rendered
+    case rez of
+       Just info -> jsonToRepJson $ parentFileToJson info
+       Nothing -> jsonToRepJson $ object ["error" .= ("unknown" :: T.Text)]
 
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha = 
@@ -35,17 +82,17 @@ getCommitR commitSha =
 
 instance ToJavascript Ref where
     toJavascript v = toJavascript ("\"" :: String)
-           `mappend` toJavascript (toHexString v)
-           `mappend` toJavascript ("\"" :: String)
+                  <> toJavascript (toHexString v)
+                  <> toJavascript ("\"" :: String)
 
 instance (ToJavascript a) => ToJavascript [a] where
     toJavascript [] = toJavascript ("[]" :: String)
     toJavascript [x] = toJavascript ("[" :: String)
-             `mappend` toJavascript x
-             `mappend` toJavascript ("]" :: String)
+                    <> toJavascript x
+                    <> toJavascript ("]" :: String)
     toJavascript (f:fs) =  toJavascript ("[" :: String)
-                `mappend` concater (toJavascript f) fs
-                `mappend` toJavascript ("]" :: String)
+                       <> concater (toJavascript f) fs
+                       <> toJavascript ("]" :: String)
         where sep = toJavascript (", " :: String)
 
               concater acc     [] = acc

@@ -2,12 +2,14 @@ module GitQuery where
 
 import Prelude
 
+import System.FilePath( splitDirectories )
 import System.IO( stderr, hPutStrLn )
 import Control.Applicative
 import Control.Monad.IO.Class( liftIO )
 import Control.Monad.Trans.Maybe( MaybeT, runMaybeT  )
 
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import Data.List( find )
 import Data.Maybe( fromJust )
@@ -91,13 +93,14 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
   where prevFileSha = fromHexString lastFileStrSha
         prevCommit = fromHexString commitStrSha
 
-        bytePath = []
+        bytePath = map BC.pack $ splitDirectories path
 
         getObj = maybeIO . accessObject repository
 
         inner = do 
             Commit commit <- getObj prevCommit
             t@(Tree _)    <- getObj $ commitTree commit
+            Blob prevFile <- getObj prevFileSha
             currentFileRef <- maybeIO $ findInTree repository bytePath t
             Blob file <- getObj currentFileRef 
 
@@ -105,15 +108,17 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
                     liftIO $ findFirstCommit repository bytePath currentFileRef prevCommit
 
             let toStrict = B.concat . L.toChunks
+                prevData = decodeUtf8 $ toStrict prevFile
+                thisData = decodeUtf8 $ toStrict file
 
             return $ ParentFile
-                { fileData = decodeUtf8 $ toStrict file
+                { fileData = thisData
                 , fileRef = currentFileRef
                 , parentRef = commitParents firstNfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
                 , commitRef = firstRef
                 , commitPath = path
-                , fileDiff = []
+                , fileDiff = computeTextDiff thisData prevData
                 }
 
 data ParentFile = ParentFile
