@@ -2,7 +2,9 @@ module GitQuery where
 
 import Prelude
 
-import System.FilePath( splitDirectories )
+import Data.Maybe( fromMaybe )
+import Data.Monoid( mappend )
+import System.FilePath( splitDirectories, (</>) )
 import System.IO( stderr, hPutStrLn )
 import Control.Applicative
 import Control.Monad.IO.Class( liftIO )
@@ -25,11 +27,26 @@ import Data.Git( GitObject( .. )
                , getBranchNames
                )
 
+import qualified Data.Vector as V
 import Data.Git.Ref( Ref, fromHexString )
 
 import Diff
 
 import Yesod.Logger
+
+data CommitTreeDiff = AddElement T.Text Ref
+                    | DelElement T.Text Ref
+                    | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
+                    deriving (Eq, Show)
+
+data CommitDetail = CommitDetail
+    { commitDetailMessage :: T.Text
+    , commitDetailParents :: [Ref]
+    , commitDetailKey     :: Ref
+    , commitDetailAuthor  :: T.Text
+    , commitDetailChanges :: [CommitTreeDiff]
+    }
+    deriving (Eq, Show)
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
@@ -45,6 +62,43 @@ maybeIO a = do
         Nothing -> fail undefined
         Just j  -> return j
 
+diffCommit :: Git -> Bool -> Ref -> IO [CommitTreeDiff]
+diffCommit repository deep ref = fromMaybe [] <$> (runMaybeT $ do
+    (Commit thisCommit) <- getObj ref
+    let prevRef = head $ commitParents thisCommit
+    (Commit prevCommit) <- getObj prevRef
+    thisTree <- getObj $ commitTree thisCommit
+    prevTree <- getObj $ commitTree prevCommit
+    inner "" thisTree (commitTree prevCommit) prevTree (commitTree prevCommit))
+  where getObj = maybeIO . accessObject repository
+        inner name (Tree left) _r1 (Tree right) _r2 = diffTree name left right
+        inner name (Blob c1) _r1 (Blob c2) r2
+            | not deep  = return [ModifyElement (T.pack name) r2 []]
+            | otherwise = return
+                [ModifyElement (T.pack name) r2 $ computeTextScript txtLeft txtRight]
+                    where strictify = B.concat . L.toChunks
+                          txtLeft = decodeUtf8 $ strictify c1
+                          txtRight = decodeUtf8 $ strictify c2
+        inner _ _ _ _ _ = return []
+
+        diffTree _name   []     [] = return []
+        diffTree name    [] rights = return
+            [AddElement fullName r | (_, item, r) <- rights
+                                  , let fullName = T.pack $ name </> BC.unpack item ]
+        diffTree name lefts     [] = return
+            [DelElement fullName r | (_, item, r) <- lefts
+                                  , let fullName = T.pack $ name </> BC.unpack item ]
+        diffTree name ((_, lName, lRef):ls) ((_, rName, rRef):rs)
+            | lName == rName = do
+                subL <- maybeIO $ accessObject repository lRef
+                subR <- maybeIO $ accessObject repository rRef
+                mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
+
+            | lName < rName = return [DelElement delName lRef]
+            | otherwise = return [AddElement addName rRef]
+                where delName = T.pack $ name </> BC.unpack lName
+                      addName =  T.pack $ name </> BC.unpack rName
+                      subname = name </> BC.unpack lName
 
 findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
@@ -104,7 +158,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
             currentFileRef <- maybeIO $ findInTree repository bytePath t
             Blob file <- getObj currentFileRef 
 
-            (firstNfo, firstRef, path) <-
+            (firstNfo, firstRef, betweenCommits) <-
                     liftIO $ findFirstCommit repository bytePath currentFileRef prevCommit
 
             let toStrict = B.concat . L.toChunks
@@ -117,7 +171,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
                 , parentRef = commitParents firstNfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
                 , commitRef = firstRef
-                , commitPath = path
+                , commitPath = betweenCommits
                 , fileDiff = computeTextDiff thisData prevData
                 }
 

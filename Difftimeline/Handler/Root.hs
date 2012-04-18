@@ -6,7 +6,7 @@ import qualified Data.ByteString.Char8 as BC
 import Yesod.Json
 import Text.Julius( julius, renderJavascript, ToJavascript( .. ) )
 import GitQuery
-import Data.Git.Ref( Ref, toHex, toHexString )
+import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
 import qualified Data.Text as T
 import Yesod.Logger
 import Data.Text.Encoding( decodeUtf8 )
@@ -25,15 +25,39 @@ getRootR = sendFile "text/html" "../static-content/base_page.html"
 refToText :: Ref -> T.Text
 refToText = decodeUtf8 . toHex
 
-diffToJson :: DiffCommand -> Value
+diffToJson :: DiffCommand -> [(T.Text, Value)]
 diffToJson (DiffCommand way bego begdest s) =
-  object [ "way" .= wayText way
+         [ "way" .= wayText way
          , "orig_idx" .= bego
          , "dest_idx" .= begdest
          , "size"     .= s]
     where wayText DiffAddition = "+" :: T.Text
           wayText DiffDeletion = "-"
 
+commitTreeDiffToJson :: CommitTreeDiff -> Value
+commitTreeDiffToJson (AddElement name r) =
+  object ["kind" .= ("addition" :: T.Text), "name" .= name
+         ,"hash" .= toHexString r]
+commitTreeDiffToJson (DelElement name r) =
+  object ["kind" .= ("deletion" :: T.Text), "name" .= name
+         ,"hash" .= toHexString r]
+commitTreeDiffToJson (ModifyElement name r diffs) =
+  object $ ["kind" .= ("modification" :: T.Text), "name" .= name
+           ,"hash" .= toHexString r] ++ diffElement 
+        where diffElement | null diffs = []
+                          | otherwise = ["diff" .= map adder diffs]
+              adder (d, content) = object $ diffToJson d ++ ["data" .= content]
+
+commitDetailToJson :: CommitDetail -> Value
+commitDetailToJson detail = object $ 
+    [ "message"      .= commitDetailMessage detail
+    , "parents_sha"  .= (toHexString . head $ commitDetailParents detail)
+    , "key"          .= (toHexString $ commitDetailKey detail)
+    , "author"       .= commitDetailAuthor detail
+    , "file_changes" .= array (map commitTreeDiffToJson
+                                        $ commitDetailChanges detail)
+    ] 
+    
 commitPathToJson :: CommitPath -> Value
 commitPathToJson cp =
     object [ "commit" .= refToText (pathCommitRef cp)
@@ -47,7 +71,7 @@ parentFileToJson p =
            ,"filekey"       .= (refToText $ fileRef p)
            ,"parent_commit" .= (refToText . head $ parentRef p)
            ,"message"       .= fileMessage p
-           ,"diff"          .= (array . map diffToJson $ fileDiff p)
+           ,"diff"          .= (array . map (object . diffToJson) $ fileDiff p)
            ,"path"          .= map commitPathToJson (commitPath p)
            ,"key"           .= refToText (commitRef p)
            ]
@@ -59,7 +83,7 @@ getFileParentR file = do
     let logger = getLogger app
     liftIO . logString logger $ "file : " ++ file
     liftIO . logString logger $ "param : " ++ show params
-    let commitRefs = map snd $ filter (\(n, _) -> n == T.pack "commit[]") params
+    let commitRefs = map snd $ filter (\(n, _) -> n == T.pack "commit") params
         Just fRef = lookup (T.pack "last_file") params
         repository = getRepository app
 
@@ -77,8 +101,11 @@ getCommitOverviewR commitSha =
     jsonToRepJson $ object [("commit_overview", commitSha)]
 
 getCommitR :: String -> Handler RepJson
-getCommitR commitSha =
-    jsonToRepJson $ object [("commit", commitSha)]
+getCommitR commitSha = do
+    app <- getYesod
+    let repository = getRepository app
+    rez <- liftIO . diffCommit repository False $ fromHexString commitSha
+    jsonToRepJson $ commitDetailToJson rez
 
 instance ToJavascript Ref where
     toJavascript v = toJavascript ("\"" :: String)
@@ -126,7 +153,7 @@ getInitialInfoR = do
                         var first_state = { file: "#{javascriptize $ T.pack filename}",
                                              key: #{commitRef initialAnswer},
                                          filekey: #{fileRef initialAnswer},
-                                   parent_commit: #{parentRef initialAnswer}, 
+                                   parent_commit: #{head $ parentRef initialAnswer}, 
                                             data: "#{javascriptize $ fileData initialAnswer}",
                                          message: "#{javascriptize $ fileMessage initialAnswer}",
                                             diff: [],
