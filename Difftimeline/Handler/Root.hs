@@ -51,7 +51,7 @@ commitTreeDiffToJson (ModifyElement name r diffs) =
 commitDetailToJson :: CommitDetail -> Value
 commitDetailToJson detail = object $ 
     [ "message"      .= commitDetailMessage detail
-    , "parents_sha"  .= (toHexString . head $ commitDetailParents detail)
+    , "parents_sha"  .= (array . map toHexString $ commitDetailParents detail)
     , "key"          .= (toHexString $ commitDetailKey detail)
     , "author"       .= commitDetailAuthor detail
     , "file_changes" .= array (map commitTreeDiffToJson

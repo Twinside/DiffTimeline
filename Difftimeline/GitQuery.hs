@@ -1,9 +1,17 @@
-module GitQuery where
+module GitQuery( CommitTreeDiff( .. )
+               , CommitDetail( .. )
+               , CommitPath( .. )
+               , ParentFile( .. )
+               , diffCommit
+               , findFirstCommit
+               , findParentFile 
+               , basePage
+               ) where
 
 import Prelude
 
 import Data.Monoid( mappend )
-import System.FilePath( splitDirectories, (</>) )
+import System.FilePath( splitDirectories  )
 import System.IO( stderr, hPutStrLn )
 import Control.Applicative
 import Control.Monad.IO.Class( liftIO )
@@ -15,7 +23,8 @@ import qualified Data.ByteString.Lazy as L
 import Data.List( find )
 import Data.Maybe( fromJust )
 import qualified Data.Text as T
-import Data.Text.Encoding( decodeUtf8 )
+import Data.Text.Encoding( decodeUtf8With )
+import Data.Text.Encoding.Error( lenientDecode )
 
 import Data.Git( GitObject( .. )
                , CommitAuthor( .. )
@@ -33,6 +42,9 @@ import Data.Git.Ref( Ref, fromHexString )
 import Diff
 
 import Yesod.Logger
+
+decodeUtf8 :: B.ByteString -> T.Text
+decodeUtf8 = decodeUtf8With lenientDecode
 
 data CommitTreeDiff = AddElement T.Text Ref
                     | DelElement T.Text Ref
@@ -54,6 +66,9 @@ data CommitPath = CommitPath
     , pathMessage       :: T.Text
     }
     deriving (Eq, Show)
+
+(</>) :: FilePath -> FilePath -> FilePath
+(</>) a b = a ++ "/" ++ b
 
 maybeIO :: IO (Maybe a) -> MaybeT IO a
 maybeIO a = do
@@ -96,6 +111,7 @@ diffCommit repository deep ref = runMaybeT $ do
             [DelElement fullName r | (_, item, r) <- lefts
                                   , let fullName = T.pack $ name </> BC.unpack item ]
         diffTree name ((_, lName, lRef):ls) ((_, rName, rRef):rs)
+            | lName == rName && lRef == rRef = diffTree name ls rs
             | lName == rName = do
                 subL <- maybeIO $ accessObject repository lRef
                 subR <- maybeIO $ accessObject repository rRef

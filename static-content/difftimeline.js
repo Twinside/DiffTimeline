@@ -417,7 +417,7 @@ var Commit = function(key, data) {
                 }
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
-                    acc += hl.colorLine(curr_diff.data[l])
+                    acc += hl.colorLine(curr_diff.data[l] + "\n")
 
                 if (i < e.diff.length - 1)
                     acc += "</div>\n...\n";
