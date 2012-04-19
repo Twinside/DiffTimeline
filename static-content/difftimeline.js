@@ -605,7 +605,12 @@ var FileRenderer = (function() {
 
     var fetch_file = function(file, commit, filekey, f) {
         var params = { commit: commit, last_file: filekey };
-        $.getJSON('/ask_parent/' + file, params, f);
+        var request = '/ask_parent';
+
+        if (file[0] == '/') request += file;
+        else request += '/' + file;
+
+        $.getJSON(request, params, f);
     };
 
     var init = function(init_data) {

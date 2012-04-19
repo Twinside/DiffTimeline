@@ -2,15 +2,16 @@
 module Handler.Root where
 
 import Import
+import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import Yesod.Json
-import Text.Julius( julius, renderJavascript, ToJavascript( .. ) )
-import GitQuery
-import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
-import qualified Data.Text as T
 import Yesod.Logger
+import Text.Julius( julius, renderJavascript, ToJavascript( .. ) )
+
 import Data.Text.Encoding( decodeUtf8 )
+import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
 import Diff
+import GitQuery
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -76,8 +77,9 @@ parentFileToJson p =
            ,"key"           .= refToText (commitRef p)
            ]
 
-getFileParentR :: String -> Handler RepJson
-getFileParentR file = do
+getFileParentR :: [Text] -> Handler RepJson
+getFileParentR filePathes = do
+    let file = T.unpack $ T.intercalate (T.pack "/") filePathes
     app <- getYesod
     params <- reqGetParams <$> getRequest
     let logger = getLogger app
