@@ -1,3 +1,5 @@
+build:
+	runhaskell Setup.hs build
 
 all:
 	yesod --dev devel
