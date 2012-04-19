@@ -20,8 +20,8 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 #endif
 import Network.Wai (Application)
 
-import System.FilePath( (</>) )
-import Data.Git.Repository( Git, openRepo, findRepository )
+import System.FilePath( (</>), makeRelative )
+import Data.Git.Repository( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
 import Handler.Root
 
@@ -31,7 +31,7 @@ import Handler.Root
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
 initRepository :: Logger -> IO Git
-initRepository logger= do
+initRepository logger = do
     Just dir <- getCurrentDirectory >>= findRepository
     let repoPath = dir </> ".git"
     logString logger $ "Trying to open git: " ++ repoPath
@@ -41,11 +41,13 @@ initRepository logger= do
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: AppConfig DefaultEnv Extra -> Logger -> IO Application
-getApplication conf logger = do
+getApplication :: FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
+getApplication fname conf logger = do
     s <- staticSite
     initRepo <- initRepository logger
-    let foundation = DiffTimeline conf setLogger s initRepo
+    cwd <- getCurrentDirectory
+    let initPath = makeRelative (cwd </> fname) $ gitRepoPath initRepo
+        foundation = DiffTimeline conf setLogger s initRepo initPath
     app <- toWaiAppPlain foundation
     return $ logWare app
   where
@@ -60,7 +62,7 @@ getApplication conf logger = do
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)
 getApplicationDev =
-    defaultDevelApp loader getApplication
+    defaultDevelApp loader $ getApplication ""
   where
     loader = loadConfig (configSettings Development)
         { csParseExtra = parseExtra

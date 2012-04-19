@@ -15,7 +15,7 @@ import Yesod.Core hiding (Route)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Yesod.Static
-import Settings.StaticFiles
+-- import Settings.StaticFiles
 import Yesod.Logger (Logger, logMsg, formatLogText)
 import qualified Settings
 import Settings (Extra (..), widgetFile)
@@ -33,6 +33,7 @@ data DiffTimeline = DiffTimeline
     , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , getRepository :: Git
+    , initialPath   :: FilePath
     }
 
 -- Set up i18n messages. See the message folder.

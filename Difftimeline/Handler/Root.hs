@@ -159,7 +159,7 @@ getInitialInfoR = do
     app <- getYesod
     let logger = getLogger app
         repository = getRepository app
-        filename = "difftimeline.rb" :: String
+        filename = initialPath app
     answer <- liftIO $ basePage logger repository [BC.pack filename]
     let rendered = case answer of
             Nothing ->
