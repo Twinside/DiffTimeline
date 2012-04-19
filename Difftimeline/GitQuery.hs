@@ -2,7 +2,6 @@ module GitQuery where
 
 import Prelude
 
-import Data.Maybe( fromMaybe )
 import Data.Monoid( mappend )
 import System.FilePath( splitDirectories, (</>) )
 import System.IO( stderr, hPutStrLn )
@@ -19,6 +18,7 @@ import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8 )
 
 import Data.Git( GitObject( .. )
+               , CommitAuthor( .. )
                , CommitInfo( .. )
                , Git
                , findObject
@@ -62,14 +62,21 @@ maybeIO a = do
         Nothing -> fail undefined
         Just j  -> return j
 
-diffCommit :: Git -> Bool -> Ref -> IO [CommitTreeDiff]
-diffCommit repository deep ref = fromMaybe [] <$> (runMaybeT $ do
+diffCommit :: Git -> Bool -> Ref -> IO (Maybe CommitDetail)
+diffCommit repository deep ref = runMaybeT $ do
     (Commit thisCommit) <- getObj ref
     let prevRef = head $ commitParents thisCommit
     (Commit prevCommit) <- getObj prevRef
     thisTree <- getObj $ commitTree thisCommit
     prevTree <- getObj $ commitTree prevCommit
-    inner "" thisTree (commitTree prevCommit) prevTree (commitTree prevCommit))
+    diff <- inner "" thisTree (commitTree prevCommit) prevTree (commitTree thisCommit)
+    return (CommitDetail {
+          commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
+        , commitDetailParents = commitParents thisCommit
+        , commitDetailKey     = ref
+        , commitDetailAuthor  = decodeUtf8 . authorName $ commitAuthor thisCommit
+        , commitDetailChanges = diff
+        })
   where getObj = maybeIO . accessObject repository
         inner name (Tree left) _r1 (Tree right) _r2 = diffTree name left right
         inner name (Blob c1) _r1 (Blob c2) r2

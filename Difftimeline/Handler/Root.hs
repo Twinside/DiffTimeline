@@ -97,15 +97,30 @@ getFileParentR file = do
        Nothing -> jsonToRepJson $ object ["error" .= ("unknown" :: T.Text)]
 
 getCommitOverviewR :: String -> Handler RepJson
-getCommitOverviewR commitSha = 
-    jsonToRepJson $ object [("commit_overview", commitSha)]
+getCommitOverviewR commitSha =  do
+    app <- getYesod
+    let repository = getRepository app
+    rez <- liftIO . diffCommit repository False $ fromHexString commitSha
+    case rez of
+        Just info ->
+            jsonToRepJson . map commitTreeDiffToJson  $ commitDetailChanges info
+        Nothing ->
+            jsonToRepJson $ object ["error" .= ("unknown error" :: T.Text)]
+
+
 
 getCommitR :: String -> Handler RepJson
 getCommitR commitSha = do
     app <- getYesod
     let repository = getRepository app
-    rez <- liftIO . diffCommit repository False $ fromHexString commitSha
-    jsonToRepJson $ commitDetailToJson rez
+    rez <- liftIO . diffCommit repository True $ fromHexString commitSha
+    case rez of
+        Just nfo ->
+            jsonToRepJson $ commitDetailToJson nfo
+        Nothing ->
+            jsonToRepJson $ object ["error" .= ("unknown error" :: T.Text)]
+
+
 
 instance ToJavascript Ref where
     toJavascript v = toJavascript ("\"" :: String)
