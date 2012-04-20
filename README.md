@@ -1,25 +1,16 @@
-How to install dependencies
+How to build Difftimeline
 ===========================
- * Install Ruby 1.9 (or 1.8, but preffer 1.9)
- * Install bundle : `gem install bundle`
- * Install all dependencies : `bundle install`
+ * Install GHC 7.4 (haskell compiler), and find
+   a way to install `cabal-install`, under windows
+   you should use mingw to build it (only way to 
+   build the Network package)
 
-Mac OSX run
------------
- * Install Ruby 1.9 somehow
- * Install bundler ( `gem install bundler` )
- * Install all the missing gems ( `bundle install` )
+ * Install the yesod package `cabal install yesod`
+ * In the main folder call `cabal-dev install`
 
-Linux
-=====
- * install ruby 1.8 or 1.9, on debian like :
-     * `sudo apt-get install ruby1.8`
-     * `sudo apt-get install ruby1.9.1`
- * install rubygems ( `sudo apt-get install rubygems1.9.1` )
- * install bundler ( `sudo gem install bundler` )
- * Install all the missing gems ( `bundle install` )
+And that should be it
 
 Running
 -------
-to launch `ruby1.9 difftimeline.rb <filename>` on Mac OSX, or `ruby difftimeline.rb <filename>`
+to launch `difftimeline <filename>`
 
