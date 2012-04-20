@@ -20,7 +20,9 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 #endif
 import Network.Wai (Application)
 
-import System.FilePath( (</>), makeRelative )
+import System.FilePath( (</>), makeRelative, takeDirectory,
+                        normalise, splitPath )
+import qualified System.FilePath as FP
 import Data.Git.Repository( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
 import Handler.Root
@@ -37,6 +39,19 @@ initRepository logger = do
     logString logger $ "Trying to open git: " ++ repoPath
     openRepo repoPath
 
+simplifyPath :: FilePath -> FilePath
+simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise 
+    where subst '\\' = '/'
+          subst a = a
+
+          inner :: [FilePath] -> [FilePath]
+          inner []          = []
+          inner ("./":xs)    = inner xs
+          inner (".\\":xs)    = inner xs
+          inner (_:"../":xs) = inner xs
+          inner (_:"..\\":xs) = inner xs
+          inner (x:xs)      = x : inner xs
+
 -- This function allocates resources (such as a database connection pool),
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
@@ -46,8 +61,9 @@ getApplication fname conf logger = do
     s <- staticSite
     initRepo <- initRepository logger
     cwd <- getCurrentDirectory
-    let initPath = makeRelative (cwd </> fname) $ gitRepoPath initRepo
+    let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) (cwd </> fname)
         foundation = DiffTimeline conf setLogger s initRepo initPath
+    liftIO . logString logger $ "Initial file : " ++ initPath
     app <- toWaiAppPlain foundation
     return $ logWare app
   where

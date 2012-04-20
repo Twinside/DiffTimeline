@@ -160,6 +160,7 @@ getInitialInfoR = do
     let logger = getLogger app
         repository = getRepository app
         filename = initialPath app
+    liftIO . logString logger $ "Loading " ++ filename
     answer <- liftIO $ basePage logger repository [BC.pack filename]
     let rendered = case answer of
             Nothing ->
