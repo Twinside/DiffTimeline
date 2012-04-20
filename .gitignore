@@ -8,3 +8,6 @@ Difftimeline.app
 static-content/tmp
 *.o
 *.hi
+dist
+cabal-dev
+static/tmp

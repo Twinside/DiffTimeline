@@ -23,7 +23,7 @@ import GitQuery
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getRootR :: Handler RepHtml
-getRootR = sendFile "text/html" "../static-content/base_page.html"
+getRootR = sendFile "text/html" "static-content/base_page.html"
 
 refToText :: Ref -> T.Text
 refToText = decodeUtf8 . toHex
