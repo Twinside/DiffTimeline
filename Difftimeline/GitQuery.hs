@@ -14,14 +14,13 @@ import Data.Monoid( mappend )
 import System.FilePath( splitDirectories  )
 import System.IO( stderr, hPutStrLn )
 import Control.Applicative
+import Control.Monad.Error( ErrorT, throwError, runErrorT )
 import Control.Monad.IO.Class( liftIO )
-import Control.Monad.Trans.Maybe( MaybeT, runMaybeT  )
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import Data.List( find )
-import Data.Maybe( fromJust )
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
@@ -70,20 +69,44 @@ data CommitPath = CommitPath
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) a b = a ++ "/" ++ b
 
-maybeIO :: IO (Maybe a) -> MaybeT IO a
-maybeIO a = do
+errorIO :: String -> IO (Maybe a) -> ErrorT String IO a
+errorIO str a = do
     mayrez <- liftIO a
     case mayrez of
-        Nothing -> fail undefined
+        Nothing -> throwError str
         Just j  -> return j
 
-diffCommit :: Git -> Bool -> Ref -> IO (Maybe CommitDetail)
-diffCommit repository deep ref = runMaybeT $ do
-    (Commit thisCommit) <- getObj ref
+accessCommit :: String -> Git -> Ref -> ErrorT String IO GitObject
+accessCommit s rep ref = do
+    rez <- liftIO $ accessObject rep ref
+    case rez of
+        Nothing -> throwError s
+        Just c@(Commit _) -> return c
+        Just _ -> throwError s
+
+accessTree :: String -> Git -> Ref -> ErrorT String IO GitObject
+accessTree s rep ref = do
+    rez <- liftIO $ accessObject rep ref
+    case rez of
+        Nothing -> throwError s
+        Just c@(Tree _) -> return c
+        Just _ -> throwError s
+
+accessBlob :: String -> Git -> Ref -> ErrorT String IO GitObject
+accessBlob s rep ref = do
+    rez <- liftIO $ accessObject rep ref
+    case rez of
+        Nothing -> throwError s
+        Just c@(Blob _) -> return c
+        Just _ -> throwError s
+
+diffCommit :: Git -> Bool -> Ref -> IO (Either String CommitDetail)
+diffCommit repository deep ref = runErrorT $ do
+    (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let prevRef = head $ commitParents thisCommit
-    (Commit prevCommit) <- getObj prevRef
-    thisTree <- getObj $ commitTree thisCommit
-    prevTree <- getObj $ commitTree prevCommit
+    (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
+    thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
+    prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
     diff <- inner "" thisTree (commitTree prevCommit) prevTree (commitTree thisCommit)
     return (CommitDetail {
           commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
@@ -92,7 +115,7 @@ diffCommit repository deep ref = runMaybeT $ do
         , commitDetailAuthor  = decodeUtf8 . authorName $ commitAuthor thisCommit
         , commitDetailChanges = diff
         })
-  where getObj = maybeIO . accessObject repository
+  where getObj reason = errorIO reason . accessObject repository
         inner name (Tree left) _r1 (Tree right) _r2 = diffTree name left right
         inner name (Blob c1) _r1 (Blob c2) r2
             | not deep  = return [ModifyElement (T.pack name) r2 []]
@@ -113,8 +136,10 @@ diffCommit repository deep ref = runMaybeT $ do
         diffTree name ((_, lName, lRef):ls) ((_, rName, rRef):rs)
             | lName == rName && lRef == rRef = diffTree name ls rs
             | lName == rName = do
-                subL <- maybeIO $ accessObject repository lRef
-                subR <- maybeIO $ accessObject repository rRef
+                subL <- errorIO "Error can't access parent commit subtree"
+                                $ accessObject repository lRef
+                subR <- errorIO "Error can't acces commit subtree"
+                                $ accessObject repository rRef
                 mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
 
             | lName < rName = return [DelElement delName lRef]
@@ -127,15 +152,13 @@ findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
                 -> Ref              -- ^ Ref of the element in the path
                 -> Ref              -- ^ First commit ref
-                -> IO (CommitInfo, Ref, [CommitPath])
-findFirstCommit repository path currentFileRef firstCommit =
-  fromJust <$> (runMaybeT $ inner undefined undefined firstCommit)
-    where getObj = maybeIO . accessObject repository
-  
-          inner prevCommit prevRef currentCommit = do
-            (Commit info) <- getObj currentCommit
-            t@(Tree _)    <- getObj $ commitTree info
-            commitFileRef <- maybeIO $ findInTree repository path t
+                -> ErrorT String IO (CommitInfo, Ref, [CommitPath])
+findFirstCommit repository path currentFileRef firstCommit = inner undefined undefined firstCommit
+    where inner prevCommit prevRef currentCommit = do
+            (Commit info) <- accessCommit "Can't file commit in commit path" repository currentCommit
+            t@(Tree _)    <- accessTree "Can't find tree in commit path" repository $ commitTree info
+            commitFileRef <- errorIO "Can't find children in commit path"
+                                     $ findInTree repository path t
        
             if commitFileRef /= currentFileRef
                then return (prevCommit, prevRef, [])
@@ -165,24 +188,22 @@ findInTree git pathes = inner pathes . Just
           extractRef (_, _, ref) = ref
           findVal v lst = extractRef <$> find (\(_, n, _) -> v == n) lst
 
-findParentFile :: Git -> String -> String -> FilePath -> IO (Maybe ParentFile)
-findParentFile repository lastFileStrSha commitStrSha path = runMaybeT $ inner
+findParentFile :: Git -> String -> String -> FilePath -> IO (Either String ParentFile)
+findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
   where prevFileSha = fromHexString lastFileStrSha
         prevCommit = fromHexString commitStrSha
 
         bytePath = map BC.pack $ splitDirectories path
 
-        getObj = maybeIO . accessObject repository
-
         inner = do 
-            Commit commit <- getObj prevCommit
-            t@(Tree _)    <- getObj $ commitTree commit
-            Blob prevFile <- getObj prevFileSha
-            currentFileRef <- maybeIO $ findInTree repository bytePath t
-            Blob file <- getObj currentFileRef 
+            Commit commit <- accessCommit "Can't find parent commit" repository prevCommit
+            t@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree commit
+            Blob prevFile <- accessBlob "Can't find file content" repository prevFileSha
+            currentFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath t
+            Blob file <- accessBlob "Can't find file content" repository $ currentFileRef 
 
             (firstNfo, firstRef, betweenCommits) <-
-                    liftIO $ findFirstCommit repository bytePath currentFileRef prevCommit
+                    findFirstCommit repository bytePath currentFileRef prevCommit
 
             let toStrict = B.concat . L.toChunks
                 prevData = decodeUtf8 $ toStrict prevFile
@@ -209,19 +230,19 @@ data ParentFile = ParentFile
     }
     deriving (Eq, Show)
 
-basePage :: Logger -> Git -> [B.ByteString] -> IO (Maybe ParentFile)
-basePage logger repository path = runMaybeT $ do
-    let getObj = maybeIO . accessObject repository
+basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
+basePage logger repository path = runErrorT $ do
+    let getObj errorReason = errorIO errorReason . accessObject repository
     liftIO $ logString logger "OK before read branch"
     headLists <- liftIO $ getBranchNames repository
     liftIO . logString logger $ show headLists
     headRef        <- liftIO $ readBranch repository "master"
     liftIO . logString logger $ show headRef
     liftIO . hPutStrLn stderr $ "init ref : " ++ show headRef
-    (Commit cInfo) <- getObj headRef
-    tree           <- getObj $ commitTree cInfo
-    foundFileRef   <- maybeIO $ findInTree repository path tree
-    (Blob content) <- getObj foundFileRef
+    (Commit cInfo) <- accessCommit "Error can't access commit" repository headRef
+    tree           <- getObj "Error can't access commit tree" $ commitTree cInfo
+    foundFileRef   <- errorIO "Error can't find file in tree" $ findInTree repository path tree
+    (Blob content) <- getObj "Error can't find file content" foundFileRef
 
     let toStrict = B.concat . L.toChunks
     return $ ParentFile {

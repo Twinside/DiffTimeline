@@ -21,7 +21,7 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 import Network.Wai (Application)
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
-                        normalise, splitPath )
+                        normalise, splitPath, isRelative )
 import qualified System.FilePath as FP
 import Data.Git.Repository( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
@@ -32,9 +32,9 @@ import Handler.Root
 -- the comments there for more details.
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
-initRepository :: Logger -> IO Git
-initRepository logger = do
-    Just dir <- getCurrentDirectory >>= findRepository
+initRepository :: Logger -> FilePath -> IO Git
+initRepository logger startDir = do
+    Just dir <- findRepository startDir
     let repoPath = dir </> ".git"
     logString logger $ "Trying to open git: " ++ repoPath
     openRepo repoPath
@@ -59,8 +59,11 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 getApplication :: FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
 getApplication fname conf logger = do
     s <- staticSite
-    initRepo <- initRepository logger
-    cwd <- getCurrentDirectory
+    cwd <- getCurrentDirectory 
+    let name = if isRelative fname
+            then simplifyPath $ cwd </> fname
+            else simplifyPath fname
+    initRepo <- initRepository logger $ takeDirectory name
     let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) (cwd </> fname)
         foundation = DiffTimeline conf setLogger s initRepo initPath
     liftIO . logString logger $ "Initial file : " ++ initPath

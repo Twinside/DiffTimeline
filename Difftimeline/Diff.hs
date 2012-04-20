@@ -29,7 +29,7 @@ data DiffAction = DiffAddition  -- ^ Data which should be inserted
                 deriving (Eq, Show)
 
 -- | Hold computed information about the diff
-data DiffCommand = DiffCommand {-# UNPACK #-}!DiffAction  -- ^ Addition or deletion
+data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                                {-# UNPACK #-}!Int         -- ^ Size of the modification

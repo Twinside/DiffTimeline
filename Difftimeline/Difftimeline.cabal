@@ -92,4 +92,5 @@ executable         Difftimeline
                  , wai-app-static                >= 1.1        && < 1.2
                  , warp                          >= 1.1        && < 1.2
                  , simple-sendfile               == 0.2.1
+                 , mtl                           >= 2.0        && < 2.1
 

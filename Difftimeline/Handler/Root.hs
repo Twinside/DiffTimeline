@@ -6,8 +6,10 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import Yesod.Json
 import Yesod.Logger
-import Text.Julius( julius, renderJavascript, ToJavascript( .. ) )
+import Text.Julius( julius, renderJavascript )
 
+import System.Exit( exitSuccess )
+import System.FilePath( splitDirectories  )
 import Data.Text.Encoding( decodeUtf8 )
 import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
 import Diff
@@ -95,8 +97,8 @@ getFileParentR filePathes = do
 
     -- liftIO $ logLazyText logger rendered
     case rez of
-       Just info -> jsonToRepJson $ parentFileToJson info
-       Nothing -> jsonToRepJson $ object ["error" .= ("unknown" :: T.Text)]
+       Left err -> jsonToRepJson $ object ["error" .= err]
+       Right info -> jsonToRepJson $ parentFileToJson info
 
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha =  do
@@ -104,10 +106,9 @@ getCommitOverviewR commitSha =  do
     let repository = getRepository app
     rez <- liftIO . diffCommit repository False $ fromHexString commitSha
     case rez of
-        Just info ->
+        Left err -> jsonToRepJson $ object ["error" .= err]
+        Right info ->
             jsonToRepJson . map commitTreeDiffToJson  $ commitDetailChanges info
-        Nothing ->
-            jsonToRepJson $ object ["error" .= ("unknown error" :: T.Text)]
 
 
 
@@ -117,32 +118,9 @@ getCommitR commitSha = do
     let repository = getRepository app
     rez <- liftIO . diffCommit repository True $ fromHexString commitSha
     case rez of
-        Just nfo ->
+        Left err -> jsonToRepJson $ object ["error" .= err]
+        Right nfo ->
             jsonToRepJson $ commitDetailToJson nfo
-        Nothing ->
-            jsonToRepJson $ object ["error" .= ("unknown error" :: T.Text)]
-
-
-
-instance ToJavascript Ref where
-    toJavascript v = toJavascript ("\"" :: String)
-                  <> toJavascript (toHexString v)
-                  <> toJavascript ("\"" :: String)
-
-instance (ToJavascript a) => ToJavascript [a] where
-    toJavascript [] = toJavascript ("[]" :: String)
-    toJavascript [x] = toJavascript ("[" :: String)
-                    <> toJavascript x
-                    <> toJavascript ("]" :: String)
-    toJavascript (f:fs) =  toJavascript ("[" :: String)
-                       <> concater (toJavascript f) fs
-                       <> toJavascript ("]" :: String)
-        where sep = toJavascript (", " :: String)
-
-              concater acc     [] = acc
-              concater acc (x:xs) = concater sub xs
-                    where sub = acc `mappend` sep `mappend`  toJavascript x
-
 
 javascriptize :: T.Text -> T.Text
 javascriptize = T.replace quo quoRep
@@ -160,18 +138,19 @@ getInitialInfoR = do
     let logger = getLogger app
         repository = getRepository app
         filename = initialPath app
+        splitedFilename = map BC.pack $ splitDirectories filename
     liftIO . logString logger $ "Loading " ++ filename
-    answer <- liftIO $ basePage logger repository [BC.pack filename]
+    answer <- liftIO $ basePage logger repository splitedFilename
     let rendered = case answer of
-            Nothing ->
-                renderJavascript $ [julius| alert("Uknown git error"); |] ("" :: Text)
+            Left err ->
+                renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
 
-            Just initialAnswer ->
+            Right initialAnswer ->
                     renderJavascript $ [julius|
                         var first_state = { file: "#{javascriptize $ T.pack filename}",
-                                             key: #{commitRef initialAnswer},
-                                         filekey: #{fileRef initialAnswer},
-                                   parent_commit: #{head $ parentRef initialAnswer}, 
+                                             key: "#{toHexString $ commitRef initialAnswer}",
+                                         filekey: "#{toHexString $ fileRef initialAnswer}",
+                                   parent_commit: "#{toHexString $ head $ parentRef initialAnswer}", 
                                             data: "#{javascriptize $ fileData initialAnswer}",
                                          message: "#{javascriptize $ fileMessage initialAnswer}",
                                             diff: [],
@@ -181,6 +160,8 @@ getInitialInfoR = do
     -- liftIO $ logLazyText logger rendered
     return . RepPlain $ toContent rendered
 
-postQuitR :: Handler RepJson
-postQuitR = jsonToRepJson $ object [("ok", True)]
+getQuitR :: Handler RepJson
+getQuitR = do
+    _ <- jsonToRepJson $ object [("ok", True)]
+    liftIO $ exitSuccess
 

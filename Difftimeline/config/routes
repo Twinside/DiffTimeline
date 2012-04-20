@@ -9,6 +9,6 @@
 /ask_commit/#String   CommitOverviewR GET
 /commit/#String       CommitR         GET
 /initial_info.js    InitialInfoR    GET
-/quit               QuitR           POST
+/quit               QuitR           GET
 
 
