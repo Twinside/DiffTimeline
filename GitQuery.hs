@@ -31,8 +31,7 @@ import Data.Git( GitObject( .. )
                , Git
                , findObject
                , CommitInfo( .. )
-               , readBranch
-               , getBranchNames
+               , getHead
                )
 
 import qualified Data.Vector as V
@@ -66,6 +65,7 @@ data CommitPath = CommitPath
     }
     deriving (Eq, Show)
 
+-- | Want same behaviour between windows & Unix
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) a b = a ++ "/" ++ b
 
@@ -233,12 +233,8 @@ data ParentFile = ParentFile
 basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
 basePage logger repository path = runErrorT $ do
     let getObj errorReason = errorIO errorReason . accessObject repository
-    liftIO $ logString logger "OK before read branch"
-    headLists <- liftIO $ getBranchNames repository
-    liftIO . logString logger $ show headLists
-    headRef        <- liftIO $ readBranch repository "master"
-    liftIO . logString logger $ show headRef
-    liftIO . hPutStrLn stderr $ "init ref : " ++ show headRef
+    headRef        <- errorIO "Can't read HEAD" $ getHead repository
+    liftIO . logString logger $ "init ref : " ++ show headRef
     (Commit cInfo) <- accessCommit "Error can't access commit" repository headRef
     tree           <- getObj "Error can't access commit tree" $ commitTree cInfo
     foundFileRef   <- errorIO "Error can't find file in tree" $ findInTree repository path tree
