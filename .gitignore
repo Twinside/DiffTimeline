@@ -5,3 +5,9 @@ vendor
 Difftimeline.app
 .bundle
 .DS_STORE
+static-content/tmp
+*.o
+*.hi
+dist
+cabal-dev
+static/tmp

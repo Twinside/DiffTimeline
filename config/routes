@@ -1,0 +1,14 @@
+/static-content            StaticR   Static   getStatic
+
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/ RootR GET
+
+/ask_parent/*Texts   FileParentR     GET
+/ask_commit/#String   CommitOverviewR GET
+/commit/#String       CommitR         GET
+/initial_info.js    InitialInfoR    GET
+/quit               QuitR           GET
+
+

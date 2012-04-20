@@ -417,7 +417,7 @@ var Commit = function(key, data) {
                 }
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
-                    acc += hl.colorLine(curr_diff.data[l])
+                    acc += hl.colorLine(curr_diff.data[l] + "\n")
 
                 if (i < e.diff.length - 1)
                     acc += "</div>\n...\n";
@@ -476,7 +476,7 @@ var CommitRenderer = function(init_key) {
     this.fetch_commit = function( id ) {
         var this_obj = this;
 
-        $.getJSON('commit/' + id, {}, function(data) {
+        $.getJSON('/commit/' + id, {}, function(data) {
             var new_commit = new Commit(id, data);
 
             new_commit.create_dom();
@@ -524,7 +524,7 @@ var FileBlob = function (filename, data) {
     this.fetch_details = function() {
         var this_obj = this;
 
-        $.getJSON('ask_commit/' + this.key, {}, function(data) {
+        $.getJSON('/ask_commit/' + this.key, {}, function(data) {
             if (data === null) {
                 show_error({error: 'Communication error with the server'});
                 return;
@@ -605,7 +605,12 @@ var FileRenderer = (function() {
 
     var fetch_file = function(file, commit, filekey, f) {
         var params = { commit: commit, last_file: filekey };
-        $.getJSON('ask_parent/' + file, params, f);
+        var request = '/ask_parent';
+
+        if (file[0] == '/') request += file;
+        else request += '/' + file;
+
+        $.getJSON(request, params, f);
     };
 
     var init = function(init_data) {
@@ -706,6 +711,6 @@ function show_error( data )
 
 
 function leave_server()
-    { $.ajax( {url:"quit", async:false} ); }
+    { $.ajax( {url:"/quit", async:false} ); }
 
 ich.grabTemplates();
