@@ -12,7 +12,6 @@ module Settings
     ) where
 
 import Prelude
-import Text.Shakespeare.Text (st)
 import Language.Haskell.TH.Syntax
 import Yesod.Default.Config
 import qualified Yesod.Default.Util
@@ -39,7 +38,7 @@ staticDir = "static-content"
 --
 -- To see how this value is used, see urlRenderOverride in Difftimeline.hs
 staticRoot :: AppConfig DefaultEnv a ->  Text
-staticRoot conf = [st|#{appRoot conf}/static|]
+staticRoot _conf = ("" :: Text)
 
 widgetFile :: String -> Q Exp
 #if DEVELOPMENT

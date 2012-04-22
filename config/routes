@@ -1,4 +1,3 @@
-/static-content            StaticR   Static   getStatic
 
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
@@ -11,4 +10,12 @@
 /initial_info.js    InitialInfoR    GET
 /quit               QuitR           GET
 
-
+/static-content/ICanHaz.min.js               ICanHaz_min             GET
+/static-content/difftimeline.css             DifftimelineCss         GET
+/static-content/difftimeline.js              DifftimelineJs          GET
+/static-content/favicon.ico                  Favicon                 GET
+/static-content/jquery-1.6.4.min.js          Jquery                  GET
+/static-content/screen.css                   Screen                  GET
+/static-content/syntax-highlight.css         Syntax_highlight        GET
+/static-content/tinysyntaxhighlighter.js     Tinysyntaxhighlighter   GET
+/static-content/underscore-min.js            Underscore_min          GET

@@ -14,6 +14,7 @@ import Data.Text.Encoding( decodeUtf8 )
 import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
 import Diff
 import GitQuery
+import StaticFiles
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -23,7 +24,25 @@ import GitQuery
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getRootR :: Handler RepHtml
-getRootR = sendFile "text/html" "static-content/base_page.html"
+getRootR = return $ RepHtml $ toContent basePageEmbedded 
+
+newtype RepCss = RepCss Content
+instance HasReps RepCss where
+    chooseRep (RepCss c) _ = return (typeCss, c)
+
+getDifftimelineCss, getSyntax_highlight, getScreen :: Handler RepCss
+getDifftimelineCss = return . RepCss $ toContent diffTimelineCssEmbedded
+getScreen =  return . RepCss $ toContent screenCssEmbedded
+getSyntax_highlight = return . RepCss $ toContent  syntaxhighlihgtCss
+
+getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, 
+    getTinysyntaxhighlighter, getUnderscore_min :: Handler RepPlain
+getICanHaz_min = return . RepPlain $ toContent icanHazEmbedded 
+getDifftimelineJs = return . RepPlain $ toContent diffTimlineJsEmbedded 
+getFavicon = return . RepPlain $ toContent faviconEmbed
+getJquery = return . RepPlain $ toContent jqueryEmbedded 
+getTinysyntaxhighlighter = return . RepPlain $ toContent tinySyntaxHighlightJs 
+getUnderscore_min = return . RepPlain $ toContent underscoreJs
 
 refToText :: Ref -> T.Text
 refToText = decodeUtf8 . toHex

@@ -6,11 +6,12 @@ module Application
 
 import Import
 import Settings (parseExtra)
-import Settings.StaticFiles (staticSite)
 import System.Directory( getCurrentDirectory )
+import Network.Wai( Application )
 import Yesod.Default.Config
-import Yesod.Default.Main (defaultDevelApp)
+import Yesod.Default.Main (defaultDevelApp )
 import Yesod.Default.Handlers (getFaviconR, getRobotsR)
+{-import Network.Wai( Application )-}
 #if DEVELOPMENT
 import Yesod.Logger (Logger, logBS, logString)
 import Network.Wai.Middleware.RequestLogger (logCallbackDev)
@@ -18,7 +19,6 @@ import Network.Wai.Middleware.RequestLogger (logCallbackDev)
 import Yesod.Logger (Logger, logBS, toProduction, logString)
 import Network.Wai.Middleware.RequestLogger (logCallback)
 #endif
-import Network.Wai (Application)
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
@@ -58,14 +58,13 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- migrations handled by Yesod.
 getApplication :: FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
 getApplication fname conf logger = do
-    s <- staticSite
     cwd <- getCurrentDirectory 
     let name = if isRelative fname
             then simplifyPath $ cwd </> fname
             else simplifyPath fname
     initRepo <- initRepository logger $ takeDirectory name
     let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) (cwd </> fname)
-        foundation = DiffTimeline conf setLogger s initRepo initPath
+        foundation = DiffTimeline conf setLogger initRepo initPath
     liftIO . logString logger $ "Initial file : " ++ initPath
     app <- toWaiAppPlain foundation
     return $ logWare app

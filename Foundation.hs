@@ -11,17 +11,17 @@ module Foundation
     ) where
 
 import Prelude
-import Yesod.Core hiding (Route)
+import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
-import Yesod.Default.Util (addStaticContentExternal)
-import Yesod.Static
+-- import Yesod.Default.Util (addStaticContentExternal)
+-- import Yesod.Static
 -- import Settings.StaticFiles
 import Yesod.Logger (Logger, logMsg, formatLogText)
 import qualified Settings
 import Settings (Extra (..), widgetFile)
 import Control.Monad.IO.Class (liftIO)
-import Web.ClientSession (getKey)
-import Text.Hamlet (hamletFile)
+-- import Web.ClientSession (getKey)
+-- import Text.Hamlet (hamletFile)
 import Data.Git.Repository( Git )
 
 -- | The site argument for your application. This can be a good place to
@@ -31,7 +31,6 @@ import Data.Git.Repository( Git )
 data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv Extra
     , getLogger :: Logger
-    , getStatic :: Static -- ^ Settings for static file serving.
     , getRepository :: Git
     , initialPath   :: FilePath
     }
@@ -65,28 +64,10 @@ mkYesodData "DiffTimeline" $(parseRoutesFile "config/routes")
 instance Yesod DiffTimeline where
     approot = ApprootMaster $ appRoot . settings
 
-    -- Place the session key file in the config folder
-    encryptKey _ = fmap Just $ getKey "config/client_session_key.aes"
-
-    defaultLayout widget = do
-        master <- getYesod
-        mmsg <- getMessage
-
-        -- We break up the default layout into two components:
-        -- default-layout is the contents of the body tag, and
-        -- default-layout-wrapper is the entire page. Since the final
-        -- value passed to hamletToRepHtml cannot be a widget, this allows
-        -- you to use normal widget features in default-layout.
-
-        pc <- widgetToPageContent $ do
-            $(widgetFile "normalize")
-            $(widgetFile "default-layout")
-        hamletToRepHtml $(hamletFile "templates/default-layout-wrapper.hamlet")
+    defaultLayout _ = return . RepHtml $ toContent ("" :: String)
 
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticroot setting in Settings.hs
-    urlRenderOverride y (StaticR s) =
-        Just $ uncurry (joinPath y (Settings.staticRoot $ settings y)) $ renderRoute s
     urlRenderOverride _ _ = Nothing
 
     messageLogger y loc level msg =
@@ -96,7 +77,7 @@ instance Yesod DiffTimeline where
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
     -- users receiving stale content.
-    addStaticContent = addStaticContentExternal (const $ Left ()) base64md5 Settings.staticDir (StaticR . flip StaticRoute [])
+    {-addStaticContent = addStaticContentExternal (const $ Left ()) base64md5 Settings.staticDir (StaticR . flip StaticRoute [])-}
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody

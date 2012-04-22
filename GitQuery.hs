@@ -12,7 +12,6 @@ import Prelude
 
 import Data.Monoid( mappend )
 import System.FilePath( splitDirectories  )
-import System.IO( stderr, hPutStrLn )
 import Control.Applicative
 import Control.Monad.Error( ErrorT, throwError, runErrorT )
 import Control.Monad.IO.Class( liftIO )

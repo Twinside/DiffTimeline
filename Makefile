@@ -2,7 +2,7 @@ build:
 	runhaskell Setup.hs build
 
 conf:
-	runhaskell Setup.hs configure
+	cabal-dev install
 
 all:
 	yesod --dev devel
