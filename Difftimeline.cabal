@@ -12,50 +12,8 @@ cabal-version:     >= 1.6
 build-type:        Simple
 homepage:          http://Difftimeline.yesodweb.com/
 
-Flag dev
-    Description:   Turn on development settings, like auto-reload templates.
-    Default:       False
-
-Flag library-only
-    Description:   Build for use with "yesod devel"
-    Default:       False
-
-library
-    if flag(library-only)
-        Buildable: True
-    else
-        Buildable: False
-    exposed-modules: Application
-    other-modules:   Foundation
-                     Import
-                     Settings
-                     Settings.StaticFiles
-                     Handler.Root
-                     Diff
-                     GitQuery
-
-    ghc-options:   -Wall -threaded -O0
-    cpp-options:   -DDEVELOPMENT
-
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                OverloadedStrings
-                MultiParamTypeClasses
-                TypeFamilies
-
-executable         Difftimeline
-    if flag(library-only)
-        Buildable: False
-
-    if flag(dev)
-        cpp-options:   -DDEVELOPMENT
-        ghc-options:   -Wall -threaded -O0
-    else
-        ghc-options:   -Wall -threaded -O2
-
+executable         difftimeline
+    ghc-options:   -static -Wall -threaded -O2
     main-is:       main.hs
 
     extensions: TemplateHaskell
