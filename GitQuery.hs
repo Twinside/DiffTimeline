@@ -209,12 +209,12 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
                 thisData = decodeUtf8 $ toStrict file
 
             return $ ParentFile
-                { fileData = thisData
+                { fileData = T.filter (/= '\r') thisData
                 , fileRef = currentFileRef
                 , parentRef = commitParents firstNfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
                 , commitRef = firstRef
-                , commitPath = betweenCommits
+                , commitPath = reverse betweenCommits
                 , fileDiff = computeTextDiff thisData prevData
                 }
 

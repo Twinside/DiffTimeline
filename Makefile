@@ -15,3 +15,5 @@ prepare:
 	cabal-dev add-source hit/hit-0.3.tar.gz
 	cabal-dev install
 
+place:
+	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/

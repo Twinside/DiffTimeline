@@ -190,7 +190,7 @@ var DiffManipulator = (function () {
             }
 
             // output the real diff
-            if (d.end - d.beg == 0)
+            if (d.end - d.beg <= 1)
             {
                 highlighter.set_current_line_number(d.beg);
                 colorized = highlighter.colorLine(lines[d.beg]);
@@ -202,10 +202,10 @@ var DiffManipulator = (function () {
                 colorized = highlighter.colorLine(lines[d.beg]);
                 processed_lines.push( begs[d.way] + colorized);
 
-                for ( var lineNum = d.beg + 1; lineNum < d.end; lineNum++ )
+                for ( var lineNum = d.beg + 1; lineNum < d.end - 1; lineNum++ )
                     processed_lines.push(highlighter.colorLine(lines[lineNum]));
 
-                processed_lines.push(highlighter.colorLine(lines[d.end]) + ends[d.way]);
+                processed_lines.push(highlighter.colorLine(lines[d.end - 1]) + ends[d.way]);
             }
 
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
@@ -339,7 +339,7 @@ var DiffManipulator = (function () {
             if (diff.way === "+")
             {
                 lines[diff.dest_idx] = '<div class="diff_addition">' + lines[diff.dest_idx];
-                lines[diff.dest_idx + diff.size] += '</div>';
+                lines[diff.dest_idx + diff.size - 1] += '</div>';
             }
             
         }
@@ -353,7 +353,7 @@ var DiffManipulator = (function () {
             if (diff.way === "-")
             {
                 lines[diff.orig_idx] = '<div class="diff_deletion">' + lines[diff.orig_idx];
-                lines[diff.orig_idx + diff.size] += '</div>';
+                lines[diff.orig_idx + diff.size - 1] += '</div>';
             }
             
         }

@@ -91,7 +91,7 @@ parentFileToJson :: ParentFile -> Value
 parentFileToJson p =
     object ["data"          .= fileData p
            ,"filekey"       .= (refToText $ fileRef p)
-           ,"parent_commit" .= (refToText . head $ parentRef p)
+           ,"parent_commit" .= (refToText . last $ parentRef p)
            ,"message"       .= fileMessage p
            ,"diff"          .= (array . map (object . diffToJson) $ fileDiff p)
            ,"path"          .= map commitPathToJson (commitPath p)
