@@ -10,5 +10,8 @@ all:
 # Do not use the normal folder version, sdist doesn't work
 # on windows, instead, prepare a tiny tar gz and install
 # it manually
-add_private_package:
-	cabal-dev add-source ../bidule.tar.gz
+prepare:
+	cd hit; make pack
+	cabal-dev add-source hit/hit-0.3.tar.gz
+	cabal-dev install
+

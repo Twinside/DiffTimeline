@@ -6,7 +6,8 @@ How to build Difftimeline
    build the Network package)
 
  * Install the yesod package `cabal install yesod`
- * In the main folder call `cabal-dev install`
+ * In the main folder call `make prepare`
+ * After that, you can build calling just make
 
 And that should be it
 
