@@ -23,9 +23,10 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
 import qualified System.FilePath as FP
-import Data.Git.Repository( Git, openRepo, findRepository, gitRepoPath )
+import Data.Git( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
 import Handler.Root
+import System.Exit( exitFailure )
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
@@ -34,10 +35,16 @@ mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
 initRepository :: Logger -> FilePath -> IO Git
 initRepository logger startDir = do
-    Just dir <- findRepository startDir
-    let repoPath = dir </> ".git"
-    logString logger $ "Trying to open git: " ++ repoPath
-    openRepo repoPath
+    maybeRepo <- findRepository startDir
+    case maybeRepo of
+       Nothing -> do
+           putStrLn "Error : no git repository found"
+           exitFailure
+
+       Just dir -> do
+            let repoPath = dir </> ".git"
+            logString logger $ "Trying to open git: " ++ repoPath
+            openRepo repoPath
 
 simplifyPath :: FilePath -> FilePath
 simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise 

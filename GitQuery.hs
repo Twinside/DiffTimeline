@@ -31,10 +31,11 @@ import Data.Git( GitObject( .. )
                , findObject
                , CommitInfo( .. )
                , getHead
+               , Ref
+               , fromHexString 
                )
 
 import qualified Data.Vector as V
-import Data.Git.Ref( Ref, fromHexString )
 
 import Diff
 

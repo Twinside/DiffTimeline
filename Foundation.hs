@@ -22,7 +22,7 @@ import Settings (Extra (..), widgetFile)
 import Control.Monad.IO.Class (liftIO)
 -- import Web.ClientSession (getKey)
 -- import Text.Hamlet (hamletFile)
-import Data.Git.Repository( Git )
+import Data.Git( Git )
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application

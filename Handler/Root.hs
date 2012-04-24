@@ -11,7 +11,7 @@ import Text.Julius( julius, renderJavascript )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
 import Data.Text.Encoding( decodeUtf8 )
-import Data.Git.Ref( Ref, toHex, toHexString, fromHexString )
+import Data.Git( Ref, toHex, toHexString, fromHexString )
 import Diff
 import GitQuery
 import StaticFiles
