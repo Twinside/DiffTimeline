@@ -585,7 +585,19 @@ var FileBlob = function (filename, data) {
 
     this.create_dom = function() {
         this.short_message = this.message.split("\n")[0];
-        var processed = ich.commitfile(this);
+        var processed;
+
+        var path_length = this.path.length;
+        var maximum_path_length = 15;
+
+        if (path_length > maximum_path_length)
+        {
+            this.path_beg = _.initial(this.path, maximum_path_length / 2);
+            this.path_end = _.last(this.path, maximum_path_length / 2);
+            processed = ich.commitfile_huge_path(this);
+        }
+        else
+            processed = ich.commitfile(this);
 
         $(".container").prepend( processed );
     }

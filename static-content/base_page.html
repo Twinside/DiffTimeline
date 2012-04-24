@@ -70,6 +70,12 @@
                 <a onclick="breadcrumb.click_index({{id}})">{{name}}</a>
             </span>
         </script>
+        <script id="commitcircle" type="text/html">
+            <div class="delta_commit_circle"
+                 onclick="application_state.switch_commit('{{commit}}')">
+               <div>{{message}}</div>
+            </div>
+        </script>
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
@@ -79,12 +85,32 @@
                     </div>
 
                     <div class="commit_list">
-                        {{#path}}
-                        <div class="delta_commit_circle"
-                             onclick="application_state.switch_commit('{{commit}}')">
-                            <div>{{message}}</div>
-                        </div>
-                        {{/path}}
+                        {{#path}} {{>commitcircle}} {{/path}}
+                    </div>
+
+                    <span class="more_info"
+                        onClick="application_state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        </span>
+                    <div class="commit_detail"></div>
+                </div>
+
+                <div class="file_content">
+                    <pre class="syntax_highlighted"></pre>
+                </div>
+            </div>
+        </script>
+        <script id="commitfile_huge_path" type="text/html">
+            <div class="commit" id="{{key}}">
+                <div class="commitinfo">
+                    <div class="commitmsg">
+                        <span class="id">{{key}}</span><hr />
+                        <h4 title="{{message}}">{{short_message}}</h4>
+                    </div>
+
+                    <div class="commit_list">
+                        {{#path_beg}} {{>commitcircle}} {{/path_beg}}
+                        <span class="ellipsis">...</span>
+                        {{#path_end}} {{>commitcircle}} {{/path_end}}
                     </div>
 
                     <span class="more_info"
