@@ -13,7 +13,7 @@ build-type:        Simple
 homepage:          http://Difftimeline.yesodweb.com/
 
 executable         difftimeline
-    ghc-options:   -static -Wall -threaded -O2
+    ghc-options:   -optl-static -static -Wall -threaded -O2 -optl-pthread
     main-is:       main.hs
 
     extensions: TemplateHaskell
