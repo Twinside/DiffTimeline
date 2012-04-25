@@ -28,7 +28,7 @@ Gentoo practical example (on amd64)
 * Install the cabal-dev (as user)
    * `cabal install cabal-dev`
 * Mae sure you got static zlib & gmp (as root)
-   * `echo 'sys-libs/zlib' >> /etc/portage/package.use`
+   * `echo 'sys-libs/zlib static-libs' >> /etc/portage/package.use`
    * `echo 'dev-libs/gmp static-libs' >> /etc/portage/package.use`
    * `emerge -DuNa @world`
 * In the main folder call `make prepare` (as user)
