@@ -476,14 +476,23 @@ var CommitRenderer = function(init_key) {
     this.fetch_commit = function( id ) {
         var this_obj = this;
 
-        $.getJSON('/commit/' + id, {}, function(data) {
-            var new_commit = new Commit(id, data);
+        $.ajax({
+            url: '/commit/' + id,
+            dataType: 'json',
+            data: {},
+            error: function() {
+                show_error({error: 'Communication error with the server while fetching commit'});
+            },
 
-            new_commit.create_dom();
-            new_commit.render();
+            success: function(data) {
+                var new_commit = new Commit(id, data);
 
-            this_obj.collection.push(new_commit);
-            this_obj.keys[id] = new_commit;
+                new_commit.create_dom();
+                new_commit.render();
+
+                this_obj.collection.push(new_commit);
+                this_obj.keys[id] = new_commit;
+            }
         });
     }
 
@@ -524,37 +533,45 @@ var FileBlob = function (filename, data) {
     this.fetch_details = function() {
         var this_obj = this;
 
-        $.getJSON('/ask_commit/' + this.key, {}, function(data) {
-            if (data === null) {
-                show_error({error: 'Communication error with the server'});
-                return;
-            }
+        $.ajax({
+            url: '/ask_commit/' + this.key,
+            dataType: 'json',
+            data: {},
+            error: function() {
+                show_error({error: 'Communication error with the server while fetching commit details'});
+            },
+            success: function(data) {
+                if (data === null) {
+                    show_error({error: 'Communication error with the server'});
+                    return;
+                }
 
-            if (data['error']) { 
-                show_error( data );
-                return;
-            }
+                if (data['error']) { 
+                    show_error( data );
+                    return;
+                }
 
-            var kind_formater = {
-                'modification': ich.commit_file_modification,
-                'addition':ich.commit_file_addition,
-                'deletion':ich.commit_file_deletion
-            };
+                var kind_formater = {
+                    'modification': ich.commit_file_modification,
+                    'addition':ich.commit_file_addition,
+                    'deletion':ich.commit_file_deletion
+                };
 
-            var detail = $('#' + this_obj.key + ' .commit_detail');
-            detail.append(ich.commit_button_file({commit: this_obj.key}));
+                var detail = $('#' + this_obj.key + ' .commit_detail');
+                detail.append(ich.commit_button_file({commit: this_obj.key}));
 
-            for ( var change in data )
-            {
-                var e = data[change];
-                var kind = e['kind'];
-                e.key = this_obj.key;
+                for ( var change in data )
+                {
+                    var e = data[change];
+                    var kind = e['kind'];
+                    e.key = this_obj.key;
 
-                var file_diff;
-                if (kind_formater.hasOwnProperty(kind))
-                    detail.append(kind_formater[kind](e));
-                else
-                    detail.append(ich.commit_file_unknown(e));
+                    var file_diff;
+                    if (kind_formater.hasOwnProperty(kind))
+                        detail.append(kind_formater[kind](e));
+                    else
+                        detail.append(ich.commit_file_unknown(e));
+                }
             }
         });
     };
@@ -622,7 +639,11 @@ var FileRenderer = (function() {
         if (file[0] == '/') request += file;
         else request += '/' + file;
 
-        $.getJSON(request, params, f);
+        $.ajax({ url: request, dataType: 'json', data: params,
+                 error: function() {
+                     show_error({error: 'Communication error with the server while fetching file'});
+                 },
+                 success: f });
     };
 
     var init = function(init_data) {
