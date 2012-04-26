@@ -643,7 +643,7 @@ var FileRenderer = (function() {
         this.keys = {};
 
         this.create_all_dom = function() {
-            for ( var i = 0; i < this.collection.length; i++ ) {
+            for ( var i = this.collection.length - 1; i >= 0; i-- ) {
                 this.collection[i].create_dom();
             }
         };
