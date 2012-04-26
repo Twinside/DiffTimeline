@@ -29,7 +29,7 @@ var TinySyntaxHighlighter = (function () {
         var consumed = false;
         var ret = this.compute_line_number();
 
-        for ( var j in this.activeStack )
+        for ( var j = 1; j < this.activeStack.length; j++ )
         {
             var e = this.activeStack[j];
             ret += '<span class="' + e.kind + '">';
@@ -106,7 +106,7 @@ var TinySyntaxHighlighter = (function () {
         // end of line, we must close all the
         // active tags (have to be reoppened a
         // the beginning
-        for ( var i = 0; i < this.activeStack.length; i++ )
+        for ( var i = 1; i < this.activeStack.length; i++ )
             { ret += '</span>'; }
 
         return ret;
