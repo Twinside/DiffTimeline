@@ -592,7 +592,8 @@ var FileBlob = function (filename, data) {
 
         if (path_length > maximum_path_length)
         {
-            this.path_beg = _.initial(this.path, maximum_path_length / 2);
+            this.path_beg = _.initial(this.path,
+                                      this.path.length - maximum_path_length / 2);
             this.path_end = _.last(this.path, maximum_path_length / 2);
             processed = ich.commitfile_huge_path(this);
         }
