@@ -19,6 +19,7 @@ import Control.Monad.IO.Class( liftIO )
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
+import Data.Aeson
 import Data.List( find )
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
@@ -33,6 +34,8 @@ import Data.Git( GitObject( .. )
                , getHead
                , Ref
                , fromHexString 
+               , toHexString
+               , toHex
                )
 
 import qualified Data.Vector as V
@@ -44,10 +47,32 @@ import Yesod.Logger
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
+refToText :: Ref -> T.Text
+refToText = decodeUtf8 . toHex
+
 data CommitTreeDiff = AddElement T.Text Ref
                     | DelElement T.Text Ref
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     deriving (Eq, Show)
+
+instance ToJSON CommitTreeDiff where
+    toJSON (AddElement name r) =
+        object [ "kind" .= ("addition" :: T.Text)
+               , "name" .= name
+               , "hash" .= toHexString r]
+
+    toJSON (DelElement name r) =
+        object [ "kind" .= ("deletion" :: T.Text)
+               , "name" .= name
+               , "hash" .= toHexString r]
+
+    toJSON (ModifyElement name r diffs) =
+        object $ [ "kind" .= ("modification" :: T.Text)
+                 , "name" .= name
+                 , "hash" .= toHexString r] ++ diffElement 
+          where diffElement | null diffs = []
+                            | otherwise = ["diff" .= map adder diffs]
+                adder (d, content) = object $ diffToJson d ++ ["data" .= content]
 
 data CommitDetail = CommitDetail
     { commitDetailMessage :: T.Text
@@ -58,12 +83,30 @@ data CommitDetail = CommitDetail
     }
     deriving (Eq, Show)
 
+instance ToJSON CommitDetail where
+    toJSON detail = object $ 
+      [ "message"      .= commitDetailMessage detail
+      , "parents_sha"  .= (toJSON . map toHexString $ commitDetailParents detail)
+      , "key"          .= (toHexString $ commitDetailKey detail)
+      , "author"       .= commitDetailAuthor detail
+      , "file_changes" .= toJSON (commitDetailChanges detail)
+      ] 
+    
+
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
     , pathParentRef     :: Ref
     , pathMessage       :: T.Text
     }
     deriving (Eq, Show)
+
+instance ToJSON CommitPath where
+    toJSON cp =
+      object [ "commit" .= refToText (pathCommitRef cp)
+             , "parent_commit" .= refToText (pathParentRef cp)
+             , "message" .= pathMessage cp
+             ]
+
 
 -- | Want same behaviour between windows & Unix
 (</>) :: FilePath -> FilePath -> FilePath
@@ -230,11 +273,21 @@ data ParentFile = ParentFile
     }
     deriving (Eq, Show)
 
+instance ToJSON ParentFile where
+    toJSON p =
+      object ["data"          .= fileData p
+             ,"filekey"       .= (refToText $ fileRef p)
+             ,"parent_commit" .= (refToText . last $ parentRef p)
+             ,"message"       .= fileMessage p
+             ,"diff"          .= (toJSON . map (object . diffToJson) $ fileDiff p)
+             ,"path"          .= toJSON (commitPath p)
+             ,"key"           .= refToText (commitRef p)
+             ]
+
 basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
-basePage logger repository path = runErrorT $ do
+basePage _logger repository path = runErrorT $ do
     let getObj errorReason = errorIO errorReason . accessObject repository
     headRef        <- errorIO "Can't read HEAD" $ getHead repository
-    liftIO . logString logger $ "init ref : " ++ show headRef
     (Commit cInfo) <- accessCommit "Error can't access commit" repository headRef
     tree           <- getObj "Error can't access commit tree" $ commitTree cInfo
     foundFileRef   <- errorIO "Error can't find file in tree" $ findInTree repository path tree

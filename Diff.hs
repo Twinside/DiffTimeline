@@ -6,6 +6,9 @@ module              Diff( -- * Types
                         , DiffCommand( .. )
                         , Index
 
+                          -- * Diff conversion
+                        , diffToJson
+
                           -- * Diff functions
                         , computeDiff
                         , computeTextDiff
@@ -20,6 +23,7 @@ import Control.Monad.ST( ST, runST )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
+import Data.Aeson
 
 type Index = Int
 
@@ -34,6 +38,16 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
                  deriving (Eq, Show)
+
+
+diffToJson :: DiffCommand -> [(T.Text, Value)]
+diffToJson (DiffCommand way bego begdest s) =
+         [ "way"      .= wayText way
+         , "orig_idx" .= bego
+         , "dest_idx" .= begdest
+         , "size"     .= s]
+    where wayText DiffAddition = "+" :: T.Text
+          wayText DiffDeletion = "-"
 
 -- | Merge diff commands which are contiguous of the same direction.
 compactCommands :: [DiffCommand] -> [DiffCommand]

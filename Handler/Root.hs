@@ -4,17 +4,15 @@ module Handler.Root where
 import Import
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
-import Yesod.Json
-import Yesod.Logger
 import Text.Julius( julius, renderJavascript )
 
+import Yesod.Json( jsonToRepJson )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
-import Data.Text.Encoding( decodeUtf8 )
-import Data.Git( Ref, toHex, toHexString, fromHexString )
-import Diff
+import Data.Git( toHexString, fromHexString )
 import GitQuery
 import StaticFiles
+import Data.Aeson
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -44,68 +42,11 @@ getJquery = return . RepPlain $ toContent jqueryEmbedded
 getTinysyntaxhighlighter = return . RepPlain $ toContent tinySyntaxHighlightJs 
 getUnderscore_min = return . RepPlain $ toContent underscoreJs
 
-refToText :: Ref -> T.Text
-refToText = decodeUtf8 . toHex
-
-diffToJson :: DiffCommand -> [(T.Text, Value)]
-diffToJson (DiffCommand way bego begdest s) =
-         [ "way" .= wayText way
-         , "orig_idx" .= bego
-         , "dest_idx" .= begdest
-         , "size"     .= s]
-    where wayText DiffAddition = "+" :: T.Text
-          wayText DiffDeletion = "-"
-
-commitTreeDiffToJson :: CommitTreeDiff -> Value
-commitTreeDiffToJson (AddElement name r) =
-  object ["kind" .= ("addition" :: T.Text), "name" .= name
-         ,"hash" .= toHexString r]
-commitTreeDiffToJson (DelElement name r) =
-  object ["kind" .= ("deletion" :: T.Text), "name" .= name
-         ,"hash" .= toHexString r]
-commitTreeDiffToJson (ModifyElement name r diffs) =
-  object $ ["kind" .= ("modification" :: T.Text), "name" .= name
-           ,"hash" .= toHexString r] ++ diffElement 
-        where diffElement | null diffs = []
-                          | otherwise = ["diff" .= map adder diffs]
-              adder (d, content) = object $ diffToJson d ++ ["data" .= content]
-
-commitDetailToJson :: CommitDetail -> Value
-commitDetailToJson detail = object $ 
-    [ "message"      .= commitDetailMessage detail
-    , "parents_sha"  .= (array . map toHexString $ commitDetailParents detail)
-    , "key"          .= (toHexString $ commitDetailKey detail)
-    , "author"       .= commitDetailAuthor detail
-    , "file_changes" .= array (map commitTreeDiffToJson
-                                        $ commitDetailChanges detail)
-    ] 
-    
-commitPathToJson :: CommitPath -> Value
-commitPathToJson cp =
-    object [ "commit" .= refToText (pathCommitRef cp)
-           , "parent_commit" .= refToText (pathParentRef cp)
-           , "message" .= pathMessage cp
-           ]
-
-parentFileToJson :: ParentFile -> Value
-parentFileToJson p =
-    object ["data"          .= fileData p
-           ,"filekey"       .= (refToText $ fileRef p)
-           ,"parent_commit" .= (refToText . last $ parentRef p)
-           ,"message"       .= fileMessage p
-           ,"diff"          .= (array . map (object . diffToJson) $ fileDiff p)
-           ,"path"          .= map commitPathToJson (commitPath p)
-           ,"key"           .= refToText (commitRef p)
-           ]
-
 getFileParentR :: [Text] -> Handler RepJson
 getFileParentR filePathes = do
     let file = T.unpack $ T.intercalate (T.pack "/") filePathes
     app <- getYesod
     params <- reqGetParams <$> getRequest
-    let logger = getLogger app
-    liftIO . logString logger $ "file : " ++ file
-    liftIO . logString logger $ "param : " ++ show params
     let commitRefs = map snd $ filter (\(n, _) -> n == T.pack "commit") params
         Just fRef = lookup (T.pack "last_file") params
         repository = getRepository app
@@ -113,11 +54,9 @@ getFileParentR filePathes = do
     rez <- liftIO $ findParentFile repository
                                     (T.unpack fRef)
                                     (T.unpack $ head commitRefs) file
-
-    -- liftIO $ logLazyText logger rendered
     case rez of
        Left err -> jsonToRepJson $ object ["error" .= err]
-       Right info -> jsonToRepJson $ parentFileToJson info
+       Right info -> jsonToRepJson $ toJSON info
 
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha =  do
@@ -127,7 +66,7 @@ getCommitOverviewR commitSha =  do
     case rez of
         Left err -> jsonToRepJson $ object ["error" .= err]
         Right info ->
-            jsonToRepJson . map commitTreeDiffToJson  $ commitDetailChanges info
+            jsonToRepJson . toJSON $ commitDetailChanges info
 
 
 
@@ -138,8 +77,7 @@ getCommitR commitSha = do
     rez <- liftIO . diffCommit repository True $ fromHexString commitSha
     case rez of
         Left err -> jsonToRepJson $ object ["error" .= err]
-        Right nfo ->
-            jsonToRepJson $ commitDetailToJson nfo
+        Right nfo -> jsonToRepJson $ toJSON nfo
 
 javascriptize :: T.Text -> T.Text
 javascriptize = T.replace quo quoRep
@@ -158,7 +96,6 @@ getInitialInfoR = do
         repository = getRepository app
         filename = initialPath app
         splitedFilename = map BC.pack $ splitDirectories filename
-    liftIO . logString logger $ "Loading " ++ filename
     answer <- liftIO $ basePage logger repository splitedFilename
     let rendered = case answer of
             Left err ->
@@ -176,11 +113,10 @@ getInitialInfoR = do
                                             path: [] };
 
                         application_state.start_file( first_state ); |] ("" :: Text)
-    -- liftIO $ logLazyText logger rendered
     return . RepPlain $ toContent rendered
 
 getQuitR :: Handler RepJson
 getQuitR = do
-    _ <- jsonToRepJson $ object [("ok", True)]
+    _ <- jsonToRepJson $ object ["ok" .= True]
     liftIO $ exitSuccess
 
