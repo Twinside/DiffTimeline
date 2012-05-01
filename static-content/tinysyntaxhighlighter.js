@@ -47,26 +47,29 @@ var TinySyntaxHighlighter = (function () {
             if (currentIndex >= maxIndex) break;
 
             var current_region = this.activeStack[ this.activeStack.length - 1 ];
+            var consumed = current_region.end(line, currentIndex)
 
-            if (isTokenPrefixOf(current_region.end, line, currentIndex))
+            if (consumed > 0)
             {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
-                ret += current_region.end + '</span>';
-                currentIndex += current_region.end.length;
+                ret += line.slice(currentIndex, currentIndex + consumed) + '</span>';
+                currentIndex += consumed;
                 continue;
             }
 
             for ( var i in current_region.regions )
             {
                 var r = current_region.regions[i];
+                var consumed = r.begin(line, currentIndex);
 
-                if (isTokenPrefixOf(r.begin, line, currentIndex))
+                if (consumed > 0)
                 {
                     this.activeStack.push(r);
-                    ret += '<span class="' + r.kind + '">' + r.begin;
+                    ret += '<span class="' + r.kind + '">' + line.slice( currentIndex
+                                                                       , currentIndex + consumed - 1);
                     consumed = true;
-                    currentIndex += r.begin.length;
+                    currentIndex += consumed;
                     break;
                 }
             }
@@ -262,9 +265,19 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     }
 
+    var null_region = function () { return 0; }
+    var tok_region = function(tok) {
+        return function(line, base) {
+            if ( isTokenPrefixOf(tok, line, base) )
+                return tok.length;
+            else
+                return 0;
+        }
+    }
+
     /** @const */
     var rubyDef = {
-        begin:'', end:'',
+        begin:null_region, end:null_region,
 
         parsers:[ generic_parsers.monoline_comment('#')
                 , generic_parsers.double_quote_string
@@ -288,7 +301,7 @@ var TinySyntaxHighlighter = (function () {
     };
 
     var pythonDef = {
-        begin:'', end:'',
+        begin:null_region, end:null_region,
 
         parsers:[ generic_parsers.monoline_comment('#')
                 , generic_parsers.double_quote_string
@@ -318,9 +331,10 @@ var TinySyntaxHighlighter = (function () {
     }
 
     var haskellDef = {
-        begin:'', end:'',
+        begin:null_region, end:null_region,
 
-        regions: [make_region_recursive({ begin:"{-", end:"-}", kind:"syntax_comment"
+        regions: [make_region_recursive({ begin:tok_region("{-")
+                                        , end:tok_region("-}"), kind:"syntax_comment"
                                         , regions:[], parsers:[], keywords:[] })],
 
         parsers:[ generic_parsers.c_like_identifier
@@ -343,9 +357,11 @@ var TinySyntaxHighlighter = (function () {
     };
 
     var javascriptDef = {
-        begin:'', end:'',
+        begin:null_region, end:null_region,
 
-        regions:[{ begin:"/*", end:"*/", kind:"syntax_comment"
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
                  , regions:[], parsers:[], keywords:[] }],
 
         parsers:[ generic_parsers.c_like_identifier
@@ -374,9 +390,11 @@ var TinySyntaxHighlighter = (function () {
 
     /** @const */
     var cDef = {
-        begin:'', end:'',
+        begin:null_region, end:null_region,
 
-        regions:[{ begin:"/*", end:"*/", kind:"syntax_comment"
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
                  , regions:[], parsers:[], keywords:[] }],
 
         parsers:[ generic_parsers.c_like_identifier
