@@ -70,7 +70,7 @@ getApplication fname conf logger = do
             then simplifyPath $ cwd </> fname
             else simplifyPath fname
     initRepo <- initRepository logger $ takeDirectory name
-    let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) (cwd </> fname)
+    let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) name
         foundation = DiffTimeline conf setLogger initRepo initPath
     liftIO . logString logger $ "Initial file : " ++ initPath
     app <- toWaiAppPlain foundation
