@@ -4,12 +4,13 @@ module Handler.Root where
 import Import
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy.Char8 as LC
 import Text.Julius( julius, renderJavascript )
 
 import Yesod.Json( jsonToRepJson )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
-import Data.Git( toHexString, fromHexString )
+import Data.Git( getHead, toHexString, fromHexString )
 import GitQuery
 import StaticFiles
 import Data.Aeson
@@ -89,12 +90,27 @@ javascriptize = T.replace quo quoRep
           (bs, bsRep) = (T.pack "\\",  T.pack "\\\\")
           (quo, quoRep) = (T.pack "\"",  T.pack "\\\"")
 
-getInitialInfoR :: Handler RepPlain
-getInitialInfoR = do
+getInitialCommit :: Handler RepPlain
+getInitialCommit = do
+  app <- getYesod
+  let repository = getRepository app
+      strictify = BC.concat . LC.toChunks
+  Just headRef <- liftIO $ getHead repository
+  diffRez <- liftIO $ diffCommit repository True headRef 
+  return . RepPlain . toContent $ case diffRez of
+    Left err ->
+        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+
+    Right rez ->
+        renderJavascript $ [julius|
+            var first_state = #{decodeUtf8 $ strictify $ encode $ toJSON rez};
+            application_state.start_commit( first_state ); |] ("" :: Text)
+
+getInitialFile :: FilePath -> Handler RepPlain
+getInitialFile filename = do
     app <- getYesod
     let logger = getLogger app
         repository = getRepository app
-        filename = initialPath app
         splitedFilename = map BC.pack $ splitDirectories filename
     answer <- liftIO $ basePage logger repository splitedFilename
     let rendered = case answer of
@@ -114,6 +130,13 @@ getInitialInfoR = do
 
                         application_state.start_file( first_state ); |] ("" :: Text)
     return . RepPlain $ toContent rendered
+
+getInitialInfoR :: Handler RepPlain
+getInitialInfoR = do
+    app <- getYesod
+    case initialPath app of
+        Nothing -> getInitialCommit
+        Just fname -> getInitialFile fname
 
 getQuitR :: Handler RepJson
 getQuitR = do

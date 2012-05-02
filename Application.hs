@@ -1,24 +1,12 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-module Application
-    ( getApplication
-    , getApplicationDev
-    ) where
+module Application( getApplication ) where
 
 import Import
-import Settings (parseExtra)
 import System.Directory( getCurrentDirectory )
 import Network.Wai( Application )
 import Yesod.Default.Config
-import Yesod.Default.Main (defaultDevelApp )
 import Yesod.Default.Handlers (getFaviconR, getRobotsR)
-{-import Network.Wai( Application )-}
-#if DEVELOPMENT
 import Yesod.Logger (Logger, logBS, logString)
 import Network.Wai.Middleware.RequestLogger (logCallbackDev)
-#else
-import Yesod.Logger (Logger, logBS, toProduction, logString)
-import Network.Wai.Middleware.RequestLogger (logCallback)
-#endif
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
@@ -63,33 +51,22 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
-getApplication fname conf logger = do
+getApplication :: Maybe FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
+getApplication Nothing conf logger = do
+    initRepo <- getCurrentDirectory >>= initRepository logger
+    let foundation = DiffTimeline conf logger initRepo Nothing
+    app <- toWaiAppPlain foundation
+    return $ logCallbackDev (logBS logger) app
+
+getApplication (Just fname) conf logger = do
     cwd <- getCurrentDirectory 
     let name = if isRelative fname
             then simplifyPath $ cwd </> fname
             else simplifyPath fname
     initRepo <- initRepository logger $ takeDirectory name
     let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) name
-        foundation = DiffTimeline conf setLogger initRepo initPath
+        foundation = DiffTimeline conf logger initRepo (Just initPath)
     liftIO . logString logger $ "Initial file : " ++ initPath
     app <- toWaiAppPlain foundation
-    return $ logWare app
-  where
-#ifdef DEVELOPMENT
-    logWare = logCallbackDev (logBS setLogger)
-    setLogger = logger
-#else
-    setLogger = toProduction logger -- by default the logger is set for development
-    logWare = logCallback (logBS setLogger)
-#endif
-
--- for yesod devel
-getApplicationDev :: IO (Int, Application)
-getApplicationDev =
-    defaultDevelApp loader $ getApplication ""
-  where
-    loader = loadConfig (configSettings Development)
-        { csParseExtra = parseExtra
-        }
+    return $ logCallbackDev (logBS logger) app
 

@@ -75,7 +75,7 @@ var application_state = (function () {
 
         switch_commit: function(id) {
             this.clear_display();
-            states.push(new CommitRenderer(id));
+            states.push(new CommitRenderer.create_from_arg(id));
             breadcrumb.append_breadcrumb(id);
         },
 
@@ -127,6 +127,11 @@ var application_state = (function () {
 
             $('.btn_toggleview').html(btn_toggle_text[view_mode]);
             this.render_all();
+        },
+
+        start_commit: function(commit_obj) {
+            states.push( CommitRenderer.create_from_data(commit_obj) );
+            breadcrumb.append_breadcrumb(commit_obj.key);
         },
 
         start_file: function(file_obj) {
@@ -456,55 +461,79 @@ var Commit = function(key, data) {
 /**
  * @constructor
  */
-var CommitRenderer = function(init_key) {
-    this.collection = [];
-    this.keys = {};
-
-    this.render_all = function() {
-        for ( var i = 0; i < this.collection.length; i++ ) {
-            this.collection[i].render();
-        }
-    };
-
-
-    this.create_all_dom = function() {
-        for ( var i = 0; i < this.collection.length; i++ ) {
-            this.collection[i].create_dom();
-        }
-    };
-
-    this.fetch_commit = function( id ) {
+var CommitRenderer = (function() {
+    var fetch_commit = function( id, f ) {
         var this_obj = this;
 
         $.ajax({
             url: '/commit/' + id,
             dataType: 'json',
             data: {},
+            success: f,
             error: function() {
                 show_error({error: 'Communication error with the server while fetching commit'});
-            },
+            }
+        });
+    }
 
-            success: function(data) {
-                var new_commit = new Commit(id, data);
+    var init = function(init_data) {
+        var new_commit = new Commit(init_data.key, init_data);
+        new_commit.create_dom();
+        new_commit.render();
+        
+        this.collection = [new_commit];
+        this.keys[init_data.key] = new_commit;
+    }
+
+    var init_methods = function() {
+        this.keys = {};
+        this.render_all = function() {
+            for ( var i = 0; i < this.collection.length; i++ ) {
+                this.collection[i].render();
+            }
+        };
+
+
+        this.create_all_dom = function() {
+            for ( var i = 0; i < this.collection.length; i++ ) {
+                this.collection[i].create_dom();
+            }
+        };
+
+        this.fetch_previous = function() {
+            var this_obj = this;
+            var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
+
+            fetch_commit(prev_id, function(data) {
+                var new_commit = new Commit(data.key, data);
 
                 new_commit.create_dom();
                 new_commit.render();
 
                 this_obj.collection.push(new_commit);
-                this_obj.keys[id] = new_commit;
-            }
-        });
+                this_obj.keys[data.key] = new_commit;
+            });
+        }
     }
 
-    this.fetch_previous = function() {
-        var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
-        this.fetch_commit(prev_id);
-    }
+    return {
+        create_from_data: function(init_data) { 
+            var rez = new init_methods();
+            init.call(rez, init_data);
+            return rez;
+        },
 
-    this.fetch_commit(init_key);
+        create_from_arg: function(key) {
+            var rez = new init_methods();
 
-    return this;
-};
+            fetch_commit(key, function(data) { 
+                init.call(rez, data);
+            });
+
+            return rez;
+        }
+    };
+})();
 
 /**
  * @constructor

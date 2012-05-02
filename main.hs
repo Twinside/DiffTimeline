@@ -1,15 +1,10 @@
 import Prelude
-import Yesod.Default.Config (--fromArgs, loadDevelopmentConfig
-                             AppConfig(..), DefaultEnv( Development ))
--- import Yesod.Default.Main   (defaultMain)
+import Yesod.Default.Config (AppConfig(..), DefaultEnv( Development ))
 import Settings             (Extra(..))
 import Application          (getApplication)
 import Network.Wai.Handler.Launch (run)
 import System.Environment( getArgs )
--- import Network.Wai.Application.Static
-import Yesod.Logger ( -- Logger, logBS, logString,
-                     defaultDevelopmentLogger)
--- import Network.Wai.Middleware.RequestLogger (logCallbackDev)
+import Yesod.Logger (defaultDevelopmentLogger)
 
 main :: IO ()
 main = do
@@ -17,17 +12,21 @@ main = do
         appEnv = Development,
         appPort = 3000,
         appRoot = ".",
+        appHost = "",
         appExtra = Extra {
                 extraCopyright = "",
                 extraAnalytics = Nothing
             }
       }
-    -- config <- fromArgs parseExtra
     args <- getArgs
     case args of
-        [] -> putStrLn "usage : Difftimeline <file>"
+        [] -> do
+            logger <- defaultDevelopmentLogger
+            app <- getApplication Nothing config logger
+            run app
+
         (f:_) -> do
             logger <- defaultDevelopmentLogger
-            app <- getApplication f config logger
+            app <- getApplication (Just f) config logger
             run app
 

@@ -32,7 +32,7 @@ data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv Extra
     , getLogger :: Logger
     , getRepository :: Git
-    , initialPath   :: FilePath
+    , initialPath   :: Maybe FilePath
     }
 
 -- Set up i18n messages. See the message folder.

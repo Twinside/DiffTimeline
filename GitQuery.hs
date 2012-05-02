@@ -6,6 +6,7 @@ module GitQuery( CommitTreeDiff( .. )
                , findFirstCommit
                , findParentFile 
                , basePage
+               , decodeUtf8
                ) where
 
 import Prelude
