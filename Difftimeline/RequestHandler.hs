@@ -1,7 +1,7 @@
 {-# LANGUAGE OverlappingInstances #-}
-module Handler.Root where
+module Difftimeline.RequestHandler where
 
-import Import
+import Difftimeline.Import
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
@@ -11,9 +11,10 @@ import Yesod.Json( jsonToRepJson )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
 import Data.Git( getHead, toHexString, fromHexString )
-import GitQuery
-import StaticFiles
 import Data.Aeson
+
+import Difftimeline.GitQuery
+import Difftimeline.StaticFiles
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in

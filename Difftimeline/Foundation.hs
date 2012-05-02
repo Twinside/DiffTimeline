@@ -1,4 +1,4 @@
-module Foundation
+module Difftimeline.Foundation
     ( DiffTimeline (..)
     , Route (..)
     , DiffTimelineMessage (..)
@@ -12,12 +12,8 @@ module Foundation
 import Prelude
 import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
--- import Yesod.Default.Util (addStaticContentExternal)
--- import Yesod.Static
 import Yesod.Logger (Logger, logMsg, formatLogText)
 import Control.Monad.IO.Class (liftIO)
--- import Web.ClientSession (getKey)
--- import Text.Hamlet (hamletFile)
 import Data.Git( Git )
 
 -- | The site argument for your application. This can be a good place to
@@ -69,11 +65,6 @@ instance Yesod DiffTimeline where
     messageLogger y loc level msg =
       formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
 
-    -- This function creates static content files in the static folder
-    -- and names them based on a hash of their content. This allows
-    -- expiration dates to be set far in the future without worry of
-    -- users receiving stale content.
-    {-addStaticContent = addStaticContentExternal (const $ Left ()) base64md5 Settings.staticDir (StaticR . flip StaticRoute [])-}
-
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
+

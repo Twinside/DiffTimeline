@@ -1,6 +1,6 @@
 import Prelude
 import Yesod.Default.Config (AppConfig(..), DefaultEnv( Development ))
-import Application          (getApplication)
+import Difftimeline.Application( getApplication )
 import Network.Wai.Handler.Launch (run)
 import System.Environment( getArgs )
 import Yesod.Logger (defaultDevelopmentLogger)

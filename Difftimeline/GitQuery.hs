@@ -1,13 +1,13 @@
-module GitQuery( CommitTreeDiff( .. )
-               , CommitDetail( .. )
-               , CommitPath( .. )
-               , ParentFile( .. )
-               , diffCommit
-               , findFirstCommit
-               , findParentFile 
-               , basePage
-               , decodeUtf8
-               ) where
+module Difftimeline.GitQuery( CommitTreeDiff( .. )
+                            , CommitDetail( .. )
+                            , CommitPath( .. )
+                            , ParentFile( .. )
+                            , diffCommit
+                            , findFirstCommit
+                            , findParentFile 
+                            , basePage
+                            , decodeUtf8
+                            ) where
 
 import Prelude
 
@@ -41,7 +41,7 @@ import Data.Git( GitObject( .. )
 
 import qualified Data.Vector as V
 
-import Diff
+import Difftimeline.Diff
 
 import Yesod.Logger
 

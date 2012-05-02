@@ -1,6 +1,6 @@
-module Application( getApplication ) where
+module Difftimeline.Application( getApplication ) where
 
-import Import
+import Difftimeline.Import
 import System.Directory( getCurrentDirectory )
 import Network.Wai( Application )
 import Yesod.Default.Config
@@ -13,7 +13,7 @@ import System.FilePath( (</>), makeRelative, takeDirectory,
 import qualified System.FilePath as FP
 import Data.Git( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
-import Handler.Root
+import Difftimeline.RequestHandler
 import System.Exit( exitFailure )
 
 -- This line actually creates our YesodSite instance. It is the second half

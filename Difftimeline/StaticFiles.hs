@@ -1,4 +1,4 @@
-module StaticFiles where
+module Difftimeline.StaticFiles where
 
 import qualified Data.ByteString as B
 import Data.FileEmbed
