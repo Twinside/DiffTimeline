@@ -47,29 +47,29 @@ var TinySyntaxHighlighter = (function () {
             if (currentIndex >= maxIndex) break;
 
             var current_region = this.activeStack[ this.activeStack.length - 1 ];
-            var consumed = current_region.end(line, currentIndex)
+            var consumed_chars = current_region.end(line, currentIndex)
 
-            if (consumed > 0)
+            if (consumed_chars > 0)
             {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
-                ret += line.slice(currentIndex, currentIndex + consumed) + '</span>';
-                currentIndex += consumed;
+                ret += html_encodize(line.slice(currentIndex, currentIndex + consumed_chars)) + '</span>';
+                currentIndex += consumed_chars;
                 continue;
             }
 
             for ( var i in current_region.regions )
             {
                 var r = current_region.regions[i];
-                var consumed = r.begin(line, currentIndex);
+                var consumed_chars = r.begin(line, currentIndex);
 
-                if (consumed > 0)
+                if (consumed_chars > 0)
                 {
                     this.activeStack.push(r);
-                    ret += '<span class="' + r.kind + '">' + line.slice( currentIndex
-                                                                       , currentIndex + consumed - 1);
+                    var encoded = html_encodize(line.slice( currentIndex, currentIndex + consumed_chars));
+                    ret += '<span class="' + r.kind + '">' + encoded;
                     consumed = true;
-                    currentIndex += consumed;
+                    currentIndex += consumed_chars;
                     break;
                 }
             }
@@ -78,7 +78,7 @@ var TinySyntaxHighlighter = (function () {
 
             for ( var i in current_region.parsers )
             {
-                var parser = this.def.parsers[i];
+                var parser = current_region.parsers[i];
                 var parserRet = parser.recognizer(line, currentIndex);
 
                 if (parserRet !== '')
@@ -158,6 +158,10 @@ var TinySyntaxHighlighter = (function () {
         this.colorLine = colorLine;
         this.def = highlight_def;
         return this;
+    };
+
+    var change_parser_kind = function(k, p) {
+        return { kind: k, recognizer: p.recognizer };
     };
 
     var generic_parsers = {
@@ -273,6 +277,21 @@ var TinySyntaxHighlighter = (function () {
             else
                 return 0;
         }
+    };
+
+    var rexp_parser = function( k, rexp ) {
+        return {
+            kind: k,
+            recognizer: function( line, currIndex ) {
+                rexp.lastIndex = currIndex;
+                var rez = rexp.exec(line);
+
+                if (rez !== null && rez.index === currIndex)
+                    return rez[0];
+
+                return '';
+            }
+        };
     }
 
     /** @const */
@@ -298,6 +317,51 @@ var TinySyntaxHighlighter = (function () {
             ]),
         
         regions:[]
+    };
+
+    var xmlDef = {
+        begin:null_region, end:null_region,
+        keywords: [],
+        parsers: [rexp_parser('syntax_special', /&[0-9A-Za-z]{1,8};/g)],
+        regions:[{ begin:tok_region('<!--')
+                 , end:tok_region('-->')
+                 , kind:"syntax_comment"
+                 , regions:[], parsers:[], keywords:[] }
+
+                ,{ begin:function(l, currentIndex) {
+                            if (l[currentIndex] !== '<') return 0;
+                            if (currentIndex + 1>= l.length) return 0;
+                            if (l[currentIndex + 1].match(/[a-zA-Z]/))
+                                return 1;
+
+                            return 0;
+                         }
+                 , end:tok_region(">")
+                 , kind:"syntax_tag"
+                 , regions:[]
+                 , parsers:[ generic_parsers.double_quote_string
+                           , generic_parsers.simple_quote_string
+                           , change_parser_kind('syntax_tag_name', generic_parsers.c_like_identifier)
+                           ]
+                 , keywords:[]
+                 }
+
+                ,{ begin:function(l, currentIndex) {
+                            if (l[currentIndex] !== '<') return 0;
+                            if (currentIndex + 1>= l.length) return 0;
+                            if (l[currentIndex + 1] !== '/') return 0;
+
+                            return 2;
+                         }
+
+                 , end:tok_region(">")
+                 , kind:"syntax_tag"
+                 , regions:[]
+                 , parsers:[ change_parser_kind('syntax_tag_name', generic_parsers.c_like_identifier) ]
+                 , keywords:[]
+                 }
+                 ],
+
     };
 
     var pythonDef = {
@@ -468,6 +532,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter(with_line_number, pythonDef );
         else if (filename.match(/\.js$/))
             return new create_highlighter(with_line_number, javascriptDef );
+        else if (filename.match(/\.xml$/) || filename.match(/\.html$/) || filename.match(/\.htm/))
+            return new create_highlighter(with_line_number, xmlDef );
 
         return new create_empty_highlighter(with_line_number);
     }
