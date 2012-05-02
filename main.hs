@@ -1,6 +1,5 @@
 import Prelude
 import Yesod.Default.Config (AppConfig(..), DefaultEnv( Development ))
-import Settings             (Extra(..))
 import Application          (getApplication)
 import Network.Wai.Handler.Launch (run)
 import System.Environment( getArgs )
@@ -13,10 +12,7 @@ main = do
         appPort = 3000,
         appRoot = ".",
         appHost = "",
-        appExtra = Extra {
-                extraCopyright = "",
-                extraAnalytics = Nothing
-            }
+        appExtra = ()
       }
     args <- getArgs
     case args of

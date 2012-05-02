@@ -6,7 +6,6 @@ module Foundation
     , Handler
     , Widget
     , module Yesod.Core
-    , module Settings
     , liftIO
     ) where
 
@@ -15,10 +14,7 @@ import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
 -- import Yesod.Default.Util (addStaticContentExternal)
 -- import Yesod.Static
--- import Settings.StaticFiles
 import Yesod.Logger (Logger, logMsg, formatLogText)
-import qualified Settings
-import Settings (Extra (..), widgetFile)
 import Control.Monad.IO.Class (liftIO)
 -- import Web.ClientSession (getKey)
 -- import Text.Hamlet (hamletFile)
@@ -29,7 +25,7 @@ import Data.Git( Git )
 -- starts running, such as database connections. Every handler will have
 -- access to the data present here.
 data DiffTimeline = DiffTimeline
-    { settings  :: AppConfig DefaultEnv Extra
+    { settings  :: AppConfig DefaultEnv ()
     , getLogger :: Logger
     , getRepository :: Git
     , initialPath   :: Maybe FilePath

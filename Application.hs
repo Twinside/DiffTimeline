@@ -51,7 +51,8 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: Maybe FilePath -> AppConfig DefaultEnv Extra -> Logger -> IO Application
+getApplication :: Maybe FilePath -> AppConfig DefaultEnv () -> Logger 
+               -> IO Application
 getApplication Nothing conf logger = do
     initRepo <- getCurrentDirectory >>= initRepository logger
     let foundation = DiffTimeline conf logger initRepo Nothing
