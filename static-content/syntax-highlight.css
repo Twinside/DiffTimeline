@@ -76,3 +76,23 @@
     margin-right: 5px;
 }
 
+.syntax_tag
+{
+    color:  #4e4e4e; 
+}
+
+.syntax_tag_name
+{
+    color:  #0087ff;
+}
+
+.syntax_tag_param
+{
+    color: #585858;
+}
+
+.syntax_special
+{
+    color: #d70000   
+}
+
