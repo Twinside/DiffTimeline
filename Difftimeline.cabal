@@ -1,16 +1,16 @@
 name:              Difftimeline
-version:           0.0.0
+version:           0.1
 license:           BSD3
 license-file:      LICENSE
 author:            Vincent Berthoux
 maintainer:        Vincent Berthoux
-synopsis:          The greatest Yesod web application ever.
-description:       I'm sure you can say something clever here if you try.
+synopsis:          Git repository driller
+description:       Explore the history of a given file in your browser.
 category:          Web
 stability:         Experimental
 cabal-version:     >= 1.6
 build-type:        Simple
-homepage:          http://Difftimeline.yesodweb.com/
+homepage:          https://github.com/Twinside/DiffTimeline
 
 executable         difftimeline
     ghc-options:   -optl-static -static -Wall -threaded -O2 -optl-pthread
@@ -26,27 +26,25 @@ executable         difftimeline
                 TypeFamilies
 
     build-depends: base                          >= 4          && < 5
+                 , aeson                         >= 0.6        && < 0.7
+                 , directory                     >= 1.1        && < 1.2
+                 , bytestring                    >= 0.9        && < 0.10
+                 , file-embed                    >= 0.0.4      && < 0.1
+                 , filepath                      >= 1.3        && < 1.4
+                 , hit                           >= 0.3        && < 0.4
+                 , monad-control                 >= 0.3        && < 0.4
+                 , mtl                           >= 2.0        && < 2.1
+                 , template-haskell
+                 , text                          >= 0.11       && < 0.12
+                 , transformers                  >= 0.2        && < 0.3
+                 , vector                        >= 0.9.1      && < 0.10
+
+                 , shakespeare-js                >= 1.0        && < 1.1 
                  , yesod-core                    >= 1.0        && < 1.1
                  , yesod-json                    >= 1.0        && < 1.1
                  , yesod-default                 >= 1.0        && < 1.1
-                 , clientsession                 >= 0.7.3      && < 0.8
-                 , bytestring                    >= 0.9        && < 0.10
-                 , text                          >= 0.11       && < 0.12
-                 , template-haskell
-                 , shakespeare-js                >= 1.0        && < 1.1 
-                 , wai-extra                     >= 1.2        && < 1.3
-                 , transformers                  >= 0.2        && < 0.3
-                 , monad-control                 >= 0.3        && < 0.4
-                 , yaml                          >= 0.7        && < 0.8
-                 , directory                     >= 1.1        && < 1.2
-                 , vector                        >= 0.9.1      && < 0.10
-                 , filepath                      >= 1.3        && < 1.4
+
                  , wai                           >= 1.2        && < 1.3
+                 , wai-extra                     >= 1.2        && < 1.3
                  , wai-handler-launch            >= 1.2        && < 1.3
-                 , wai-app-static                >= 1.2        && < 1.3
-                 , warp                          >= 1.2        && < 1.3
-                 , mtl                           >= 2.0        && < 2.1
-                 , hit                           >= 0.3        && < 0.4
-                 , file-embed                    >= 0.0.4      && < 0.1
-                 , aeson                         >= 0.6        && < 0.7
 
