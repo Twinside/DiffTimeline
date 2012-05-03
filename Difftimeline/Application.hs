@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Difftimeline.Application( getApplication ) where
 
 import Difftimeline.Import
