@@ -4,13 +4,14 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , ParentFile( .. )
                             , diffCommit
                             , findFirstCommit
-                            , findParentFile 
+                            , findParentFile
                             , basePage
                             , decodeUtf8
                             ) where
 
 import Prelude
 
+import Data.List( sortBy )
 import Data.Monoid( mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
@@ -34,9 +35,11 @@ import Data.Git( GitObject( .. )
                , CommitInfo( .. )
                , getHead
                , Ref
-               , fromHexString 
+               , fromHexString
                , toHexString
                , toHex
+
+               , TreeEntry
                )
 
 import qualified Data.Vector as V
@@ -53,10 +56,16 @@ refToText = decodeUtf8 . toHex
 
 data CommitTreeDiff = AddElement T.Text Ref
                     | DelElement T.Text Ref
+                    | NeutralElement T.Text Ref
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     deriving (Eq, Show)
 
 instance ToJSON CommitTreeDiff where
+    toJSON (NeutralElement name r) =
+        object [ "kind" .= ("neutral" :: T.Text)
+               , "name" .= name
+               , "hash" .= toHexString r]
+
     toJSON (AddElement name r) =
         object [ "kind" .= ("addition" :: T.Text)
                , "name" .= name
@@ -70,7 +79,7 @@ instance ToJSON CommitTreeDiff where
     toJSON (ModifyElement name r diffs) =
         object $ [ "kind" .= ("modification" :: T.Text)
                  , "name" .= name
-                 , "hash" .= toHexString r] ++ diffElement 
+                 , "hash" .= toHexString r] ++ diffElement
           where diffElement | null diffs = []
                             | otherwise = ["diff" .= map adder diffs]
                 adder (d, content) = object $ diffToJson d ++ ["data" .= content]
@@ -85,14 +94,14 @@ data CommitDetail = CommitDetail
     deriving (Eq, Show)
 
 instance ToJSON CommitDetail where
-    toJSON detail = object $ 
+    toJSON detail = object $
       [ "message"      .= commitDetailMessage detail
       , "parents_sha"  .= (toJSON . map toHexString $ commitDetailParents detail)
       , "key"          .= (toHexString $ commitDetailKey detail)
       , "author"       .= commitDetailAuthor detail
       , "file_changes" .= toJSON (commitDetailChanges detail)
-      ] 
-    
+      ]
+
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
@@ -151,7 +160,7 @@ diffCommit repository deep ref = runErrorT $ do
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
-    diff <- inner "" thisTree (commitTree prevCommit) prevTree (commitTree thisCommit)
+    diff <- inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
     return (CommitDetail {
           commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
         , commitDetailParents = commitParents thisCommit
@@ -160,7 +169,9 @@ diffCommit repository deep ref = runErrorT $ do
         , commitDetailChanges = diff
         })
   where getObj reason = errorIO reason . accessObject repository
-        inner name (Tree left) _r1 (Tree right) _r2 = diffTree name left right
+        inner name (Tree left) _r1 (Tree right) _r2 = diffTree name sortedLeft sortedRight
+            where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
+                  sortedRight = sortBy (\(_,a,_) (_,b,_) -> compare a b) right
         inner name (Blob c1) _r1 (Blob c2) r2
             | not deep  = return [ModifyElement (T.pack name) r2 []]
             | otherwise = return
@@ -170,14 +181,29 @@ diffCommit repository deep ref = runErrorT $ do
                           txtRight = decodeUtf8 $ strictify c2
         inner _ _ _ _ _ = return []
 
+        maySubTree f name r = do
+            sub <- errorIO "Dip dup" $ accessObject repository r
+            batchSubTree f name r sub
+
+        batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
+                     -> ErrorT String IO [CommitTreeDiff]
+        batchSubTree f name r (Blob _) = return [f (T.pack name) r]
+        batchSubTree f name _ (Tree t) =
+          concat <$> sequence [objAccess r >>= (batchSubTree f (namer n) r) | (_, n, r) <- t]
+            where objAccess = getObj "dipdup2"
+                  namer n = name </> BC.unpack n
+        batchSubTree _ _ _ _ = return []
+
+        diffTree :: String -> [TreeEntry] -> [TreeEntry]
+                 -> ErrorT String IO [CommitTreeDiff]
         diffTree _name   []     [] = return []
-        diffTree name    [] rights = return
-            [AddElement fullName r | (_, item, r) <- rights
-                                  , let fullName = T.pack $ name </> BC.unpack item ]
-        diffTree name lefts     [] = return
-            [DelElement fullName r | (_, item, r) <- lefts
-                                  , let fullName = T.pack $ name </> BC.unpack item ]
-        diffTree name ((_, lName, lRef):ls) ((_, rName, rRef):rs)
+        diffTree name    [] rights = concat <$> sequence
+            [maySubTree AddElement fullName r | (_, item, r) <- rights
+                                              , let fullName = name </> BC.unpack item ]
+        diffTree name lefts     [] = concat <$> sequence
+            [maySubTree DelElement fullName r | (_, item, r) <- lefts
+                                              , let fullName = name </> BC.unpack item ]
+        diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
             | lName == rName && lRef == rRef = diffTree name ls rs
             | lName == rName = do
                 subL <- errorIO "Error can't access parent commit subtree"
@@ -186,11 +212,15 @@ diffCommit repository deep ref = runErrorT $ do
                                 $ accessObject repository rRef
                 mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
 
-            | lName < rName = return [DelElement delName lRef]
-            | otherwise = return [AddElement addName rRef]
-                where delName = T.pack $ name </> BC.unpack lName
-                      addName =  T.pack $ name </> BC.unpack rName
+            | lName < rName = mappend <$> maySubTree DelElement addName lRef
+                                      <*> diffTree name ls rights
+
+            | otherwise = mappend <$> maySubTree AddElement delName rRef
+                                  <*> diffTree name lefts rs
+                where addName = name </> BC.unpack lName
+                      delName = name </> BC.unpack rName
                       subname = name </> BC.unpack lName
+
 
 findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
@@ -203,7 +233,7 @@ findFirstCommit repository path currentFileRef firstCommit = inner undefined und
             t@(Tree _)    <- accessTree "Can't find tree in commit path" repository $ commitTree info
             commitFileRef <- errorIO "Can't find children in commit path"
                                      $ findInTree repository path t
-       
+
             if commitFileRef /= currentFileRef
                then return (prevCommit, prevRef, [])
                else do
@@ -213,7 +243,7 @@ findFirstCommit repository path currentFileRef firstCommit = inner undefined und
                         pathParentRef = (commitParents info) !! 0,
                         pathMessage = decodeUtf8 $ commitMessage info
                     } : commitPathRest)
-      
+
 accessObject :: Git -> Ref -> IO (Maybe GitObject)
 accessObject g r = findObject g r
 
@@ -239,12 +269,12 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
 
         bytePath = map BC.pack $ splitDirectories path
 
-        inner = do 
+        inner = do
             Commit commit <- accessCommit "Can't find parent commit" repository prevCommit
             t@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree commit
             Blob prevFile <- accessBlob "Can't find file content" repository prevFileSha
             currentFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath t
-            Blob file <- accessBlob "Can't find file content" repository $ currentFileRef 
+            Blob file <- accessBlob "Can't find file content" repository $ currentFileRef
 
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef prevCommit
@@ -303,6 +333,6 @@ basePage _logger repository path = runErrorT $ do
     	fileData = decodeUtf8 $ toStrict content,
     	parentRef = commitParents cInfo,
     	fileMessage = decodeUtf8 $ commitMessage cInfo
-    
+
     }
 
