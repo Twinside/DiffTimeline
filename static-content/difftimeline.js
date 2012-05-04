@@ -550,6 +550,7 @@ var FileBlob = function (filename, data) {
         return ret;
     }
 
+    this.detail_fetched = false;
     this.file = filename;
     this.diff = data.diff;
     this.data = data.data;
@@ -560,8 +561,14 @@ var FileBlob = function (filename, data) {
     this.path = data.path;
 
     this.fetch_details = function() {
-        var this_obj = this;
+        if (this.detail_fetched)
+        {
+            var detail = $('#' + this.key + ' .commit_detail');
+            detail.animate({height: 'toggle'}, 500);
+            return;
+        }
 
+        var this_obj = this;
         $.ajax({
             url: '/ask_commit/' + this.key,
             dataType: 'json',
@@ -574,6 +581,8 @@ var FileBlob = function (filename, data) {
                     show_error({error: 'Communication error with the server'});
                     return;
                 }
+
+                this_obj.detail_fetched = true;
 
                 if (data['error']) { 
                     show_error( data );
@@ -604,7 +613,6 @@ var FileBlob = function (filename, data) {
                         detail.append(ich.commit_file_unknown(e));
                 }
                 detail.animate({height: 'toggle'}, 500);
-
             }
         });
     };
