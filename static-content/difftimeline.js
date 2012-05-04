@@ -587,6 +587,8 @@ var FileBlob = function (filename, data) {
                 };
 
                 var detail = $('#' + this_obj.key + ' .commit_detail');
+
+                detail.animate({height: 'toggle'}, 1);
                 detail.append(ich.commit_button_file({commit: this_obj.key}));
 
                 for ( var change in data )
@@ -601,6 +603,8 @@ var FileBlob = function (filename, data) {
                     else
                         detail.append(ich.commit_file_unknown(e));
                 }
+                detail.animate({height: 'toggle'}, 500);
+
             }
         });
     };
