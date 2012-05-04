@@ -9,7 +9,7 @@ body
 .container
 {
     width: 30000px;
-    top:   30px;
+    top:   90px;
     left:  100px;
     position: relative;
     z-index: 0;
@@ -29,6 +29,7 @@ body
     position: fixed;
     z-index: 1;
     padding: 10px;
+    top: 40px;
 }
 
 .commit
@@ -311,6 +312,13 @@ pre
    border-radius: 5px;
 }
 
+.legend
+{
+    z-index: 1;
+    position: fixed;
+    background: white;
+}
+
 .legend td > div
 {
     border: 1px solid gray;
@@ -361,6 +369,11 @@ pre
    border-radius: 2px;
    padding-right: 3px;
    padding-bottom: 7px;
+   position: fixed;
+   left: 100px;
+   top: 40px;
+   z-index: 1;
+   background: white;
 }
 
 .breadcrumb_elem a {
@@ -431,11 +444,3 @@ pre
    background: -ms-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* IE10+ */
    background: linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* W3C */
 }
-
-/* breadcrumb */
-#breadcrumb
-{
-    position: absolute;
-    left: 100px;
-}
-
