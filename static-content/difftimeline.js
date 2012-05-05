@@ -35,6 +35,8 @@ var application_state = (function () {
     var states = [];
     var forward_states = [];
     var commit_delta_margin = 6;
+    var apparition_duration = 750;
+    var apparition_pane_duration = 500;
 
     var btn_toggle_text = {
         full: '&#x25bc;<br/>&#x25b2;',
@@ -45,6 +47,7 @@ var application_state = (function () {
     return {
         active_view_mode: function() { return view_mode; },
         active_context_size: function() { return context_size; },
+        apparition_duration: function() { return apparition_duration; },
 
         send_state_message: function(message) {
             var last_path = states[ states.length - 1 ];
@@ -439,6 +442,7 @@ var Commit = function(key, data) {
     this.create_dom = function() {
         this.orig_node = ich.commit_detailed(this);
         $('.container').prepend(this.orig_node);
+        return this.orig_node;
     }
 
     this.render = function() {
@@ -507,8 +511,10 @@ var CommitRenderer = (function() {
             fetch_commit(prev_id, function(data) {
                 var new_commit = new Commit(data.key, data);
 
-                new_commit.create_dom();
+                var new_node = new_commit.create_dom();
+                new_node.animate({'width':'toggle'}, 0);
                 new_commit.render();
+                new_node.animate({'width':'toggle'}, application_state.apparition_duration());
 
                 this_obj.collection.push(new_commit);
                 this_obj.keys[data.key] = new_commit;
@@ -594,7 +600,7 @@ var FileBlob = function (filename, data) {
         else
             btn_node.html("&#x25bc");
 
-        detail.animate({height: 'toggle'}, 500);
+        detail.animate({height: 'toggle'}, application_state.apparition_pane_duration);
     };
 
     this.fetch_details = function() {
@@ -634,7 +640,7 @@ var FileBlob = function (filename, data) {
                 this_obj.details = data;
 
                 var detail_node = $('#' + this_obj.key + ' .commit_detail');
-                detail_node.animate({height: 'toggle'}, 1);
+                detail_node.animate({height: 'toggle'}, 0);
                 this_obj.create_dom_details();
                 this_obj.toggle_detail_pane()
             }
@@ -689,6 +695,8 @@ var FileBlob = function (filename, data) {
             this.toggle_detail_pane();
             $('#' + this.key + ' .more_info').html("&#x25bc");
         }
+
+        return processed;
     }
 
     this.render = function(prev_diff) {
@@ -779,12 +787,15 @@ var FileRenderer = (function() {
 
                 var new_commit = new FileBlob(last_commit.file, data);
 
-                new_commit.create_dom();
+                var node = new_commit.create_dom();
+
                 this_obj.collection.unshift( new_commit );
 
                 this_obj.keys[new_commit.key] = new_commit;
+                node.animate({'width': 'toggle'}, 0);
                 this_obj.collection[0].render([]);
                 this_obj.collection[1].render(new_commit.diff);
+                node.animate({'width': 'toggle'}, application_state.apparition_duration() * 2);
             });
         };
         return this;
