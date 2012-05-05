@@ -560,11 +560,47 @@ var FileBlob = function (filename, data) {
     this.parent_commit = data.parent_commit;
     this.path = data.path;
 
+    this.create_dom_details = function() {
+        var kind_formater = {
+            'modification': ich.commit_file_modification,
+            'addition':ich.commit_file_addition,
+            'deletion':ich.commit_file_deletion
+        };
+
+        var detail_node = $('#' + this.key + ' .commit_detail');
+        detail_node.append(ich.commit_button_file({commit: this.key}));
+
+        for ( var i = 0; i < this.details.length; i++ )
+        {
+            var e = this.details[i];
+            var kind = e['kind'];
+            e.key = this.key;
+
+            var file_diff;
+            if (kind_formater.hasOwnProperty(kind))
+                detail_node.append(kind_formater[kind](e));
+            else
+                detail_node.append(ich.commit_file_unknown(e));
+        }
+    };
+
+    this.toggle_detail_pane = function() {
+        var detail = $('#' + this.key + ' .commit_detail');
+        var btn_node = $('#' + this.key + ' .more_info');
+        var btn_text = btn_node.text()
+
+        if (btn_text[0] == '▼')
+            btn_node.html("&#x25b2");
+        else
+            btn_node.html("&#x25bc");
+
+        detail.animate({height: 'toggle'}, 500);
+    };
+
     this.fetch_details = function() {
         if (this.detail_fetched)
         {
-            var detail = $('#' + this.key + ' .commit_detail');
-            detail.animate({height: 'toggle'}, 500);
+            this.toggle_detail_pane();
             return;
         }
 
@@ -595,24 +631,12 @@ var FileBlob = function (filename, data) {
                     'deletion':ich.commit_file_deletion
                 };
 
-                var detail = $('#' + this_obj.key + ' .commit_detail');
+                this_obj.details = data;
 
-                detail.animate({height: 'toggle'}, 1);
-                detail.append(ich.commit_button_file({commit: this_obj.key}));
-
-                for ( var change in data )
-                {
-                    var e = data[change];
-                    var kind = e['kind'];
-                    e.key = this_obj.key;
-
-                    var file_diff;
-                    if (kind_formater.hasOwnProperty(kind))
-                        detail.append(kind_formater[kind](e));
-                    else
-                        detail.append(ich.commit_file_unknown(e));
-                }
-                detail.animate({height: 'toggle'}, 500);
+                var detail_node = $('#' + this_obj.key + ' .commit_detail');
+                detail_node.animate({height: 'toggle'}, 1);
+                this_obj.create_dom_details();
+                this_obj.toggle_detail_pane()
             }
         });
     };
@@ -658,6 +682,13 @@ var FileBlob = function (filename, data) {
             processed = ich.commitfile(this);
 
         $(".container").prepend( processed );
+                
+        if (this.detail_fetched)
+        {
+            this.create_dom_details();
+            this.toggle_detail_pane();
+            $('#' + this.key + ' .more_info').html("&#x25bc");
+        }
     }
 
     this.render = function(prev_diff) {
