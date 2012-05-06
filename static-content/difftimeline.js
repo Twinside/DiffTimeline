@@ -392,6 +392,9 @@ var DiffManipulator = (function () {
     };
 })();
 
+var html_encodize = function(snipp) {
+    return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
+}
 ////////////////////////////////////////////////////////////
 ////  Commit
 ////////////////////////////////////////////////////////////
@@ -403,7 +406,7 @@ var Commit = function(key, data) {
     this.parents_sha = data.parents_sha;
     this.file_changes = data.file_changes;
     this.message = data.message;
-    this.split_message = data.message.replace(/\n/g, '<br/>');
+    this.split_message = (html_encodize(data.message)).replace(/\n/g, '<br/>');
 
     var kind_formater = {
         'modification': function(e) {
