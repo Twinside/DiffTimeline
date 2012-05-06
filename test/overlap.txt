@@ -4,9 +4,11 @@ ee
 ff
 gg
 hh
-add1
-add2
-add3
+add-1
+add0
+add1 &
+add2 j
+add3 k
 add5
 uu
 dd
@@ -24,4 +26,5 @@ afroi
 pouet
 camion
 ramatago
+diglou
 mwep
