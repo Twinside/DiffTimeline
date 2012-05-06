@@ -403,6 +403,7 @@ var Commit = function(key, data) {
     this.parents_sha = data.parents_sha;
     this.file_changes = data.file_changes;
     this.message = data.message;
+    this.split_message = data.message.replace(/\n/g, '<br/>');
 
     var kind_formater = {
         'modification': function(e) {
