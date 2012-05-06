@@ -15,7 +15,7 @@ import Data.List( sortBy )
 import Data.Monoid( mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
-import Control.Monad.Error( ErrorT, throwError, runErrorT )
+import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
 import qualified Data.ByteString as B
@@ -231,18 +231,20 @@ findFirstCommit repository path currentFileRef firstCommit = inner undefined und
     where inner prevCommit prevRef currentCommit = do
             (Commit info) <- accessCommit "Can't file commit in commit path" repository currentCommit
             t@(Tree _)    <- accessTree "Can't find tree in commit path" repository $ commitTree info
-            commitFileRef <- errorIO "Can't find children in commit path"
-                                     $ findInTree repository path t
+            catchError (do
+                commitFileRef <- errorIO "Can't find children in commit path"
+                                        $ findInTree repository path t
 
-            if commitFileRef /= currentFileRef
-               then return (prevCommit, prevRef, [])
-               else do
-               	(obj, r, commitPathRest) <- inner info currentCommit $ commitParents info !! 0
-               	return (obj, r, CommitPath {
-                        pathCommitRef = currentCommit,
-                        pathParentRef = (commitParents info) !! 0,
-                        pathMessage = decodeUtf8 $ commitMessage info
-                    } : commitPathRest)
+                if commitFileRef /= currentFileRef
+                    then return (prevCommit, prevRef, [])
+                    else do
+                        (obj, r, commitPathRest) <- inner info currentCommit $ commitParents info !! 0
+                        return (obj, r, CommitPath {
+                                pathCommitRef = currentCommit,
+                                pathParentRef = (commitParents info) !! 0,
+                                pathMessage = decodeUtf8 $ commitMessage info
+                            } : commitPathRest))
+                            (\_ -> return (prevCommit, prevRef, []))
 
 accessObject :: Git -> Ref -> IO (Maybe GitObject)
 accessObject g r = findObject g r
@@ -275,7 +277,6 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
             Blob prevFile <- accessBlob "Can't find file content" repository prevFileSha
             currentFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath t
             Blob file <- accessBlob "Can't find file content" repository $ currentFileRef
-
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef prevCommit
 
