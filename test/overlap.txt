@@ -6,9 +6,13 @@ gg
 hh
 add-1
 add0
-add1 &
-add2 j
-add3 k
+inblue1
+inblue2
+inblue3
+inblue3
+inblue5
+inblue6
+inblue7
 add5
 uu
 dd
