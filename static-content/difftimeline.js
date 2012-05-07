@@ -191,7 +191,7 @@ var DiffManipulator = (function () {
             if (context_begin > last_outputted_line + 1 && i != 0)
                 processed_lines.push("...");
 
-            highlighter.set_current_line_number(context_begin);
+            highlighter.set_current_line_number(context_begin + 1);
             for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ )
             {
                 processed_lines.push(highlighter.colorLine(lines[lineNum]));
@@ -200,13 +200,13 @@ var DiffManipulator = (function () {
             // output the real diff
             if (d.end - d.beg <= 1)
             {
-                highlighter.set_current_line_number(d.beg);
+                highlighter.set_current_line_number(d.beg + 1);
                 colorized = highlighter.colorLine(lines[d.beg]);
                 processed_lines.push(begs[d.way] + colorized  + ends[d.way]);
             }
             else
             {
-                highlighter.set_current_line_number(d.beg);
+                highlighter.set_current_line_number(d.beg + 1);
                 colorized = highlighter.colorLine(lines[d.beg]);
                 processed_lines.push( begs[d.way] + colorized);
 
@@ -219,7 +219,7 @@ var DiffManipulator = (function () {
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
             var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
             highlighter.set_current_line_number(d.end + 1);
-            for ( var lineNum = d.end + 1; lineNum <= context_end; lineNum++ ) {
+            for ( var lineNum = d.end; lineNum <= context_end; lineNum++ ) {
                 processed_lines.push(highlighter.colorLine(lines[lineNum]));
             }
 
@@ -289,45 +289,62 @@ var DiffManipulator = (function () {
             if (right.beg >= right.end) { inc_right(); }
             else if (left.beg >= left.end) { inc_left(); }
             else if (right.beg < left.beg) { swapArrays(); }
-            // ############
-            //                  ############
-            else if (left.beg < right.beg && left.end < right.beg)
-            {
+            else if (left.beg < right.beg && left.end < right.beg)  // ############
+            {                                                       //                  ############
                 ranges.push({ way: left.way, beg: left.beg, end: left.end });
                 inc_left();
             }
-            else if (left.beg < right.beg && left.end <= right.end)
-            {
-                ranges.push({ way: left.way, beg: left.beg, end: right.beg - 1 });
+            else if (left.beg < right.beg && left.end == right.end)   // ###############
+            {                                                         //       #########
+                ranges.push({ way: left.way, beg: left.beg, end: right.beg });
                 ranges.push({ way: combiner(left.way, right.way)
-                        , beg: right.beg, end: left.end });
-                right.beg = left.end + 1;
+                            , beg: right.beg, end: left.end });
+                inc_left();
+                inc_right();
+            }
+            else if (left.beg < right.beg && left.end < right.end)   // ###############
+            {                                                        //       ##################
+                ranges.push({ way: left.way, beg: left.beg, end: right.beg });
+                ranges.push({ way: combiner(left.way, right.way)
+                            , beg: right.beg, end: left.end });
+                right.beg = left.end;
                 inc_left();
             }
-            else if (left.beg == right.beg)
-            {
-                if (left.end <= right.end )
+            else if (left.beg == right.beg) // ############
+            {                               // ############
+                if (left.end == right.end)
                 {
                     ranges.push({ way: combiner(left.way, right.way)
-                            , beg: left.beg, end: left.end });
-                    right.end = left.end + 1;
+                                , beg: left.beg, end: left.end });
+                    inc_left();
+                    inc_right();
+                }
+                else if (left.end < right.end ) // ############
+                {                               // ##########################
+                    ranges.push({ way: combiner(left.way, right.way)
+                                , beg: left.beg, end: left.end });
+                    right.beg = left.end;
                     inc_left();
                 }
-                else
-                {
+                else  // ##########################
+                {     // #############
                     ranges.push({ way: combiner(left.way, right.way)
-                            , beg: left.beg, end: right.end });
-                    left.beg = right.end + 1;
+                                , beg: left.beg, end: right.end });
+                    left.beg = right.end;
                     inc_right();
                 }
             }
-            else if (left.beg < right.beg && left.end > right.end)
-            {
-                ranges.push( {way: left.way, beg: left.beg, end: right.beg - 1  } );
+            else if (left.beg < right.beg && left.end > right.end)  // ############################
+            {                                                       //        ############
+                ranges.push({ way: left.way, beg: left.beg, end: right.beg });
                 ranges.push({ way: combiner(left.way, right.way)
                             , beg: right.beg, end: right.end });
-                left.beg = right.end + 1;
+                left.beg = right.end;
                 inc_right();
+            }
+            else
+            {
+                alert('Ergl error');
             }
         }
 
@@ -421,11 +438,11 @@ var Commit = function(key, data) {
                 curr_diff = e.diff[i];
                 if (curr_diff.way == '+') {
                     acc += '<div class="diff_addition">';
-                    hl.set_current_line_number(curr_diff.dest_idx);
+                    hl.set_current_line_number(curr_diff.dest_idx + 1);
                 }
                 else {
                     acc +=  '<div class="diff_deletion">';
-                    hl.set_current_line_number(curr_diff.orig_idx);
+                    hl.set_current_line_number(curr_diff.orig_idx + 1);
                 }
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
