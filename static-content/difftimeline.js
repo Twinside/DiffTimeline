@@ -151,6 +151,77 @@ var application_state = (function () {
  * @constructor
  */
 var DiffManipulator = (function () {
+
+    var append_all = function(n, lst) {
+        var maxi = lst.length;
+
+        for (var i = 0; i < maxi; i++) {
+            n.appendChild(lst[i]);
+        }
+
+        n.appendChild(document.createTextNode('\n'));
+
+        return n;
+    }
+
+    var glob = function(kind, nodeList) {
+        var newNode = document.createElement('div');
+        newNode.setAttribute('class', kind);
+
+        for (var i = 0; i < nodeList.length; i++) {
+            append_all(newNode, nodeList[i])
+        }
+        
+        return [[newNode]];
+    };
+
+    var begs = {
+        '+': function (n) { return glob("diff_addition", n); },
+        '-': function (n) { return glob("diff_deletion", n); },
+        '~': function (n) { return glob("diff_addition", glob( "diff_deletion", n)); },
+        '!': function (n) { return glob("diff_deletion", glob( "diff_addition", n)); },
+        '|': ''
+    };
+
+    var remove_children = function(node) {
+        while (node.hasChildNodes()) {
+            node.removeChild(node.lastChild);
+        }
+    };
+
+    var generate_full_html = function (filename, isLineNumberRequired, data, diff, node) {
+        var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
+        var lines = data.split("\n");
+        var diff_count = diff.length;
+        var current_line = 0;
+        var diff_node;
+
+        remove_children(node);
+        for (var i = 0; i < diff_count; i++) {
+            while (current_line < diff[i].beg) {
+                append_all(node, highlighter.colorLine(lines[current_line]));
+                current_line++;
+            }
+
+            var curr_diff = diff[i];
+            var diff_nodes = [];
+
+            for (var j = curr_diff.beg; j < curr_diff.end; j++) {
+                diff_nodes.push( highlighter.colorLine(lines[current_line++]) );
+            }
+
+            diff_node = (begs[curr_diff.way])(diff_nodes);
+            node.appendChild(diff_node[0][0]);
+            node.appendChild(document.createTextNode('\n'));
+        }
+
+        while (current_line < lines.length)
+        {
+            append_all(node, highlighter.colorLine(lines[current_line]));
+            current_line++;
+        }
+    }
+
     /** Generate an HTML representation of a diff and a file content.
      * @param filename filename of the file, used for syntax detection
      * @param contextSize Int
@@ -158,27 +229,15 @@ var DiffManipulator = (function () {
      * @param data {String} file content.
      * @param diff [{way:String, beg:Int, end:Int}] diff ranges
      */
-    var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff) {
+    var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff, node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
-        var lines = data.split("\n");
-        var begs = {
-            '+': '<div class="diff_addition">',
-            '-': '<div class="diff_deletion">',
-            '~': '<div class="diff_addition"><div class="diff_deletion">',
-            '!': '<div class="diff_deletion"><div class="diff_addition">',
-            '|': ''
-        };
-
-        var ends = {
-            '+': '</div>',       '-': '</div>',
-            '~': '</div></div>', '!': '</div></div>',
-            '|': ''
-        };
+        var lines = data.split('\n');
 
         var processed_lines = [];
         var last_outputted_line = -1;
         var colorized;
 
+        remove_children(node);
         var i;
         for ( i = 0; i < diff.length; i++ )
         {
@@ -188,45 +247,48 @@ var DiffManipulator = (function () {
             var context_begin = Math.max(last_outputted_line + 1, d.beg - contextSize);
 
             // write an elipssiss if there is a deconnection
-            if (context_begin > last_outputted_line + 1 && i != 0)
-                processed_lines.push("...");
+            if (context_begin > last_outputted_line && i != 0) {
+                node.appendChild(document.createTextNode('...\n'));
+            }
 
             highlighter.set_current_line_number(context_begin + 1);
-            for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ )
-            {
-                processed_lines.push(highlighter.colorLine(lines[lineNum]));
+            for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ ) {
+                append_all(node, highlighter.colorLine(lines[lineNum]));
             }
 
             // output the real diff
             if (d.end - d.beg <= 1)
             {
                 highlighter.set_current_line_number(d.beg + 1);
-                colorized = highlighter.colorLine(lines[d.beg]);
-                processed_lines.push(begs[d.way] + colorized  + ends[d.way]);
+                var new_node = begs[d.way]([highlighter.colorLine(lines[d.beg])]);
+                node.appendChild(new_node[0][0]);
+                node.appendChild(document.createTextNode('\n'));
+                new_node = undefined;
             }
             else
             {
                 highlighter.set_current_line_number(d.beg + 1);
-                colorized = highlighter.colorLine(lines[d.beg]);
-                processed_lines.push( begs[d.way] + colorized);
+                processed_lines = [];
 
-                for ( var lineNum = d.beg + 1; lineNum < d.end - 1; lineNum++ )
+                for ( var lineNum = d.beg; lineNum < d.end; lineNum++ )
                     processed_lines.push(highlighter.colorLine(lines[lineNum]));
 
-                processed_lines.push(highlighter.colorLine(lines[d.end - 1]) + ends[d.way]);
+                var new_node = (begs[d.way])(processed_lines);
+                node.appendChild(new_node[0][0]);
+                node.appendChild(document.createTextNode('\n'));
+                new_node = undefined;
             }
 
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
             var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
+
             highlighter.set_current_line_number(d.end + 1);
-            for ( var lineNum = d.end; lineNum <= context_end; lineNum++ ) {
-                processed_lines.push(highlighter.colorLine(lines[lineNum]));
+            for ( var lineNum = d.end; lineNum < context_end; lineNum++ ) {
+                append_all(node, highlighter.colorLine(lines[lineNum]));
             }
 
             last_outputted_line = context_end;
         }
-
-        return processed_lines.join("\n");
     }
 
     /** Combine two diff list into one list of edition
@@ -357,34 +419,6 @@ var DiffManipulator = (function () {
         return ranges;
     }
 
-    var intercalate_diff_add = function (lines, diff_list) {
-        for ( var idx in diff_list )
-        {
-            var diff = diff_list[idx];
-            if (diff.way === "+")
-            {
-                lines[diff.dest_idx] = '<div class="diff_addition">' + lines[diff.dest_idx];
-                lines[diff.dest_idx + diff.size - 1] += '</div>';
-            }
-            
-        }
-        return lines;
-    }
-
-    var intercalate_diff_del = function (lines, diff_list) {
-        for ( var idx in diff_list )
-        {
-            var diff = diff_list[idx];
-            if (diff.way === "-")
-            {
-                lines[diff.orig_idx] = '<div class="diff_deletion">' + lines[diff.orig_idx];
-                lines[diff.orig_idx + diff.size - 1] += '</div>';
-            }
-            
-        }
-        return lines;
-    }
-
     /** Keep only the diff information of adding (with a '+' way property)
      * @param diffs [{way: String, ...}]
      */
@@ -400,9 +434,8 @@ var DiffManipulator = (function () {
     }
 
     return {
+        generateFullHtml:    generate_full_html,
         generateCompactHtml: generate_compact_html,
-        intercalateDiffDel:  intercalate_diff_del,
-        intercalateDiffAdd:  intercalate_diff_add,
         filterAdds: filter_adds,
         filterRems: filter_rems,
         calculateFoldSet: calculate_fold_set 
@@ -429,30 +462,43 @@ var Commit = function(key, data) {
         'modification': function(e) {
             var hl = TinySyntaxHighlighter.from_filename(true, e.name);
             var rez_node = ich.commit_file_modification_detailed(e);
-            var code_node = rez_node.find('pre');
+            var code_node = rez_node.find('pre')[0];
 
             var curr_diff;
             var acc = ""
+            var diff_node;
+
+            var div_node = function(kind) {
+                var node = document.createElement('div');
+                node.setAttribute('class', kind);
+                return node;
+            };
+
             for ( var i = 0; i < e.diff.length; i++ )
             {
                 curr_diff = e.diff[i];
                 if (curr_diff.way == '+') {
-                    acc += '<div class="diff_addition">';
+                    diff_node = div_node("diff_addition");
                     hl.set_current_line_number(curr_diff.dest_idx + 1);
                 }
                 else {
-                    acc +=  '<div class="diff_deletion">';
+                    diff_node = div_node("diff_deletion");
                     hl.set_current_line_number(curr_diff.orig_idx + 1);
                 }
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
-                    acc += hl.colorLine(curr_diff.data[l] + "\n")
+                {
+                    var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
+                    for ( var node in lineNodes )
+                        diff_node.appendChild(lineNodes[node]);
+                }
 
                 if (i < e.diff.length - 1)
-                    acc += "</div>\n...\n";
+                {
+                    code_node.appendChild(diff_node);
+                    code_node.appendChild(document.createTextNode("\n...\n"));
+                }
             }
-
-            code_node.html(acc);
 
             return rez_node;
         },
@@ -668,7 +714,7 @@ var FileBlob = function (filename, data) {
         });
     };
 
-    this.render_file_data = function(prev_diff) {
+    this.render_file_data = function(prev_diff, node) {
         var filename = this.file;
         var diff     = this.diff;
         var data     = this.data;
@@ -680,16 +726,10 @@ var FileBlob = function (filename, data) {
         var clean_cr_lf_data = data.replace(/\r/g, '');
 
         if (application_state.active_view_mode() === 'compact')
-            return DiffManipulator.generateCompactHtml(filename,
-                                                    application_state.active_context_size(),
-                                                    true, clean_cr_lf_data, ranges);
+            DiffManipulator.generateCompactHtml(filename, application_state.active_context_size(),
+                                                true, clean_cr_lf_data, ranges, node[0]);
         else // render full
-        {
-            var lines = add_syntax_coloration(filename, clean_cr_lf_data.split('\n'));
-            var encoded_with_diff = DiffManipulator.intercalateDiffDel(lines, rems);
-            var diffed_content = DiffManipulator.intercalateDiffAdd(encoded_with_diff, adds);
-            return diffed_content.join('\n');
-        }
+            DiffManipulator.generateFullHtml(filename, true, clean_cr_lf_data, ranges, node[0]);
     }
 
     this.create_dom = function() {
@@ -721,8 +761,7 @@ var FileBlob = function (filename, data) {
     }
 
     this.render = function(prev_diff) {
-        var rendered = this.render_file_data(prev_diff);
-        $("#" + this.key + " .syntax_highlighted").html(rendered);
+        this.render_file_data(prev_diff, $("#" + this.key + " .syntax_highlighted"));
     }
 
     return this;

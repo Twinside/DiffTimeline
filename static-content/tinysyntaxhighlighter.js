@@ -23,26 +23,52 @@ var TinySyntaxHighlighter = (function () {
         return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
     }
 
+    var highlight = function(kind, txt) {
+        var span = document.createElement('span');
+        var txtNode = document.createTextNode(txt);
+        span.setAttribute('class', kind);
+        span.appendChild(txtNode);
+
+        return span;
+    }
+
     var colorLine = function ( line ) {
         var maxIndex = line.length;
         var currentIndex = 0;
         var consumed = false;
-        var ret = this.compute_line_number();
+        var ret = [];
+        var textAccumulator = "";
 
-        for ( var j = 1; j < this.activeStack.length; j++ )
-        {
-            var e = this.activeStack[j];
-            ret += '<span class="' + e.kind + '">';
+        var globNode = function(kind, tok) {
+            var span = document.createElement('span');
+            var maxi = ret.length;
+
+            addText(tok);
+            span.setAttribute('class', kind);
+
+            for ( var i = 0; i < maxi; i++ )
+                { span.appendChild(ret[i]); }
+
+            ret = [span];
+        };
+
+        var addNode = function(node) {
+            if (textAccumulator !== '') {
+                ret.push(document.createTextNode(textAccumulator));
+                textAccumulator = '';
+            }
+            ret.push(node);
+        };
+
+        var addText = function(txt) {
+            textAccumulator += txt;
         }
 
         while (currentIndex < maxIndex)
         {
             while (currentIndex < maxIndex &&
                    line[currentIndex] === ' ' || line[currentIndex] === '\t')
-            {
-                ret += line[currentIndex];
-                currentIndex++;
-            }
+            { addText(line[currentIndex++]); }
 
             if (currentIndex >= maxIndex) break;
 
@@ -53,7 +79,8 @@ var TinySyntaxHighlighter = (function () {
             {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
-                ret += html_encodize(line.slice(currentIndex, currentIndex + consumed_chars)) + '</span>';
+                globNode(current_region.kind,
+                         line.slice(currentIndex, currentIndex + consumed_chars));
                 currentIndex += consumed_chars;
                 continue;
             }
@@ -66,8 +93,7 @@ var TinySyntaxHighlighter = (function () {
                 if (consumed_chars > 0)
                 {
                     this.activeStack.push(r);
-                    var encoded = html_encodize(line.slice( currentIndex, currentIndex + consumed_chars));
-                    ret += '<span class="' + r.kind + '">' + encoded;
+                    addText(line.slice(currentIndex, currentIndex + consumed_chars));
                     consumed = true;
                     currentIndex += consumed_chars;
                     break;
@@ -86,13 +112,12 @@ var TinySyntaxHighlighter = (function () {
                     if (this.def.keywords.hasOwnProperty(parserRet))
                     {
                         var found_class = this.def.keywords[parserRet]
-                        ret += '<span class="' + found_class + '">' + parserRet + '</span>';
+                        addNode( highlight(found_class, parserRet) );
                     }
                     else if (parser.kind !== '')
-                    {
-                        ret += '<span class="' + parser.kind + '">' + html_encodize(parserRet) + '</span>';
-                    }
-                    else ret += html_encodize(parserRet);
+                        addNode( highlight(parser.kind, parserRet) );
+                    else
+                        addText(parserRet);
 
                     currentIndex += parserRet.length;
                     consumed = true;
@@ -101,23 +126,27 @@ var TinySyntaxHighlighter = (function () {
             }
 
             if (!consumed)
-                { ret += html_encodize(line[currentIndex++]); }
+                { addText(line[currentIndex++]); }
 
             consumed = false;
+        }
+
+        if (textAccumulator !== '') {
+            ret.push(document.createTextNode(textAccumulator));
         }
 
         // end of line, we must close all the
         // active tags (have to be reoppened a
         // the beginning
-        for ( var i = 1; i < this.activeStack.length; i++ )
-            { ret += '</span>'; }
+        for ( var i = this.activeStack.length - 1; i > 0; i-- )
+            { globNode(this.activeStack[i].kind); }
 
+        ret.unshift(this.compute_line_number());
         return ret;
     };
 
     var basic_highlighter = function(line) {
-        var ret = this.compute_line_number();
-        return ret + html_encodize(line);
+        return [this.compute_line_number(), document.createTextNode(line)];
     }
 
     /** Create a highlighter which just pass-through the line
@@ -136,15 +165,15 @@ var TinySyntaxHighlighter = (function () {
             var ret = '';
             if (this.with_line_number) {
               this.current_line = this.current_line + 1;
-              return '<span class="syntax_line_number">' + (this.current_line - 1)+ '</span>';
+              return highlight('syntax_line_number', this.current_line - 1);
             }
-            return '';
+            return undefined;
           };
         }
         else
         {
           this.set_current_line_number = function (i) {};
-          this.compute_line_number = function () { return ''; };
+          this.compute_line_number = function () { return undefined; };
         }
         return this;
     };
@@ -360,8 +389,7 @@ var TinySyntaxHighlighter = (function () {
                  , parsers:[ change_parser_kind('syntax_tag_name', generic_parsers.c_like_identifier) ]
                  , keywords:[]
                  }
-                 ],
-
+                 ]
     };
 
     var pythonDef = {
