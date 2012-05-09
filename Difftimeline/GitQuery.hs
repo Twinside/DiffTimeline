@@ -3,16 +3,22 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitPath( .. )
                             , ParentFile( .. )
                             , diffCommit
+                            , diffCommitTree
                             , findFirstCommit
                             , findParentFile
                             , basePage
                             , decodeUtf8
+
+
+                            -- * Manipulation functions
+                            , flattenTreeDiff
+                            , filterCommitTreeDiff
                             ) where
 
 import Prelude
 
 import Data.List( sortBy )
-import Data.Monoid( mappend )
+import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
@@ -57,10 +63,38 @@ refToText = decodeUtf8 . toHex
 data CommitTreeDiff = AddElement T.Text Ref
                     | DelElement T.Text Ref
                     | NeutralElement T.Text Ref
+                    | TreeElement T.Text Ref [CommitTreeDiff]
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     deriving (Eq, Show)
 
+flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
+flattenTreeDiff = inner mempty
+    where (<//>) t n = t `mappend` T.pack "/" `mappend` n
+          inner n (AddElement t r) = [AddElement (n <//> t) r]
+          inner n (DelElement t r) = [DelElement (n <//> t) r]
+          inner n (NeutralElement t r) = [NeutralElement (n <//> t) r]
+          inner n (ModifyElement t r diff) = [ModifyElement (n <//> t) r diff]
+          inner n (TreeElement t _ sub) = concatMap (inner $ n <//> t) sub
+
+filterCommitTreeDiff :: (CommitTreeDiff -> Bool) -> CommitTreeDiff
+                     -> [CommitTreeDiff]
+filterCommitTreeDiff f = inner
+    where inner a@(AddElement _ _) | f a = [a]
+          inner a@(DelElement _ _) | f a = [a]
+          inner a@(NeutralElement _ _) | f a = [a]
+          inner a@(ModifyElement _ _ _) | f a = [a]
+          inner a@(TreeElement n r sub) | f a =
+                [TreeElement n r $ concatMap inner sub]
+          inner _ = []
+
 instance ToJSON CommitTreeDiff where
+    toJSON (TreeElement name r children) =
+        object [ "kind" .= ("neutral" :: T.Text)
+               , "name" .= name
+               , "hash" .= toHexString r
+               , "children" .= children
+               ]
+
     toJSON (NeutralElement name r) =
         object [ "kind" .= ("neutral" :: T.Text)
                , "name" .= name
@@ -152,6 +186,73 @@ accessBlob s rep ref = do
         Nothing -> throwError s
         Just c@(Blob _) -> return c
         Just _ -> throwError s
+
+nullRef :: Ref
+nullRef = fromHexString $ replicate 40 '0'
+
+diffCommitTree :: Git -> Bool -> Ref -> IO (Either String CommitTreeDiff)
+diffCommitTree repository deep ref = runErrorT $ do
+    (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+    let prevRef = head $ commitParents thisCommit
+    (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
+    thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
+    prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
+    inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
+  where getObj reason = errorIO reason . accessObject repository
+        inner name (Tree left) _r1 (Tree right) _r2 = 
+          TreeElement (T.pack name) nullRef <$> diffTree name sortedLeft sortedRight
+            where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
+                  sortedRight = sortBy (\(_,a,_) (_,b,_) -> compare a b) right
+
+        inner name (Blob c1) _r1 (Blob c2) r2
+            | not deep  = return $ ModifyElement (T.pack name) r2 []
+            | otherwise = return .
+                ModifyElement (T.pack name) r2 $ computeTextScript txtLeft txtRight
+                    where strictify = B.concat . L.toChunks
+                          txtLeft = decodeUtf8 $ strictify c1
+                          txtRight = decodeUtf8 $ strictify c2
+        inner _ _ _ _ _ = throwError "Wrong git object kind"
+
+        maySubTree f name r = do
+            sub <- errorIO "Dip dup" $ accessObject repository r
+            batchSubTree f name r sub
+
+        batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
+                     -> ErrorT String IO CommitTreeDiff
+        batchSubTree f name r (Blob _) = return $ f (T.pack name) r
+        batchSubTree f name r (Tree t) = TreeElement (T.pack name) r <$>
+          sequence [objAccess subRef >>= (batchSubTree f (BC.unpack n) subRef)
+                                            | (_, n, subRef) <- t]
+            where objAccess = getObj "dipdup2"
+        batchSubTree _ _ _ _ = throwError "Wrong git object kind"
+
+        diffTree :: String -> [TreeEntry] -> [TreeEntry]
+                 -> ErrorT String IO [CommitTreeDiff]
+        diffTree _name   []     [] = return []
+        diffTree name    [] rights = sequence
+            [maySubTree AddElement fullName r | (_, item, r) <- rights
+                                              , let fullName = name </> BC.unpack item ]
+        diffTree name lefts     [] = sequence
+            [maySubTree DelElement fullName r | (_, item, r) <- lefts
+                                              , let fullName = name </> BC.unpack item ]
+        diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
+            | lName == rName && lRef == rRef =
+                (NeutralElement (T.pack $ BC.unpack lName) lRef :) <$> diffTree name ls rs
+            | lName == rName = do
+                subL <- errorIO "Error can't access parent commit subtree"
+                                $ accessObject repository lRef
+                subR <- errorIO "Error can't acces commit subtree"
+                                $ accessObject repository rRef
+                (:) <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
+
+            | lName < rName =
+                (:) <$> maySubTree DelElement addName lRef
+                    <*> diffTree name ls rights
+
+            | otherwise = (:) <$> maySubTree AddElement delName rRef <*> diffTree name lefts rs
+                where addName = name </> BC.unpack lName
+                      delName = name </> BC.unpack rName
+                      subname = name </> BC.unpack lName
 
 diffCommit :: Git -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository deep ref = runErrorT $ do

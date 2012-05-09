@@ -10,11 +10,13 @@ import Text.Julius( julius, renderJavascript )
 import Yesod.Json( jsonToRepJson )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
-import Data.Git( getHead, toHexString, fromHexString )
-import Data.Aeson
+import Data.Git( Git, getHead, toHexString, fromHexString )
+import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
+
+import Yesod.Logger
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
@@ -60,26 +62,30 @@ getFileParentR filePathes = do
        Left err -> jsonToRepJson $ object ["error" .= err]
        Right info -> jsonToRepJson $ toJSON info
 
-getCommitOverviewR :: String -> Handler RepJson
-getCommitOverviewR commitSha =  do
+withRepository :: (ToJSON a, Show a) => (Git -> IO (Either String a)) -> Handler RepJson
+withRepository act = do
     app <- getYesod
     let repository = getRepository app
-    rez <- liftIO . diffCommit repository False $ fromHexString commitSha
+    rez <- liftIO $ act repository
     case rez of
         Left err -> jsonToRepJson $ object ["error" .= err]
-        Right info ->
-            jsonToRepJson . toJSON $ commitDetailChanges info
+        Right info -> jsonToRepJson $ toJSON info
 
-
+getCommitOverviewR :: String -> Handler RepJson
+getCommitOverviewR commitSha = withRepository extractor
+    where extractor repository = do
+              rez <- diffCommit repository False $ fromHexString commitSha
+              return $ commitDetailChanges <$> rez
 
 getCommitR :: String -> Handler RepJson
-getCommitR commitSha = do
-    app <- getYesod
-    let repository = getRepository app
-    rez <- liftIO . diffCommit repository True $ fromHexString commitSha
-    case rez of
-        Left err -> jsonToRepJson $ object ["error" .= err]
-        Right nfo -> jsonToRepJson $ toJSON nfo
+getCommitR commitSha = withRepository extractor
+    where extractor repository =
+              diffCommit repository True $ fromHexString commitSha
+
+getCommitTreeR :: String -> Handler RepJson
+getCommitTreeR commitSha = withRepository extractor
+    where extractor repository =
+              diffCommitTree repository False $ fromHexString commitSha
 
 javascriptize :: T.Text -> T.Text
 javascriptize = T.replace quo quoRep

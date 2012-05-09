@@ -506,11 +506,33 @@ var Commit = function(key, data) {
         'deletion':ich.commit_file_deletion
     };
 
+    this.fetch_tree = function() {
+        var this_obj = this;
+
+        $.ajax({ url: '/ask_commit_tree/' + this.key,
+            dataType: 'json',
+            data: {},
+            error: function() {
+                show_error({error: 'Communication error with the server while fetching commit tree'});
+            },
+            success: function(data) {
+
+                if (data['error']) { 
+                    show_error( data );
+                    return;
+                }
+
+                this_obj.tree = data;
+                $("#" + this_obj.key + " .commit_detail").append(ich.tree_elem(data));
+            }
+        });
+    };
+
     this.create_dom = function() {
         this.orig_node = ich.commit_detailed(this);
         $('.container').prepend(this.orig_node);
         return this.orig_node;
-    }
+    };
 
     this.render = function() {
         for ( var change in this.file_changes ) {
@@ -524,7 +546,7 @@ var Commit = function(key, data) {
             else
                 this.orig_node.append(ich.commit_file_unknown(e));
         }
-    }
+    };
     
     return this;
 };
@@ -564,6 +586,14 @@ var CommitRenderer = (function() {
             }
         };
 
+        this.fetch_tree = function(key) {
+            this.keys[key].fetch_tree();
+        }
+
+        this.send_message = function( msg ) {
+            if (msg.action === 'fetch_tree')
+                return this.fetch_tree(msg.key);
+        };
 
         this.create_all_dom = function() {
             for ( var i = 0; i < this.collection.length; i++ ) {
