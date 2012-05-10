@@ -386,6 +386,70 @@ pre
 }
 
 /* ================================================ */
+/* Tree presentation                                */
+/* ================================================ */
+.tree_node {
+    position: relative;
+    width:    92%;
+    left:     7%;
+}
+
+.tree_node > .node_name {
+    border:   1px solid gray;
+
+    padding: 5px 5px 5px 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.tree_neutral {
+    position: relative;
+    width:    92%;
+    left:     7%;
+    border:   1px solid gray;
+
+    padding: 5px 5px 5px 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.tree_modification {
+    position: relative;
+    width:    92%;
+    left:     7%;
+    border:   1px solid #AAAAFF;
+    background-color: #EEEEFF;
+
+    padding: 5px 5px 5px 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.tree_addition {
+    position: relative;
+    width:    92%;
+    left:     7%;
+    border: 1px solid green;
+    background-color: #AAFFAA;
+
+    padding: 5px 5px 5px 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.tree_deletion {
+    position: relative;
+    width:    92%;
+    left:     7%;
+    border: 1px solid #FF7777;
+    background-color: #FFAAAA;
+    
+    padding: 5px 5px 5px 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/* ================================================ */
 /* Commit detail rules                              */
 /* ================================================ */
 .modification {

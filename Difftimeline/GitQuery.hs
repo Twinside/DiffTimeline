@@ -243,16 +243,14 @@ diffCommitTree repository deep ref = runErrorT $ do
                                 $ accessObject repository lRef
                 subR <- errorIO "Error can't acces commit subtree"
                                 $ accessObject repository rRef
-                (:) <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
+                (:) <$> inner (BC.unpack lName) subL lRef subR rRef <*> diffTree name ls rs
 
             | lName < rName =
-                (:) <$> maySubTree DelElement addName lRef
+                (:) <$> maySubTree DelElement (BC.unpack lName) lRef
                     <*> diffTree name ls rights
 
-            | otherwise = (:) <$> maySubTree AddElement delName rRef <*> diffTree name lefts rs
-                where addName = name </> BC.unpack lName
-                      delName = name </> BC.unpack rName
-                      subname = name </> BC.unpack lName
+            | otherwise = (:) <$> maySubTree AddElement (BC.unpack rName) rRef
+                              <*> diffTree name lefts rs
 
 diffCommit :: Git -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository deep ref = runErrorT $ do

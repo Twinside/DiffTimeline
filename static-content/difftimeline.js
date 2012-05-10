@@ -506,6 +506,21 @@ var Commit = function(key, data) {
         'deletion':ich.commit_file_deletion
     };
 
+    var render_tree = function(node, elem) {
+
+        if (elem.hasOwnProperty('children'))
+        {
+            var new_node = ich.tree_node(elem)[0];
+            node.appendChild(new_node);
+
+            for ( var i = 0; i < elem.children.length; i++ )
+                render_tree(new_node, elem.children[i]);
+        } else {
+            var new_node = ich.tree_elem(elem)[0];
+            node.appendChild(new_node);
+        }
+    }
+
     this.fetch_tree = function() {
         var this_obj = this;
 
@@ -523,7 +538,8 @@ var Commit = function(key, data) {
                 }
 
                 this_obj.tree = data;
-                $("#" + this_obj.key + " .commit_detail").append(ich.tree_elem(data));
+                render_tree($("#" + this_obj.key + " .commit_tree")[0], data);
+                
             }
         });
     };

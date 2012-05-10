@@ -16,7 +16,7 @@ import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
 
-import Yesod.Logger
+-- import Yesod.Logger
 
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in

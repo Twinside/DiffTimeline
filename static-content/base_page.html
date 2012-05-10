@@ -45,9 +45,12 @@
         <script id="tree_elem" type="text/html">
             <div class="tree_{{kind}}">
                 <div>{{name}}</div>
-                {{#children}}
-                    {{>tree_elem}}
-                {{/children}}
+            </div>
+        </script>
+
+        <script id="tree_node" type="text/html">
+            <div class="tree_node">
+                <div class="node_name">{{name}}</div>
             </div>
         </script>
 
@@ -61,6 +64,8 @@
                     <span onclick="application_state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
                         Tree
                     </span>
+                    <div class="commit_tree">
+                    </div>
                     <div class="commit_detail">
                     </div>
                 </div>
