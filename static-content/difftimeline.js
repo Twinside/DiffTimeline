@@ -493,11 +493,11 @@ var Commit = function(key, data) {
                         diff_node.appendChild(lineNodes[node]);
                 }
 
+                code_node.appendChild(diff_node);
+
                 if (i < e.diff.length - 1)
-                {
-                    code_node.appendChild(diff_node);
                     code_node.appendChild(document.createTextNode("\n...\n"));
-                }
+
             }
 
             return rez_node;
