@@ -204,7 +204,8 @@ diffCommitTree repository deep ref = runErrorT $ do
             where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
                   sortedRight = sortBy (\(_,a,_) (_,b,_) -> compare a b) right
 
-        inner name (Blob c1) _r1 (Blob c2) r2
+        inner name (Blob c1) r1 (Blob c2) r2
+            | r1 == r2  = return $ NeutralElement (T.pack name) r1
             | not deep  = return $ ModifyElement (T.pack name) r2 []
             | otherwise = return .
                 ModifyElement (T.pack name) r2 $ computeTextScript txtLeft txtRight
@@ -236,14 +237,13 @@ diffCommitTree repository deep ref = runErrorT $ do
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                               , let fullName = name </> BC.unpack item ]
         diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
-            | lName == rName && lRef == rRef =
-                (NeutralElement (T.pack $ BC.unpack lName) lRef :) <$> diffTree name ls rs
-            | lName == rName = do
-                subL <- errorIO "Error can't access parent commit subtree"
+            | lName == rName = ((do
+                subL <- errorIO ("Error can't access parent commit subtree " ++ BC.unpack lName)
                                 $ accessObject repository lRef
-                subR <- errorIO "Error can't acces commit subtree"
+                subR <- errorIO ("Error can't acces commit subtree" ++ BC.unpack lName)
                                 $ accessObject repository rRef
-                (:) <$> inner (BC.unpack lName) subL lRef subR rRef <*> diffTree name ls rs
+                (:) <$> inner (BC.unpack lName) subL lRef subR rRef)
+                               `catchError` (\_ -> return id)) <*> diffTree name ls rs
 
             | lName < rName =
                 (:) <$> maySubTree DelElement (BC.unpack lName) lRef

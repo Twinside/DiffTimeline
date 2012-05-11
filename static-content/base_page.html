@@ -36,6 +36,13 @@
             </div>
         </script>
 
+        <script id="tree_folder" type="text/html">
+            <div class="tree_node">
+                <div class="node_name">{{name}}</div>
+                <div class="children"></div>
+            </div>
+        </script>
+
         <script id="tree_node" type="text/html">
             <div class="tree_node">
                 <div class="node_name">{{name}}</div>
@@ -49,8 +56,9 @@
                         <span class="id">{{key}}</span><hr />
                         <h4 title="{{message}}">{{{split_message}}}</h4>
                     </div>
-                    <span onclick="application_state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
-                        Tree
+                    <span class="show_tree_btn"
+                          onclick="application_state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
+                        &#x25bc; Tree
                     </span>
                     <div class="commit_tree">
                     </div>

@@ -457,6 +457,7 @@ var Commit = function(key, data) {
     this.file_changes = data.file_changes;
     this.message = data.message;
     this.split_message = (html_encodize(data.message)).replace(/\n/g, '<br/>');
+    this.tree_fetched = false;
 
     var kind_formater = {
         'modification': function(e) {
@@ -506,24 +507,43 @@ var Commit = function(key, data) {
         'deletion':ich.commit_file
     };
 
-    this.render_tree = function(node, elem) {
-
+    this.render_tree = function(node, depth, elem) {
         elem.key = this.key;
+        var new_node;
 
         if (elem.hasOwnProperty('children'))
         {
-            var new_node = ich.tree_node(elem)[0];
-            node.appendChild(new_node);
+            new_node = ich.tree_folder(elem);
+            var child_node = $(".children", new_node);
+            node.appendChild(new_node[0]);
 
             for ( var i = 0; i < elem.children.length; i++ )
-                this.render_tree(new_node, elem.children[i]);
+                this.render_tree(child_node[0], depth + 1, elem.children[i]);
+
+            child_node.animate({height: 'toggle'}, 0);
+
+            if (depth != 0) {
+                new_node.click(function( obj ){
+                   child_node.animate({height: 'toggle'}, 400);
+                });
+            }
+            else child_node.animate({height: 'toggle'}, 400);
+
         } else {
-            var new_node = ich.tree_elem(elem)[0];
-            node.appendChild(new_node);
+            new_node = ich.tree_elem(elem);
+            node.appendChild(new_node[0]);
         }
+
+        return new_node;
     }
 
     this.fetch_tree = function() {
+        var tree_node = $("#" + this.key + " .commit_tree")[0];
+        if (this.tree_fetched) {
+            this.render_tree(tree_node, 0, this.tree);
+            return;
+        }
+
         var this_obj = this;
 
         $.ajax({ url: '/ask_commit_tree/' + this.key,
@@ -540,8 +560,8 @@ var Commit = function(key, data) {
                 }
 
                 this_obj.tree = data;
-                this_obj.render_tree($("#" + this_obj.key + " .commit_tree")[0], data);
-                
+                this_obj.tree_fetched = true;
+                this_obj.render_tree(tree_node, 0, data);
             }
         });
     };
