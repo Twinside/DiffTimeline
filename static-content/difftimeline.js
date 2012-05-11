@@ -144,6 +144,12 @@ var application_state = (function () {
     };
 })();
 
+var remove_children = function(node) {
+    while (node.hasChildNodes()) {
+        node.removeChild(node.lastChild);
+    }
+};
+
 ////////////////////////////////////////////////////////////
 ////  Diff handling
 ////////////////////////////////////////////////////////////
@@ -181,12 +187,6 @@ var DiffManipulator = (function () {
         '~': function (n) { return glob("diff_addition", glob( "diff_deletion", n)); },
         '!': function (n) { return glob("diff_deletion", glob( "diff_addition", n)); },
         '|': ''
-    };
-
-    var remove_children = function(node) {
-        while (node.hasChildNodes()) {
-            node.removeChild(node.lastChild);
-        }
     };
 
     var generate_full_html = function (filename, isLineNumberRequired, data, diff, node) {
@@ -507,9 +507,12 @@ var Commit = function(key, data) {
         'deletion':ich.commit_file
     };
 
-    this.render_tree = function(node, depth, elem) {
-        elem.key = this.key;
+    this.render_tree = function(node, depth, tree_path, elem) {
         var new_node;
+
+        elem.key = this.key;
+        elem.full_path = (depth > 0) ? tree_path + "/" + elem.name
+                                     : elem.name;
 
         if (elem.hasOwnProperty('children'))
         {
@@ -518,7 +521,8 @@ var Commit = function(key, data) {
             node.appendChild(new_node[0]);
 
             for ( var i = 0; i < elem.children.length; i++ )
-                this.render_tree(child_node[0], depth + 1, elem.children[i]);
+                this.render_tree(child_node[0], depth + 1, 
+                                 elem.full_path, elem.children[i]);
 
             child_node.animate({height: 'toggle'}, 0);
 
@@ -540,7 +544,8 @@ var Commit = function(key, data) {
     this.fetch_tree = function() {
         var tree_node = $("#" + this.key + " .commit_tree")[0];
         if (this.tree_fetched) {
-            this.render_tree(tree_node, 0, this.tree);
+            remove_children(tree_node);
+            this.render_tree(tree_node, 0, "", this.tree);
             return;
         }
 
@@ -561,7 +566,8 @@ var Commit = function(key, data) {
 
                 this_obj.tree = data;
                 this_obj.tree_fetched = true;
-                this_obj.render_tree(tree_node, 0, data);
+                remove_children(tree_node);
+                this_obj.render_tree(tree_node, 0, "", data);
             }
         });
     };
