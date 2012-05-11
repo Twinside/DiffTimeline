@@ -30,7 +30,9 @@
 
         <script id="tree_elem" type="text/html">
             <div class="tree_{{kind}}">
-                <span class="commit_diff_symbol"></span><span>{{name}}</span>
+                <span class="commit_diff_symbol"
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')"></span>
+                <span>{{name}}</span>
             </div>
         </script>
 

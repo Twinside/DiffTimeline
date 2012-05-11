@@ -506,7 +506,9 @@ var Commit = function(key, data) {
         'deletion':ich.commit_file
     };
 
-    var render_tree = function(node, elem) {
+    this.render_tree = function(node, elem) {
+
+        elem.key = this.key;
 
         if (elem.hasOwnProperty('children'))
         {
@@ -514,7 +516,7 @@ var Commit = function(key, data) {
             node.appendChild(new_node);
 
             for ( var i = 0; i < elem.children.length; i++ )
-                render_tree(new_node, elem.children[i]);
+                this.render_tree(new_node, elem.children[i]);
         } else {
             var new_node = ich.tree_elem(elem)[0];
             node.appendChild(new_node);
@@ -538,7 +540,7 @@ var Commit = function(key, data) {
                 }
 
                 this_obj.tree = data;
-                render_tree($("#" + this_obj.key + " .commit_tree")[0], data);
+                this_obj.render_tree($("#" + this_obj.key + " .commit_tree")[0], data);
                 
             }
         });
