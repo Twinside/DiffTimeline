@@ -11,27 +11,13 @@
         <script language="javascript" type="text/javascript" src="static-content/underscore-min.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>
 
-        <script id="commit_file_deletion" type="text/html">
-            <div class="deletion">
+        <script id="commit_file" type="text/html">
+            <div class="file_{{kind}}">
                 <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{name}}', '{{hash}}','{{key}}')">-</span> {{name}}
+                      onclick="application_state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span> {{name}}
             </div>
         </script>
 
-        <script id="commit_file_addition" type="text/html">
-            <div class="addition">
-                <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">+</span> {{name}}
-            </div>
-        </script>
-
-        <script id="commit_file_modification" type="text/html">
-            <div class="modification">
-                <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
-            </div>
-        </script>
-        
         <script id="commit_file_modification_detailed" type="text/html">
             <div class="modification">
                 <span class="commit_diff_symbol"
@@ -44,7 +30,7 @@
 
         <script id="tree_elem" type="text/html">
             <div class="tree_{{kind}}">
-                <div>{{name}}</div>
+                <span class="commit_diff_symbol"></span><span>{{name}}</span>
             </div>
         </script>
 
@@ -70,10 +56,6 @@
                     </div>
                 </div>
             </div>
-        </script>
-
-        <script id="commit_file_unknown" type="text/html">
-            <div class="modification">{{kind}} {{name}}</div>
         </script>
 
         <script id="commit_button_file" type="text/html">

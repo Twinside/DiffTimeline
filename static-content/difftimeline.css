@@ -413,6 +413,10 @@ pre
     margin-bottom: 5px;
 }
 
+.tree_neutral > .commit_diff_symbol:before {
+    content: "●";
+}
+
 .tree_modification {
     position: relative;
     width:    92%;
@@ -423,6 +427,10 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+}
+
+.tree_modification > .commit_diff_symbol:before {
+    content: "~";
 }
 
 .tree_addition {
@@ -437,6 +445,10 @@ pre
     margin-bottom: 5px;
 }
 
+.tree_addition > .commit_diff_symbol:before {
+    content: "+";
+}
+
 .tree_deletion {
     position: relative;
     width:    92%;
@@ -449,10 +461,14 @@ pre
     margin-bottom: 5px;
 }
 
+.tree_deletion > .commit_diff_symbol:before {
+    content: "-";
+}
+
 /* ================================================ */
 /* Commit detail rules                              */
 /* ================================================ */
-.modification {
+.file_modification {
     background-color: #FFFFFF;
     border: 1px solid #EEEEEE;
     padding: 7px;
@@ -462,7 +478,11 @@ pre
    border-radius: 2px;
 }
 
-.addition {
+.file_modification > .commit_diff_symbol:before {
+    content: "~";
+}
+
+.file_addition {
     background-color: #EEFFEE;
     border: 1px solid #DDEEDD;
     padding: 7px;
@@ -472,7 +492,11 @@ pre
    border-radius: 2px;
 }
 
-.deletion {
+.file_addition > .commit_diff_symbol:before {
+    content: "+";
+}
+
+.file_deletion {
    background-color: #ffeeee;
    border: 1px solid #eedddd;
    padding: 7px;
@@ -480,6 +504,10 @@ pre
    -webkit-border-radius: 2px;
    -moz-border-radius: 2px;
    border-radius: 2px;
+}
+
+.file_deletion > .commit_diff_symbol:before {
+    content: "-";
 }
 
 .commit_diff_symbol {
@@ -508,3 +536,4 @@ pre
    background: -ms-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* IE10+ */
    background: linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* W3C */
 }
+

@@ -502,8 +502,8 @@ var Commit = function(key, data) {
 
             return rez_node;
         },
-        'addition':ich.commit_file_addition,
-        'deletion':ich.commit_file_deletion
+        'addition':ich.commit_file,
+        'deletion':ich.commit_file
     };
 
     var render_tree = function(node, elem) {
@@ -560,7 +560,7 @@ var Commit = function(key, data) {
             if (kind_formater.hasOwnProperty(kind))
                 this.orig_node.append(kind_formater[kind](e));
             else
-                this.orig_node.append(ich.commit_file_unknown(e));
+                this.orig_node.append(ich.commit_file(e));
         }
     };
     
@@ -680,26 +680,14 @@ var FileBlob = function (filename, data) {
     this.path = data.path;
 
     this.create_dom_details = function() {
-        var kind_formater = {
-            'modification': ich.commit_file_modification,
-            'addition':ich.commit_file_addition,
-            'deletion':ich.commit_file_deletion
-        };
-
         var detail_node = $('#' + this.key + ' .commit_detail');
         detail_node.append(ich.commit_button_file({commit: this.key}));
 
         for ( var i = 0; i < this.details.length; i++ )
         {
             var e = this.details[i];
-            var kind = e['kind'];
             e.key = this.key;
-
-            var file_diff;
-            if (kind_formater.hasOwnProperty(kind))
-                detail_node.append(kind_formater[kind](e));
-            else
-                detail_node.append(ich.commit_file_unknown(e));
+            detail_node.append(ich.commit_file(e));
         }
     };
 
@@ -746,8 +734,8 @@ var FileBlob = function (filename, data) {
 
                 var kind_formater = {
                     'modification': ich.commit_file_modification,
-                    'addition':ich.commit_file_addition,
-                    'deletion':ich.commit_file_deletion
+                    'addition':ich.commit_file,
+                    'deletion':ich.commit_file
                 };
 
                 this_obj.details = data;
