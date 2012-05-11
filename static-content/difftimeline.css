@@ -388,10 +388,13 @@ pre
 /* ================================================ */
 /* Tree presentation                                */
 /* ================================================ */
+.commit_tree {
+    margin-right: 5px;
+}
+
 .tree_node {
-    position: relative;
-    width:    92%;
-    left:     7%;
+    position:        relative;
+    margin-left:     15px;
 }
 
 .tree_node > .node_name {
@@ -403,9 +406,8 @@ pre
 }
 
 .tree_neutral {
-    position: relative;
-    width:    92%;
-    left:     7%;
+    position:        relative;
+    margin-left:     15px;
     border:   1px solid gray;
 
     padding: 5px 5px 5px 5px;
@@ -418,9 +420,9 @@ pre
 }
 
 .tree_modification {
-    position: relative;
-    width:    92%;
-    left:     7%;
+    position:        relative;
+    margin-left:     15px;
+
     border:   1px solid #AAAAFF;
     background-color: #EEEEFF;
 
@@ -434,9 +436,9 @@ pre
 }
 
 .tree_addition {
-    position: relative;
-    width:    92%;
-    left:     7%;
+    position:        relative;
+    margin-left:     15px;
+
     border: 1px solid green;
     background-color: #AAFFAA;
 
@@ -450,9 +452,9 @@ pre
 }
 
 .tree_deletion {
-    position: relative;
-    width:    92%;
-    left:     7%;
+    position:        relative;
+    margin-left:     15px;
+
     border: 1px solid #FF7777;
     background-color: #FFAAAA;
     
