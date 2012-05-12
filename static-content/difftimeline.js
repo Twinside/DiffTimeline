@@ -458,6 +458,7 @@ var Commit = function(key, data) {
     this.message = data.message;
     this.split_message = (html_encodize(data.message)).replace(/\n/g, '<br/>');
     this.tree_fetched = false;
+    this.tree_opened = false;
 
     var kind_formater = {
         'modification': function(e) {
@@ -509,6 +510,7 @@ var Commit = function(key, data) {
 
     this.render_tree = function(node, depth, tree_path, elem) {
         var new_node;
+        var opened = false;
 
         elem.key = this.key;
         elem.full_path = (depth > 0) ? tree_path + "/" + elem.name
@@ -516,8 +518,16 @@ var Commit = function(key, data) {
 
         if (elem.hasOwnProperty('children'))
         {
+            if (depth == 0) {
+                for ( var i = 0; i < elem.children.length; i++ )
+                    this.render_tree(node, depth + 1, 
+                                     elem.full_path, elem.children[i]);
+                return node;
+            }
+
             new_node = ich.tree_folder(elem);
             var child_node = $(".children", new_node);
+            var button_indicator = $(".button", new_node);
             node.appendChild(new_node[0]);
 
             for ( var i = 0; i < elem.children.length; i++ )
@@ -526,12 +536,16 @@ var Commit = function(key, data) {
 
             child_node.animate({height: 'toggle'}, 0);
 
-            if (depth != 0) {
-                new_node.click(function( obj ){
-                   child_node.animate({height: 'toggle'}, 400);
-                });
-            }
-            else child_node.animate({height: 'toggle'}, 400);
+            new_node.click(function( obj ){
+                child_node.animate({height: 'toggle'}, 400);
+
+                if (opened)
+                    button_indicator.html('&#x25bc');
+                else
+                    button_indicator.html('&#x25b2');
+
+                opened = !opened;
+            });
 
         } else {
             new_node = ich.tree_elem(elem);
@@ -542,10 +556,13 @@ var Commit = function(key, data) {
     }
 
     this.fetch_tree = function() {
-        var tree_node = $("#" + this.key + " .commit_tree")[0];
+        var tree_node = $("#" + this.key + " .commit_tree");
+        var indicator = $("#" + this.key + " .btn_indicator");
+
         if (this.tree_fetched) {
-            remove_children(tree_node);
-            this.render_tree(tree_node, 0, "", this.tree);
+            indicator.html(this.tree_opened ? "&#x25bc;" : "&#x25b2;");
+            tree_node.animate({height: 'toggle'});
+            this.tree_opened = !this.tree_opened;
             return;
         }
 
@@ -563,11 +580,14 @@ var Commit = function(key, data) {
                     show_error( data );
                     return;
                 }
-
+                tree_node.animate({height: 'toggle'});
                 this_obj.tree = data;
                 this_obj.tree_fetched = true;
-                remove_children(tree_node);
-                this_obj.render_tree(tree_node, 0, "", data);
+                this_obj.tree_opened = true;
+                remove_children(tree_node[0]);
+                this_obj.render_tree(tree_node[0], 0, "", data);
+                tree_node.animate({height: 'toggle'});
+                indicator.html("&#x25b2;");
             }
         });
     };
@@ -575,6 +595,14 @@ var Commit = function(key, data) {
     this.create_dom = function() {
         this.orig_node = ich.commit_detailed(this);
         $('.container').prepend(this.orig_node);
+
+        if (this.tree_fetched) {
+            var tree_node = $("#" + this.key + " .commit_tree");
+            this.tree_opened = false;
+            tree_node.animate({height: 'toggle'});
+            this.render_tree(tree_node[0], 0, "", this.tree);
+        }
+
         return this.orig_node;
     };
 

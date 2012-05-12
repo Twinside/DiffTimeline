@@ -38,7 +38,12 @@
 
         <script id="tree_folder" type="text/html">
             <div class="tree_node">
-                <div class="node_name">{{name}}</div>
+                <div class="node_name">
+                    <span class="button">
+                        &#x25bc;
+                    </span>
+                    {{name}}
+                </div>
                 <div class="children"></div>
             </div>
         </script>
@@ -58,7 +63,7 @@
                     </div>
                     <span class="show_tree_btn"
                           onclick="application_state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
-                        &#x25bc; Tree
+                        <span class="btn_indicator">&#x25bc;</span> Tree
                     </span>
                     <div class="commit_tree">
                     </div>

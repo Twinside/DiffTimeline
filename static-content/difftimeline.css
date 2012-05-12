@@ -388,6 +388,10 @@ pre
 /* ================================================ */
 /* Tree presentation                                */
 /* ================================================ */
+.show_tree_btn {
+   cursor: pointer;
+}
+
 .commit_tree {
     margin-right: 5px;
 }
@@ -395,6 +399,7 @@ pre
 .tree_node {
     position:        relative;
     margin-left:     15px;
+    cursor:          pointer;
 }
 
 .tree_node > .node_name {
