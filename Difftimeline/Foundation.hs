@@ -68,3 +68,5 @@ instance Yesod DiffTimeline where
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
 
+    makeSessionBackend _ = return Nothing
+
