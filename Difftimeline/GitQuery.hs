@@ -122,6 +122,8 @@ data CommitDetail = CommitDetail
     { commitDetailMessage :: T.Text
     , commitDetailParents :: [Ref]
     , commitDetailKey     :: Ref
+    , commitDetailTimestamp :: Int
+    , commitDetailTimezone  :: Int
     , commitDetailAuthor  :: T.Text
     , commitDetailChanges :: [CommitTreeDiff]
     }
@@ -134,6 +136,8 @@ instance ToJSON CommitDetail where
       , "key"          .= (toHexString $ commitDetailKey detail)
       , "author"       .= commitDetailAuthor detail
       , "file_changes" .= toJSON (commitDetailChanges detail)
+      , "timestamp"    .= commitDetailTimestamp detail
+      , "timezone"     .= commitDetailTimezone detail
       ]
 
 
@@ -141,6 +145,9 @@ data CommitPath = CommitPath
     { pathCommitRef     :: Ref
     , pathParentRef     :: Ref
     , pathMessage       :: T.Text
+    , pathTimestamp     :: Int
+    , pathTimezone      :: Int
+    , pathAuthor        :: T.Text
     }
     deriving (Eq, Show)
 
@@ -149,6 +156,9 @@ instance ToJSON CommitPath where
       object [ "commit" .= refToText (pathCommitRef cp)
              , "parent_commit" .= refToText (pathParentRef cp)
              , "message" .= pathMessage cp
+             , "author"    .= pathAuthor cp
+             , "timestamp" .= pathTimestamp cp
+             , "timezone"  .= pathTimezone cp
              ]
 
 
@@ -260,11 +270,14 @@ diffCommit repository deep ref = runErrorT $ do
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
     diff <- inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
+    let author = commitAuthor thisCommit
     return (CommitDetail {
           commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
         , commitDetailParents = commitParents thisCommit
         , commitDetailKey     = ref
-        , commitDetailAuthor  = decodeUtf8 . authorName $ commitAuthor thisCommit
+        , commitDetailAuthor  = decodeUtf8 $ authorName author
+        , commitDetailTimestamp = authorTimestamp author
+        , commitDetailTimezone  = authorTimezone author
         , commitDetailChanges = diff
         })
   where getObj reason = errorIO reason . accessObject repository
@@ -338,10 +351,14 @@ findFirstCommit repository path currentFileRef firstCommit = inner undefined und
                     then return (prevCommit, prevRef, [])
                     else do
                         (obj, r, commitPathRest) <- inner info currentCommit $ commitParents info !! 0
+                        let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
                                 pathParentRef = (commitParents info) !! 0,
-                                pathMessage = decodeUtf8 $ commitMessage info
+                                pathMessage = decodeUtf8 $ commitMessage info,
+                                pathAuthor = decodeUtf8 $ authorName author,
+                                pathTimestamp = authorTimestamp author,
+                                pathTimezone = authorTimezone author
                             } : commitPathRest))
                             (\_ -> return (prevCommit, prevRef, []))
 
@@ -382,6 +399,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
             let toStrict = B.concat . L.toChunks
                 prevData = decodeUtf8 $ toStrict prevFile
                 thisData = decodeUtf8 $ toStrict file
+                author = commitAuthor commit
 
             return $ ParentFile
                 { fileData = T.filter (/= '\r') thisData
@@ -391,6 +409,9 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
                 , commitRef = firstRef
                 , commitPath = reverse betweenCommits
                 , fileDiff = computeTextDiff thisData prevData
+                , parentCommitAuthor = decodeUtf8 $ authorName author
+                , parentCommitTimestamp = authorTimestamp author
+                , parentCommmitTimezone = authorTimezone author
                 }
 
 data ParentFile = ParentFile
@@ -401,6 +422,9 @@ data ParentFile = ParentFile
     , commitRef   :: Ref
     , commitPath  :: [CommitPath]
     , fileDiff    :: [DiffCommand]
+    , parentCommitAuthor :: T.Text
+    , parentCommitTimestamp :: Int
+    , parentCommmitTimezone :: Int
     }
     deriving (Eq, Show)
 
@@ -413,6 +437,9 @@ instance ToJSON ParentFile where
              ,"diff"          .= (toJSON . map (object . diffToJson) $ fileDiff p)
              ,"path"          .= toJSON (commitPath p)
              ,"key"           .= refToText (commitRef p)
+             ,"author"        .= parentCommitAuthor p
+             ,"timestamp"     .= parentCommitTimestamp p
+             ,"timezone"      .= parentCommmitTimezone p
              ]
 
 basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
@@ -425,6 +452,8 @@ basePage _logger repository path = runErrorT $ do
     (Blob content) <- getObj "Error can't find file content" foundFileRef
 
     let toStrict = B.concat . L.toChunks
+        author = commitAuthor cInfo
+
     return $ ParentFile {
     	commitRef = headRef,
     	fileRef = foundFileRef,
@@ -432,7 +461,10 @@ basePage _logger repository path = runErrorT $ do
     	fileDiff = [],
     	fileData = decodeUtf8 $ toStrict content,
     	parentRef = commitParents cInfo,
-    	fileMessage = decodeUtf8 $ commitMessage cInfo
+    	fileMessage = decodeUtf8 $ commitMessage cInfo,
+        parentCommitAuthor = decodeUtf8 $ authorName author,
+        parentCommitTimestamp = authorTimestamp author,
+        parentCommmitTimezone = authorTimezone author
 
     }
 
