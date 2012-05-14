@@ -536,7 +536,8 @@ var Commit = function(key, data) {
 
             child_node.animate({height: 'toggle'}, 0);
 
-            new_node.click(function( obj ){
+            new_node.click(function( event ){
+                event.stopPropagation();
                 child_node.animate({height: 'toggle'}, 400);
 
                 if (opened)
