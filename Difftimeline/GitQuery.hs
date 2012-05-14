@@ -399,7 +399,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
             let toStrict = B.concat . L.toChunks
                 prevData = decodeUtf8 $ toStrict prevFile
                 thisData = decodeUtf8 $ toStrict file
-                author = commitAuthor commit
+                author = commitAuthor firstNfo
 
             return $ ParentFile
                 { fileData = T.filter (/= '\r') thisData

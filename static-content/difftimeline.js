@@ -442,6 +442,12 @@ var DiffManipulator = (function () {
     };
 })();
 
+var timestamp_to_string = function(stamp) {
+    var d = new Date();
+    d.setTime(stamp * 1000);
+    return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+}
+
 var html_encodize = function(snipp) {
     return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
 }
@@ -453,6 +459,7 @@ var html_encodize = function(snipp) {
  */
 var Commit = function(key, data) {
     this.key = key;
+    this.commit_date = timestamp_to_string(data.timestamp);
     this.parents_sha = data.parents_sha;
     this.file_changes = data.file_changes;
     this.message = data.message;
@@ -730,6 +737,7 @@ var FileBlob = function (filename, data) {
     this.file = filename;
     this.diff = data.diff;
     this.data = data.data;
+    this.commit_date = timestamp_to_string(data.timestamp);
     this.filekey = data.filekey;
     this.key = data.key;
     this.message = data.message;
