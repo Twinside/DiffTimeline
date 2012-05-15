@@ -259,7 +259,13 @@ pre
 .commitmsg .id
 {
     color:     #666666;
-    font-size: 0.8em;
+    font-size: 0.75em;
+}
+
+.commitmsg .time
+{
+    position: absolute;
+    right: 0;
 }
 
 .commit_list
@@ -299,6 +305,14 @@ pre
     -webkit-border-radius: 7px;
 }
 
+.delta_commit_circle .author:before {
+    content: "Author : ";
+}
+
+.delta_commit_circle .date:before {
+    content: "Date : ";
+}
+
 .ellipsis
 {
     float: left;
@@ -327,7 +341,7 @@ pre
 /* ================================================ */
 /* Tooltip rules                                    */
 /* ================================================ */
-.ellipsis div, .delta_commit_circle div {
+.ellipsis div, .delta_commit_circle > div {
     display: none;
 }
 
@@ -336,7 +350,7 @@ pre
     z-index: 500;
 }
 
-.ellipsis:hover div, .delta_commit_circle:hover div {
+.ellipsis:hover > div, .delta_commit_circle:hover > div {
     font-style: normal;
     display:    block;
     position:   absolute;

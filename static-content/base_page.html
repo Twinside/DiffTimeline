@@ -88,7 +88,11 @@
         <script id="commitcircle" type="text/html">
             <div class="delta_commit_circle"
                  onclick="application_state.switch_commit('{{commit}}')">
-               <div>{{message}}</div>
+                <div>
+                    <div>{{{splited_message}}}</div>
+                    <div class="author">{{author}}</div>
+                    <div class="date">{{commit_date}}</div>
+                </div>
             </div>
         </script>
         <script id="commitfile" type="text/html">
@@ -127,7 +131,7 @@
 
                     <div class="commit_list">
                         {{#path_beg}} {{>commitcircle}} {{/path_beg}}
-                        <span class="ellipsis">...</span>
+                        <span class="ellipsis">... ({{ellipsis_size}})</span>
                         {{#path_end}} {{>commitcircle}} {{/path_end}}
                     </div>
 

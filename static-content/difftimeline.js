@@ -744,6 +744,16 @@ var FileBlob = function (filename, data) {
     this.parent_commit = data.parent_commit;
     this.path = data.path;
 
+    for (var i = 0; i < this.path.length; i++) {
+        this.path[i].commit_date = timestamp_to_string(this.path[i].timestamp);
+
+        this.path[i].splited_message =
+            html_encodize(this.path[i].message).replace("\n", "<br/>");
+    }
+
+    this.ellipsis_size = this.path.length - 15;
+
+
     this.create_dom_details = function() {
         var detail_node = $('#' + this.key + ' .commit_detail');
         detail_node.append(ich.commit_button_file({commit: this.key}));
@@ -759,7 +769,7 @@ var FileBlob = function (filename, data) {
     this.toggle_detail_pane = function() {
         var detail = $('#' + this.key + ' .commit_detail');
         var btn_node = $('#' + this.key + ' .more_info');
-        var btn_text = btn_node.text()
+        var btn_text = btn_node.text();
 
         if (btn_text[0] == '▼')
             btn_node.html("&#x25b2");
@@ -833,6 +843,7 @@ var FileBlob = function (filename, data) {
 
     this.create_dom = function() {
         this.short_message = this.message.split("\n")[0];
+        this.splited_message = html_encodize(this.message).replace("\n", "<br/>");
         var processed;
 
         var path_length = this.path.length;
