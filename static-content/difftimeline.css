@@ -27,9 +27,13 @@ body
 {
     background: white;
     position: fixed;
-    z-index: 1;
+    top: 90px;
+    z-index: 2;
     padding: 10px;
-    top: 40px;
+
+   -moz-box-shadow: 0px 2px 2px #888;
+   -webkit-box-shadow: 0px 2px 2px#888;
+   box-shadow: 0px 2px 2px #888;
 }
 
 .commit
@@ -304,6 +308,22 @@ pre
     float: left;
 }
 
+.horizontal_toolbar
+{
+   /*padding-left: 100px;*/
+   height: 92px;
+   z-index: 1;
+   background: white;
+   position: fixed;
+
+   padding-left: 10px;
+   padding-right: 70px;
+
+   -moz-box-shadow: 0 0 2px #888;
+   -webkit-box-shadow: 0 0 2px#888;
+   box-shadow: 0 0 2px #888;
+}
+
 .message_carret
 {
     background-color: orange;
@@ -312,11 +332,9 @@ pre
    border-radius: 5px;
 }
 
-.legend
+.legend table
 {
-    z-index: 1;
-    position: fixed;
-    background: white;
+    margin: 0px;
 }
 
 .legend td > div
@@ -369,11 +387,6 @@ pre
    border-radius: 2px;
    padding-right: 3px;
    padding-bottom: 7px;
-   position: fixed;
-   left: 100px;
-   top: 40px;
-   z-index: 1;
-   background: white;
 }
 
 .breadcrumb_elem a {
