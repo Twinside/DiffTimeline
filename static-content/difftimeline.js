@@ -247,7 +247,7 @@ var DiffManipulator = (function () {
             var context_begin = Math.max(last_outputted_line + 1, d.beg - contextSize);
 
             // write an elipssiss if there is a deconnection
-            if (context_begin > last_outputted_line && i != 0) {
+            if (context_begin > last_outputted_line + 1 && i != 0) {
                 node.appendChild(document.createTextNode('...\n'));
             }
 
@@ -280,7 +280,7 @@ var DiffManipulator = (function () {
             }
 
             var next_commit_begin = (i === diff.length - 1) ? lines.length - 1 : diff[i + 1].beg;
-            var context_end = Math.min(d.end + contextSize, next_commit_begin - 1);
+            var context_end = Math.min(d.end + contextSize, next_commit_begin);
 
             highlighter.set_current_line_number(d.end + 1);
             for ( var lineNum = d.end; lineNum < context_end; lineNum++ ) {
@@ -351,7 +351,7 @@ var DiffManipulator = (function () {
             if (right.beg >= right.end) { inc_right(); }
             else if (left.beg >= left.end) { inc_left(); }
             else if (right.beg < left.beg) { swapArrays(); }
-            else if (left.beg < right.beg && left.end < right.beg)  // ############
+            else if (left.beg < right.beg && left.end <= right.beg)  // ############
             {                                                       //                  ############
                 ranges.push({ way: left.way, beg: left.beg, end: left.end });
                 inc_left();
