@@ -490,8 +490,12 @@ var Commit = function(key, data) {
                     diff_node = div_node("diff_addition");
                     hl.set_current_line_number(curr_diff.dest_idx + 1);
                 }
-                else {
+                else if (curr_diff.way == '-') {
                     diff_node = div_node("diff_deletion");
+                    hl.set_current_line_number(curr_diff.orig_idx + 1);
+                }
+                else {
+                    diff_node = div_node("diff_context");
                     hl.set_current_line_number(curr_diff.orig_idx + 1);
                 }
 

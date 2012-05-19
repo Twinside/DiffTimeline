@@ -200,8 +200,8 @@ accessBlob s rep ref = do
 nullRef :: Ref
 nullRef = fromHexString $ replicate 40 '0'
 
-diffCommitTree :: Git -> Bool -> Ref -> IO (Either String CommitTreeDiff)
-diffCommitTree repository deep ref = runErrorT $ do
+diffCommitTree :: Git -> Int -> Bool -> Ref -> IO (Either String CommitTreeDiff)
+diffCommitTree repository contextSize deep ref = runErrorT $ do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let prevRef = head $ commitParents thisCommit
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
@@ -218,7 +218,7 @@ diffCommitTree repository deep ref = runErrorT $ do
             | r1 == r2  = return $ NeutralElement (T.pack name) r1
             | not deep  = return $ ModifyElement (T.pack name) r2 []
             | otherwise = return .
-                ModifyElement (T.pack name) r2 $ computeTextScript txtLeft txtRight
+                ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight
                     where strictify = B.concat . L.toChunks
                           txtLeft = decodeUtf8 $ strictify c1
                           txtRight = decodeUtf8 $ strictify c2
@@ -262,8 +262,8 @@ diffCommitTree repository deep ref = runErrorT $ do
             | otherwise = (:) <$> maySubTree AddElement (BC.unpack rName) rRef
                               <*> diffTree name lefts rs
 
-diffCommit :: Git -> Bool -> Ref -> IO (Either String CommitDetail)
-diffCommit repository deep ref = runErrorT $ do
+diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
+diffCommit repository contextSize deep ref = runErrorT $ do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let prevRef = head $ commitParents thisCommit
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
@@ -287,7 +287,7 @@ diffCommit repository deep ref = runErrorT $ do
         inner name (Blob c1) _r1 (Blob c2) r2
             | not deep  = return [ModifyElement (T.pack name) r2 []]
             | otherwise = return
-                [ModifyElement (T.pack name) r2 $ computeTextScript txtLeft txtRight]
+                [ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight]
                     where strictify = B.concat . L.toChunks
                           txtLeft = decodeUtf8 $ strictify c1
                           txtRight = decodeUtf8 $ strictify c2

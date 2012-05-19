@@ -74,18 +74,18 @@ withRepository act = do
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha = withRepository extractor
     where extractor repository = do
-              rez <- diffCommit repository False $ fromHexString commitSha
+              rez <- diffCommit repository 0 False $ fromHexString commitSha
               return $ commitDetailChanges <$> rez
 
 getCommitR :: String -> Handler RepJson
 getCommitR commitSha = withRepository extractor
     where extractor repository =
-              diffCommit repository True $ fromHexString commitSha
+              diffCommit repository 3 True $ fromHexString commitSha
 
 getCommitTreeR :: String -> Handler RepJson
 getCommitTreeR commitSha = withRepository extractor
     where extractor repository =
-              diffCommitTree repository False $ fromHexString commitSha
+              diffCommitTree repository 0 False $ fromHexString commitSha
 
 javascriptize :: T.Text -> T.Text
 javascriptize = T.replace quo quoRep
@@ -103,7 +103,7 @@ getInitialCommit = do
   let repository = getRepository app
       strictify = BC.concat . LC.toChunks
   Just headRef <- liftIO $ getHead repository
-  diffRez <- liftIO $ diffCommit repository True headRef 
+  diffRez <- liftIO $ diffCommit repository 3 True headRef 
   return . RepPlain . toContent $ case diffRez of
     Left err ->
         renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)

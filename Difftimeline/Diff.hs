@@ -30,6 +30,7 @@ type Index = Int
 -- | Represent the action to be taken for the diff
 data DiffAction = DiffAddition  -- ^ Data which should be inserted
                 | DiffDeletion  -- ^ Data which should be removed
+                | DiffNeutral   -- ^ Only used to render context
                 deriving (Eq, Show)
 
 -- | Hold computed information about the diff
@@ -48,6 +49,7 @@ diffToJson (DiffCommand way bego begdest s) =
          , "size"     .= s]
     where wayText DiffAddition = "+" :: T.Text
           wayText DiffDeletion = "-"
+          wayText DiffNeutral  = "="
 
 -- | Merge diff commands which are contiguous of the same direction.
 compactCommands :: [DiffCommand] -> [DiffCommand]
@@ -81,15 +83,82 @@ computeTextDiff orig dest =
     computeDiff (V.fromList $ T.lines orig)
                 (V.fromList $ T.lines dest)
 
+addContextInformation :: Int -> Int -> Int -> [DiffCommand] -> [DiffCommand]
+addContextInformation 0           _        _        = id
+addContextInformation contextSize origSize destSize = inner False
+  where inner _  [] = []
+        inner True [a@(DiffCommand DiffAddition oi di s)]
+            | oi + contextSize > origSize = [a]
+            | otherwise =
+                [a, DiffCommand DiffNeutral oi (di + s) endSize]
+                    where endSize = min (destSize - oi) contextSize
+
+        inner True [a@(DiffCommand DiffDeletion oi di s)]
+            | di + s <= origSize = [a]
+            | otherwise =
+                [a, DiffCommand DiffNeutral (oi + s) (di + s) endSize]
+                    where endSize = min (endSize - oi - s) contextSize
+
+        inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
+                    b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
+                | gapSize == 0 = a : inner True (b:xs)
+                | gapSize > 0 && end1 <= contextSize =
+                    a : DiffCommand DiffNeutral oi1 end1 gapSize : inner True (b:xs)
+                     where end1 = di1 + s1
+                           gapSize = end1 - di2
+
+        inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
+                    b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
+                | gapSize == 0 = a : inner True (b:xs)
+                | gapSize > 0 && end1 <= contextSize =
+                    a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
+                     where end1 = oi1 + s1
+                           gapSize = end1 - oi2
+
+        inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
+                    b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
+                | gapSize == 0 = a : inner True (b:xs)
+                | gapSize > 0 && gapSize <= contextSize =
+                    a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
+                     where end = di1 + s1
+                           gapSize = oi1 - oi2
+
+        inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
+                    b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
+                | gapSize == 0 = a : inner True (b:xs)
+                | gapSize > 0 && gapSize <= contextSize =
+                    a : DiffCommand DiffNeutral end (di1 + s1) gapSize : inner True (b:xs)
+                     where end = oi1 + s1
+                           gapSize = di1 - di2
+
+        inner False lst@(DiffCommand DiffAddition oi di _s:_) =
+            DiffCommand DiffNeutral oi (di - contextSize) contextSize
+                : inner True lst
+
+        inner False lst@(DiffCommand DiffDeletion oi di s:_) =
+            DiffCommand DiffNeutral (oi + s) (di - contextSize) contextSize
+                : inner True lst
+
+        inner False (a@(DiffCommand DiffNeutral _ _ _):xs) =
+            a : inner False xs
+
+        inner True (x@(DiffCommand _ oi di s):xs) =
+            x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize : inner False xs
+
+
 -- | Compute the diff and extract the modification lines from the original text
-computeTextScript :: T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
-computeTextScript orig dest = map extract diffs
+computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
+computeTextScript contextSize orig dest = map extract $ addNeutral diffs
     where origArray = V.fromList $ T.lines orig
           destArray = V.fromList $ T.lines dest
           diffs = computeDiff origArray destArray
 
+          addNeutral =
+              addContextInformation contextSize (V.length origArray) (V.length destArray)
+
           extract c@(DiffCommand DiffAddition _oi  di s) = (c, V.slice di s destArray)
           extract c@(DiffCommand DiffDeletion  oi _di s) = (c, V.slice oi s origArray)
+          extract c@(DiffCommand DiffNeutral   oi _di s) = (c, V.slice oi s origArray)
 
 -- | Compute the script to pass from one vector to another using the
 -- Longuest common substring algorithm (implemented in the diff command)
