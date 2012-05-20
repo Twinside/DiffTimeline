@@ -212,7 +212,6 @@ var DiffManipulator = (function () {
 
             diff_node = (begs[curr_diff.way])(diff_nodes);
             node.appendChild(diff_node[0][0]);
-            node.appendChild(document.createTextNode('\n'));
         }
 
         while (current_line < lines.length)
@@ -262,7 +261,6 @@ var DiffManipulator = (function () {
                 highlighter.set_current_line_number(d.beg + 1);
                 var new_node = begs[d.way]([highlighter.colorLine(lines[d.beg])]);
                 node.appendChild(new_node[0][0]);
-                node.appendChild(document.createTextNode('\n'));
                 new_node = undefined;
             }
             else
@@ -275,7 +273,6 @@ var DiffManipulator = (function () {
 
                 var new_node = (begs[d.way])(processed_lines);
                 node.appendChild(new_node[0][0]);
-                node.appendChild(document.createTextNode('\n'));
                 new_node = undefined;
             }
 
@@ -492,24 +489,25 @@ var Commit = function(key, data) {
                 }
                 else if (curr_diff.way == '-') {
                     diff_node = div_node("diff_deletion");
-                    hl.set_current_line_number(curr_diff.orig_idx + 1);
+                    hl.set_current_line_number(curr_diff.dest_idx + 1);
                 }
                 else {
                     diff_node = div_node("diff_context");
-                    hl.set_current_line_number(curr_diff.orig_idx + 1);
+                    hl.set_current_line_number(curr_diff.dest_idx + 1);
                 }
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
                 {
                     var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
-                    for ( var node in lineNodes )
+                    for ( var node = 0; node < lineNodes.length; node++ )
                         diff_node.appendChild(lineNodes[node]);
                 }
 
                 code_node.appendChild(diff_node);
 
-                if (i < e.diff.length - 1)
-                    code_node.appendChild(document.createTextNode("\n...\n"));
+                if (i < e.diff.length - 1 &&
+                    curr_diff.dest_idx + curr_diff.size < e.diff[i + 1].dest_idx )
+                    code_node.appendChild(document.createTextNode("...\n"));
 
             }
 

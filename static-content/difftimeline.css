@@ -70,7 +70,7 @@ pre
     width: 100%;
     margin: 0px;
     padding: 0px;
-    display: inline-block;
+    display: block;
 }
 
 .diff_addition
@@ -80,7 +80,7 @@ pre
     width: 100%;
     margin: 0px;
     padding: 0px;
-    display: inline-block;
+    display: block;
 }
 
 .diff_deletion .diff_addition

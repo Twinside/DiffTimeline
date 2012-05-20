@@ -102,49 +102,56 @@ addContextInformation contextSize origSize destSize = inner False
         inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
                     b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | gapSize > 0 && end1 <= contextSize =
+                | 0 < gapSize && gapSize <= contextSize + 1 =
                     a : DiffCommand DiffNeutral oi1 end1 gapSize : inner True (b:xs)
                      where end1 = di1 + s1
-                           gapSize = end1 - di2
+                           gapSize = max 0 $ di2 - end1
 
         inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
                     b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | gapSize > 0 && end1 <= contextSize =
+                | 0 < gapSize && gapSize <= contextSize =
                     a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
                      where end1 = oi1 + s1
-                           gapSize = end1 - oi2
+                           gapSize = oi2 - end1
 
         inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
                     b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | gapSize > 0 && gapSize <= contextSize =
+                | 0 < gapSize && gapSize <= contextSize =
                     a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
                      where end = di1 + s1
-                           gapSize = oi1 - oi2
+                           gapSize = oi2 - oi1
 
         inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
-                    b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
+                    b@(DiffCommand DiffAddition oi2 _di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | gapSize > 0 && gapSize <= contextSize =
+                | 0 < gapSize && gapSize <= contextSize =
                     a : DiffCommand DiffNeutral end (di1 + s1) gapSize : inner True (b:xs)
                      where end = oi1 + s1
-                           gapSize = di1 - di2
+                           gapSize = oi2 - end
 
         inner False lst@(DiffCommand DiffAddition oi di _s:_) =
-            DiffCommand DiffNeutral oi (di - contextSize) contextSize
+            DiffCommand DiffNeutral beg dbeg contextSize
                 : inner True lst
+                where beg = max 0 $ oi - contextSize
+                      dbeg = max 0 $ di - contextSize
 
-        inner False lst@(DiffCommand DiffDeletion oi di s:_) =
-            DiffCommand DiffNeutral (oi + s) (di - contextSize) contextSize
+        inner False lst@(DiffCommand DiffDeletion oi di _s:_) =
+            DiffCommand DiffNeutral beg dbeg contextSize
                 : inner True lst
+                where beg = max 0 $ oi - contextSize
+                      dbeg = max 0 $ di - contextSize
 
-        inner False (a@(DiffCommand DiffNeutral _ _ _):xs) =
-            a : inner False xs
+        inner contextOutputed (a@(DiffCommand DiffNeutral _ _ _):xs) =
+            a : inner contextOutputed xs
 
-        inner True (x@(DiffCommand _ oi di s):xs) =
+        inner True (x@(DiffCommand DiffAddition oi di s):xs) =
+            x : DiffCommand DiffNeutral oi (di + s) contextSize : inner False xs
+
+        inner True (x@(DiffCommand DiffDeletion oi di s):xs) =
             x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize : inner False xs
-
+            
 
 -- | Compute the diff and extract the modification lines from the original text
 computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
