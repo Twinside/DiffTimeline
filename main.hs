@@ -1,4 +1,5 @@
 import Prelude
+import Data.Maybe( listToMaybe )
 import Yesod.Default.Config( AppConfig(..)
                            , DefaultEnv( Development )
                            )
@@ -37,22 +38,14 @@ main :: IO ()
 main = do
     args <- getArgs
     usePort <- findNextPort
-    let runner = runUrlPort usePort ""
-        config = AppConfig {
+    let config = AppConfig {
             appEnv = Development,
             appPort = usePort,
             appRoot = ".",
             appHost = "",
             appExtra = ()
       }
-    case args of
-        [] -> do
-            logger <- defaultDevelopmentLogger
-            app <- getApplication Nothing config logger
-            runner app
-
-        (f:_) -> do
-            logger <- defaultDevelopmentLogger
-            app <- getApplication (Just f) config logger
-            runner app
+    logger <- defaultDevelopmentLogger
+    app <- getApplication (listToMaybe args) config logger
+    runUrlPort usePort "" app
 
