@@ -67,8 +67,7 @@
     color: #859900;
 }
 
-.syntax_line_number
-{
+.syntax_line_number {
     width: 25px;
     display: inline-block;
     background-color: #EEE8D5;
@@ -76,23 +75,22 @@
     margin-right: 5px;
 }
 
-.syntax_tag
-{
+.syntax_tag {
     color:  #4e4e4e; 
 }
 
-.syntax_tag_name
-{
+.syntax_tag_name {
     color:  #0087ff;
 }
 
-.syntax_tag_param
-{
+.syntax_tag_param {
     color: #585858;
 }
 
-.syntax_special
-{
-    color: #d70000   
+.syntax_special {
+    color: #d70000;
 }
 
+.syntax_function {
+    color: #268bd2;
+}
