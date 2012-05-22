@@ -13,7 +13,7 @@ module Difftimeline.Diff( -- * Types
                         , computeDiff
                         , computeTextDiff
                         , computeTextScript
-                        , computeStringDiff 
+                        , computeStringDiff
                         ) where
 
 import Prelude
@@ -23,7 +23,7 @@ import Control.Monad.ST( ST, runST )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
-import Data.Aeson
+import Data.Aeson( Value, (.=) )
 
 type Index = Int
 
@@ -56,10 +56,10 @@ compactCommands :: [DiffCommand] -> [DiffCommand]
 compactCommands    [] = []
 compactCommands a@[_] = a
 compactCommands ( DiffCommand DiffAddition oi di s
-                : DiffCommand DiffAddition _ di' s' : xs) 
+                : DiffCommand DiffAddition _ di' s' : xs)
     | di + s == di' = compactCommands (DiffCommand DiffAddition oi di (s + s') : xs)
 compactCommands ( DiffCommand DiffDeletion oi  di s
-                : DiffCommand DiffDeletion oi' _ s' : xs) 
+                : DiffCommand DiffDeletion oi' _ s' : xs)
     | oi + s == oi' = compactCommands (DiffCommand DiffDeletion oi di (s + s') : xs)
 compactCommands (x:xs) = x : compactCommands xs
 
@@ -86,7 +86,9 @@ computeTextDiff orig dest =
 addContextInformation :: Int -> Int -> Int -> [DiffCommand] -> [DiffCommand]
 addContextInformation 0           _        _        = id
 addContextInformation contextSize origSize destSize = inner False
-  where inner _  [] = []
+  where maxGap = 2 * contextSize + 1
+
+        inner _  [] = []
         inner True [a@(DiffCommand DiffAddition oi di s)]
             | oi + contextSize > origSize = [a]
             | otherwise =
@@ -102,7 +104,7 @@ addContextInformation contextSize origSize destSize = inner False
         inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
                     b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | 0 < gapSize && gapSize <= contextSize + 1 =
+                | 0 < gapSize && gapSize <= maxGap =
                     a : DiffCommand DiffNeutral oi1 end1 gapSize : inner True (b:xs)
                      where end1 = di1 + s1
                            gapSize = max 0 $ di2 - end1
@@ -110,23 +112,23 @@ addContextInformation contextSize origSize destSize = inner False
         inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
                     b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | 0 < gapSize && gapSize <= contextSize =
+                | 0 < gapSize && gapSize <= maxGap =
                     a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
                      where end1 = oi1 + s1
                            gapSize = oi2 - end1
 
         inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
-                    b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
+                    b@(DiffCommand DiffDeletion _oi2 di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | 0 < gapSize && gapSize <= contextSize =
+                | 0 < gapSize && gapSize <= maxGap =
                     a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
                      where end = di1 + s1
-                           gapSize = oi2 - oi1
+                           gapSize = di2 - oi1
 
         inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
                     b@(DiffCommand DiffAddition oi2 _di2 _s2) : xs)
                 | gapSize == 0 = a : inner True (b:xs)
-                | 0 < gapSize && gapSize <= contextSize =
+                | 0 < gapSize && gapSize <= maxGap =
                     a : DiffCommand DiffNeutral end (di1 + s1) gapSize : inner True (b:xs)
                      where end = oi1 + s1
                            gapSize = oi2 - end
@@ -151,7 +153,7 @@ addContextInformation contextSize origSize destSize = inner False
 
         inner True (x@(DiffCommand DiffDeletion oi di s):xs) =
             x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize : inner False xs
-            
+
 
 -- | Compute the diff and extract the modification lines from the original text
 computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
@@ -215,7 +217,7 @@ increaseWithin (mi, ma) (mini, maxi) vec bias nullVal = do
 
 type Range = (Index, Index)
 
--- | Compare data along the "current snake" and return the index of 
+-- | Compare data along the "current snake" and return the index of
 -- the first different element
 findMaxReachingSnake :: (Eq a) => V.Vector a -> V.Vector a -> Range -> Range
                      -> Index
@@ -268,7 +270,7 @@ findMiddleSnake ctxt xMin xMax yMin yMax = do
                                   | otherwise = upperDiag
 
                                 snake = findMaxReachingSnake (origData ctxt) (destData ctxt)
-                                                             (x, xMax) (x - d, yMax) 
+                                                             (x, xMax) (x - d, yMax)
 
                             (snakeVec .<-. d) snake
                             backVal <- backwardSnake ctxt .!!!. d
