@@ -13,6 +13,26 @@ var TinySyntaxHighlighter = (function () {
         return true;
     }
 
+    /* Array storing information about diff at the line
+     * level (inner subdiff), Should be used by all node
+     * creating function to interleave proper syntax
+     * highlighting and inner diff. */
+    var positionalHighlight = [];
+    var currentPositionIndex = 0;
+    var currentRealBeginning = -1;
+
+    /*
+     * @return value <= 0 if no split is needed,
+     *         value > n otherwise.
+     */
+    var calculate_split_index  = function(index, size) {
+        return 0;
+    }
+
+    var positional_setter = function(lst) {
+        positionalHighlight  = lst;
+    }
+
     var nextSpaceIndex = function ( line, idx ) {
         var spaceIndex = line.indexOf(' ', idx );
         var tabIndex = line.indexOf('\t', idx );
@@ -158,6 +178,8 @@ var TinySyntaxHighlighter = (function () {
     var create_empty_highlighter = function(with_line_number) {
         this.colorLine = basic_highlighter;
         this.with_line_number = with_line_number;
+        this.setPositionHighlight = positional_setter;
+
         if (with_line_number) {
           this.current_line = 1;
           this.set_current_line_number = function (i) {
@@ -186,6 +208,7 @@ var TinySyntaxHighlighter = (function () {
      */
     var create_highlighter = function( with_line_number, highlight_def ) {
         create_empty_highlighter.call( this, with_line_number );
+        this.setPositionHighlight = positional_setter;
         this.activeStack = [highlight_def];
         this.colorLine = colorLine;
         this.def = highlight_def;
