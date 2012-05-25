@@ -2,6 +2,8 @@
 //              Initial state
 /////////////////////////////////////////////////////////////////////
 var breadcrumb = (function() {
+    "use strict";
+
     var count = 0;
     var current_index = 0;
 
@@ -28,6 +30,7 @@ var breadcrumb = (function() {
  * @constructor
  */
 var application_state = (function () {  
+    "use strict";
     var view_mode = 'full';
     var apply_syntax_coloration = true;
     var context_size = 2;
@@ -157,6 +160,7 @@ var remove_children = function(node) {
  * @constructor
  */
 var DiffManipulator = (function () {
+    "use strict";
 
     var append_all = function(n, lst) {
         var maxi = lst.length;
@@ -455,6 +459,8 @@ var html_encodize = function(snipp) {
  * @constructor
  */
 var Commit = function(key, data) {
+    "use strict";
+
     this.key = key;
     this.commit_date = timestamp_to_string(data.timestamp);
     this.parents_sha = data.parents_sha;
@@ -637,6 +643,8 @@ var Commit = function(key, data) {
  * @constructor
  */
 var CommitRenderer = (function() {
+    "use strict";
+
     var fetch_commit = function( id, f ) {
         var this_obj = this;
 
@@ -724,6 +732,8 @@ var CommitRenderer = (function() {
  * @constructor
  */
 var FileBlob = function (filename, data) {
+    "use strict";
+
     var add_syntax_coloration = function( filename, lines )
     {
         var ret = [];
@@ -883,6 +893,7 @@ var FileBlob = function (filename, data) {
  * @constructor
  */
 var FileRenderer = (function() {
+    "use strict";
 
     var fetch_file = function(file, commit, filekey, f) {
         var params = { commit: commit, last_file: filekey };
@@ -1002,3 +1013,4 @@ function leave_server()
     { $.ajax( {url:"/quit", async:false} ); }
 
 ich.grabTemplates();
+
