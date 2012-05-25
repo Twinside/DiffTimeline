@@ -79,8 +79,11 @@ var TinySyntaxHighlighter = (function () {
             {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
-                globNode(current_region.kind,
-                         line.slice(currentIndex, currentIndex + consumed_chars));
+
+                var newNode = highlight(current_region.kind,
+                                        line.slice(currentIndex,
+                                                   currentIndex + consumed_chars));
+                addNode(newNode);
                 currentIndex += consumed_chars;
                 continue;
             }
