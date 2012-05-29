@@ -486,6 +486,10 @@ var Commit = function(key, data) {
                 return node;
             };
 
+            if (e.binary) {
+                return rez_node;
+            }
+
             for ( var i = 0; i < e.diff.length; i++ )
             {
                 curr_diff = e.diff[i];
