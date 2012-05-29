@@ -49,7 +49,7 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                  | DiffLineReplace
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
-                               ![DiffCommand]             -- ^ What have between the two lines
+                               ![[DiffCommand]]           -- ^ What have between the two lines
                  deriving (Eq, Show)
 
 
@@ -66,7 +66,7 @@ diffToJson (DiffLineReplace oi di lst) =
          [ "way"      .= ("-+" :: T.Text)
          , "orig_idx" .= oi
          , "dest_idx" .= di
-         , "sub"      .= map diffToJson lst
+         , "sub"      .= map (map diffToJson) lst
          ]
 
 -- | Merge diff commands which are contiguous of the same direction.
@@ -109,10 +109,12 @@ refineMonolineDiff converter orig dest = inner
           inner ( DiffCommand DiffDeletion oi1 di1 s1
                 : DiffCommand DiffAddition _oi2 di2 s2
                 : xs)
-                | s1 == 1 && s2 == 1 && di1 == di2 =
+                | s1 == s2 && di1 == di2 =
                     DiffLineReplace oi1 di2 subDiff : inner xs
-                      where subDiff = computeDiff (converter $ orig !!! oi1)
-                                                  (converter $ dest !!! di2)
+                      where origs = V.map converter $ V.slice oi1 s1 orig
+                            dests = V.map converter $ V.slice di2 s2 dest
+                            subDiff = [computeDiff o d
+                                            | (o,d) <- zip (V.toList origs) (V.toList dests)]
 
           inner (x:xs) = x : inner xs
 
