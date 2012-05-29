@@ -73,6 +73,10 @@ pre
     display: block;
 }
 
+.sub > .diff_deletion {
+    background-color: #FF8888;
+}
+
 .diff_addition
 {
     font-family: Consolas, Inconsolata, Monospace;
@@ -81,6 +85,10 @@ pre
     margin: 0px;
     padding: 0px;
     display: block;
+}
+
+.sub > .diff_addition {
+    background-color: #88FF88;
 }
 
 .diff_deletion .diff_addition

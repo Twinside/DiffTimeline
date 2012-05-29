@@ -1,5 +1,101 @@
+
+/** @constructor */
+var PositionnalHighlighter = function() {
+    "use strict";
+
+    /* Array storing information about diff at the line
+     * level (inner subdiff), Should be used by all node
+     * creating function to interleave proper syntax
+     * highlighting and inner diff. */
+    var positionalHighlight = [];
+    var currentPositionIndex = -1;
+    var currentRealBeginning = -1;
+    var huge_index = 999999;
+    var previousIndex = 0;
+
+    var inner_reset = function() {
+        currentPositionIndex = 0;
+        previousIndex = 0;
+
+        if (positionalHighlight.length > 0) {
+            currentPositionIndex = 0;
+            curr_pos = positionalHighlight[currentPositionIndex];
+            currentRealBeginning = curr_pos.beg;
+        }
+        else {
+            currentPositionIndex = -1;
+            currentRealBeginning = huge_index;
+        }
+    }
+
+    /* Update the state of the sub line highlighter,
+     * update indices and detect end of boundary. */
+    var use_to_position = function( pos ) {
+        var curr_pos = positionalHighlight[currentPositionIndex];
+        if (pos < curr_pos.end) {
+            currentRealBeginning = pos + 1;
+            return;
+        }
+
+        // we finished the current block, switch to the next
+        // one.
+        currentPositionIndex++;
+
+        if (currentPositionIndex >= positionalHighlight.length)
+            currentRealBeginning = huge_index; // really big value to avoid updating again.
+        else {
+            curr_pos = positionalHighlight[currentPositionIndex];
+            currentRealBeginning = curr_pos.beg;
+        }
+    };
+
+    /* @return value <= 0 if no split is needed,
+     *         value > n otherwise.
+     */
+    var index_splitter = function(index, size) {
+        //                  hhhhhhhhhhhhhhh
+        //      tttttt
+        if (index + size < currentRealBeginning)
+            return 0;
+
+        var splitIndex = Math.min(index + size, currentRealBeginning + size);
+
+        use_to_position( splitIndex );
+
+        return splitIndex;
+    };
+
+    var split_produce = function(producer, str) {
+        var size = str.length;
+        var split = index_splitter(idx, size);
+        var curr_idx = previousIndex;
+
+        while (split > 0) {
+            producer('sub', str.splice(curr_idx - previousIndex, split - previousIndex));
+            curr_idx = split;
+            split = index_splitter(idx, size);
+        }
+
+        if (curr_idx < idx + size)
+            producer('', str.splice(curr_idx - previousIndex, size));
+
+        previousIndex += str.length;
+    };
+
+    return {
+        positional_setter: function(lst) {
+            positionalHighlight  = lst;
+        },
+
+        reset: inner_reset,
+        split_parts: split_produce
+    };
+};
+
 var TinySyntaxHighlighter = (function () {
     "use strict";
+
+    var pos_highlight = new PositionnalHighlighter();
 
     function isTokenPrefixOf( pref, line, base ) {
         if (line.length < pref.length || pref.length === 0) return false;
@@ -13,26 +109,6 @@ var TinySyntaxHighlighter = (function () {
         return true;
     }
 
-    /* Array storing information about diff at the line
-     * level (inner subdiff), Should be used by all node
-     * creating function to interleave proper syntax
-     * highlighting and inner diff. */
-    var positionalHighlight = [];
-    var currentPositionIndex = 0;
-    var currentRealBeginning = -1;
-
-    /*
-     * @return value <= 0 if no split is needed,
-     *         value > n otherwise.
-     */
-    var calculate_split_index  = function(index, size) {
-        return 0;
-    }
-
-    var positional_setter = function(lst) {
-        positionalHighlight  = lst;
-    }
-
     var nextSpaceIndex = function ( line, idx ) {
         var spaceIndex = line.indexOf(' ', idx );
         var tabIndex = line.indexOf('\t', idx );
@@ -44,12 +120,26 @@ var TinySyntaxHighlighter = (function () {
     }
 
     var highlight = function(kind, txt) {
-        var span = document.createElement('span');
-        var txtNode = document.createTextNode(txt);
-        span.setAttribute('class', kind);
-        span.appendChild(txtNode);
+        var ret = [];
+        pos_highlight.split_parts(function(k, sub_str) {
+            var span = document.createElement('span');
+            var txtNode = document.createTextNode(sub_str);
+            span.setAttribute('class', kind);
+            span.appendChild(txtNode);
 
-        return span;
+            if (k !== '') {
+                var sub_span = document.createElement('span');
+                sub_span.setAttribute('class', k);
+                sub_span.appendChild(span);
+                ret.push(sub_span);
+            }
+            else {
+                ret.push(span);
+            }
+
+        }, txt);
+
+        return ret;
     }
 
     var colorLine = function ( line ) {
@@ -72,12 +162,29 @@ var TinySyntaxHighlighter = (function () {
             ret = [span];
         };
 
-        var addNode = function(node) {
-            if (textAccumulator !== '') {
-                ret.push(document.createTextNode(textAccumulator));
-                textAccumulator = '';
-            }
-            ret.push(node);
+        var flushText = function() {
+            if (textAccumulator === '') return;
+
+            pos_highlight.split_parts(function( k, sub_str ) {
+                if (k === '')
+                    ret.push(document.createTextNode(sub_str));
+                else {
+                    var sub_span = document.createElement('span');
+                    sub_span.setAttribute('class', k);
+                    sub_span.appendChild(document.createTextNode(sub_str));
+                    rep.push(sub_span);
+                }
+            });
+        };
+
+        var line_hi = function(kind, txt) {
+            flushText();
+            highlight(kind, txt);
+        };
+
+        var addNode = function(nodes) {
+            for ( var i = 0; i < nodes.length; i++ )
+                ret.push(nodes[i]);
         };
 
         var addText = function(txt) {
@@ -100,9 +207,9 @@ var TinySyntaxHighlighter = (function () {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
 
-                var newNode = highlight(current_region.kind,
-                                        line.slice(currentIndex,
-                                                   currentIndex + consumed_chars));
+                var newNode = line_hi(current_region.kind, line, currentIndex, 
+                                      line.slice(currentIndex,
+                                                 currentIndex + consumed_chars));
                 addNode(newNode);
                 currentIndex += consumed_chars;
                 continue;
@@ -135,10 +242,10 @@ var TinySyntaxHighlighter = (function () {
                     if (this.def.keywords.hasOwnProperty(parserRet))
                     {
                         var found_class = this.def.keywords[parserRet]
-                        addNode( highlight(found_class, parserRet) );
+                        addNode( line_hi(found_class, parserRet) );
                     }
                     else if (parser.kind !== '')
-                        addNode( highlight(parser.kind, parserRet) );
+                        addNode( line_hi(parser.kind, parserRet) );
                     else
                         addText(parserRet);
 
@@ -154,9 +261,7 @@ var TinySyntaxHighlighter = (function () {
             consumed = false;
         }
 
-        if (textAccumulator !== '') {
-            ret.push(document.createTextNode(textAccumulator));
-        }
+        flushText();
 
         // end of line, we must close all the
         // active tags (have to be reoppened a
@@ -178,7 +283,9 @@ var TinySyntaxHighlighter = (function () {
     var create_empty_highlighter = function(with_line_number) {
         this.colorLine = basic_highlighter;
         this.with_line_number = with_line_number;
-        this.setPositionHighlight = positional_setter;
+        this.setPositionHighlight = function(lst) {
+            pos_highlight.positional_setter(lst);
+        };
 
         if (with_line_number) {
           this.current_line = 1;
@@ -208,7 +315,9 @@ var TinySyntaxHighlighter = (function () {
      */
     var create_highlighter = function( with_line_number, highlight_def ) {
         create_empty_highlighter.call( this, with_line_number );
-        this.setPositionHighlight = positional_setter;
+        this.setPositionHighlight = function(lst) {
+            pos_highlight.positional_setter(lst);
+        };
         this.activeStack = [highlight_def];
         this.colorLine = colorLine;
         this.def = highlight_def;
