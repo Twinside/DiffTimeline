@@ -33,11 +33,23 @@ data DiffAction = DiffAddition  -- ^ Data which should be inserted
                 | DiffNeutral   -- ^ Only used to render context
                 deriving (Eq, Show)
 
+data RawDiffCommand = DiffAdd {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
+                              {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
+                              {-# UNPACK #-}!Int         -- ^ Size of the modification
+                    | DiffDel {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
+                              {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
+                              {-# UNPACK #-}!Int         -- ^ Size of the modification
+                    deriving (Eq, Show)
+
 -- | Hold computed information about the diff
 data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
+                 | DiffLineReplace
+                               {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
+                               {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
+                               ![DiffCommand]             -- ^ What have between the two lines
                  deriving (Eq, Show)
 
 
@@ -50,17 +62,23 @@ diffToJson (DiffCommand way bego begdest s) =
     where wayText DiffAddition = "+" :: T.Text
           wayText DiffDeletion = "-"
           wayText DiffNeutral  = "="
+diffToJson (DiffLineReplace oi di lst) =
+         [ "way"      .= ("-+" :: T.Text)
+         , "orig_idx" .= oi
+         , "dest_idx" .= di
+         , "sub"      .= map diffToJson lst
+         ]
 
 -- | Merge diff commands which are contiguous of the same direction.
-compactCommands :: [DiffCommand] -> [DiffCommand]
+compactCommands :: [RawDiffCommand] -> [RawDiffCommand]
 compactCommands    [] = []
 compactCommands a@[_] = a
-compactCommands ( DiffCommand DiffAddition oi di s
-                : DiffCommand DiffAddition _ di' s' : xs)
-    | di + s == di' = compactCommands (DiffCommand DiffAddition oi di (s + s') : xs)
-compactCommands ( DiffCommand DiffDeletion oi  di s
-                : DiffCommand DiffDeletion oi' _ s' : xs)
-    | oi + s == oi' = compactCommands (DiffCommand DiffDeletion oi di (s + s') : xs)
+compactCommands ( DiffAdd oi di s
+                : DiffAdd _ di' s' : xs)
+    | di + s == di' = compactCommands (DiffAdd oi di (s + s') : xs)
+compactCommands ( DiffDel oi  di s
+                : DiffDel oi' _ s' : xs)
+    | oi + s == oi' = compactCommands (DiffDel oi di (s + s') : xs)
 compactCommands (x:xs) = x : compactCommands xs
 
 -- | Context holding data for the actual diff, internal structure
@@ -83,76 +101,94 @@ computeTextDiff orig dest =
     computeDiff (V.fromList $ T.lines orig)
                 (V.fromList $ T.lines dest)
 
-addContextInformation :: Int -> Int -> Int -> [DiffCommand] -> [DiffCommand]
-addContextInformation 0           _        _        = id
-addContextInformation contextSize origSize destSize = inner False
+refineMonolineDiff :: (Eq b) => (a -> V.Vector b) -> V.Vector a -> V.Vector a -> [DiffCommand]
+                   -> [DiffCommand]
+refineMonolineDiff converter orig dest = inner
+    where inner [] = []
+          inner [a] = [a]
+          inner ( DiffCommand DiffDeletion oi1 di1 s1
+                : DiffCommand DiffAddition _oi2 di2 s2
+                : xs)
+                | s1 == 1 && s2 == 1 && di1 == di2 =
+                    DiffLineReplace oi1 di2 subDiff : inner xs
+                      where subDiff = computeDiff (converter $ orig !!! oi1)
+                                                  (converter $ dest !!! di2)
+
+          inner (x:xs) = x : inner xs
+
+toFullCommand :: RawDiffCommand -> DiffCommand
+toFullCommand (DiffDel oi di s) = DiffCommand DiffDeletion oi di s
+toFullCommand (DiffAdd oi di s) = DiffCommand DiffAddition oi di s
+
+addContextInformation :: Int -> Int -> [RawDiffCommand] -> [DiffCommand]
+addContextInformation 0           _        = map toFullCommand
+addContextInformation contextSize origSize = inner False
   where maxGap = 2 * contextSize + 1
 
         inner _  [] = []
-        inner True [a@(DiffCommand DiffAddition oi di s)]
-            | oi + contextSize > origSize = [a]
+        inner True [a@(DiffAdd oi di s)]
+            | origSize - oi <= 0 = [toFullCommand a]
             | otherwise =
-                [a, DiffCommand DiffNeutral oi (di + s) endSize]
-                    where endSize = min (destSize - oi) contextSize
+                [toFullCommand a, DiffCommand DiffNeutral oi (di + s) endSize]
+                    where endSize = min (origSize - oi) contextSize
 
-        inner True [a@(DiffCommand DiffDeletion oi di s)]
-            | di + s <= origSize = [a]
+        inner True [a@(DiffDel oi di s)]
+            | origSize - (oi + s) <= 0 = [toFullCommand a]
             | otherwise =
-                [a, DiffCommand DiffNeutral (oi + s) (di + s) endSize]
-                    where endSize = min (endSize - oi - s) contextSize
+                [toFullCommand a, DiffCommand DiffNeutral (oi + s) di endSize]
+                    where endSize = min (origSize - oi - s) contextSize
 
-        inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
-                    b@(DiffCommand DiffAddition _oi2 di2 _s2) : xs)
-                | gapSize == 0 = a : inner True (b:xs)
+        inner True (a@(DiffAdd oi1 di1 s1) :
+                    b@(DiffAdd _oi2 di2 _s2) : xs)
+                | gapSize == 0 = toFullCommand a : inner True (b:xs)
                 | 0 < gapSize && gapSize <= maxGap =
-                    a : DiffCommand DiffNeutral oi1 end1 gapSize : inner True (b:xs)
+                    toFullCommand a : DiffCommand DiffNeutral oi1 end1 gapSize : inner True (b:xs)
                      where end1 = di1 + s1
                            gapSize = max 0 $ di2 - end1
 
-        inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
-                    b@(DiffCommand DiffDeletion oi2 _di2 _s2) : xs)
-                | gapSize == 0 = a : inner True (b:xs)
+        inner True (a@(DiffDel oi1 di1 s1) :
+                    b@(DiffDel oi2 _di2 _s2) : xs)
+                | gapSize == 0 = toFullCommand a : inner True (b:xs)
                 | 0 < gapSize && gapSize <= maxGap =
-                    a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
+                    toFullCommand a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
                      where end1 = oi1 + s1
                            gapSize = oi2 - end1
 
-        inner True (a@(DiffCommand DiffAddition oi1 di1 s1) :
-                    b@(DiffCommand DiffDeletion _oi2 di2 _s2) : xs)
-                | gapSize == 0 = a : inner True (b:xs)
+        inner True (a@(DiffAdd oi1 di1 s1) :
+                    b@(DiffDel _oi2 di2 _s2) : xs)
+                | gapSize == 0 = toFullCommand a : inner True (b:xs)
                 | 0 < gapSize && gapSize <= maxGap =
-                    a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
+                    toFullCommand a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
                      where end = di1 + s1
                            gapSize = di2 - oi1
 
-        inner True (a@(DiffCommand DiffDeletion oi1 di1 s1) :
-                    b@(DiffCommand DiffAddition oi2 _di2 _s2) : xs)
-                | gapSize == 0 = a : inner True (b:xs)
+        inner True (a@(DiffDel oi1 di1 s1) :
+                    b@(DiffAdd oi2 _di2 _s2) : xs)
+                | gapSize == 0 = toFullCommand a : inner True (b:xs)
                 | 0 < gapSize && gapSize <= maxGap =
-                    a : DiffCommand DiffNeutral end (di1 + s1) gapSize : inner True (b:xs)
+                    toFullCommand a : DiffCommand DiffNeutral end (di1 + s1) gapSize : inner True (b:xs)
                      where end = oi1 + s1
                            gapSize = oi2 - end
 
-        inner False lst@(DiffCommand DiffAddition oi di _s:_) =
+        inner False lst@(DiffAdd oi di _s:_) =
             DiffCommand DiffNeutral beg dbeg contextSize
                 : inner True lst
                 where beg = max 0 $ oi - contextSize
                       dbeg = max 0 $ di - contextSize
 
-        inner False lst@(DiffCommand DiffDeletion oi di _s:_) =
+        inner False lst@(DiffDel oi di _s:_) =
             DiffCommand DiffNeutral beg dbeg contextSize
                 : inner True lst
                 where beg = max 0 $ oi - contextSize
                       dbeg = max 0 $ di - contextSize
 
-        inner contextOutputed (a@(DiffCommand DiffNeutral _ _ _):xs) =
-            a : inner contextOutputed xs
+        inner True (x@(DiffAdd oi di s):xs) =
+            toFullCommand x : DiffCommand DiffNeutral oi (di + s) contextSize
+                            : inner False xs
 
-        inner True (x@(DiffCommand DiffAddition oi di s):xs) =
-            x : DiffCommand DiffNeutral oi (di + s) contextSize : inner False xs
-
-        inner True (x@(DiffCommand DiffDeletion oi di s):xs) =
-            x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize : inner False xs
+        inner True (x@(DiffDel oi di s):xs) =
+            toFullCommand x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize
+                            : inner False xs
 
 
 -- | Compute the diff and extract the modification lines from the original text
@@ -160,19 +196,23 @@ computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
 computeTextScript contextSize orig dest = map extract $ addNeutral diffs
     where origArray = V.fromList $ T.lines orig
           destArray = V.fromList $ T.lines dest
-          diffs = computeDiff origArray destArray
+          diffs = computeDiffRaw origArray destArray
 
-          addNeutral =
-              addContextInformation contextSize (V.length origArray) (V.length destArray)
+          addNeutral = addContextInformation contextSize (V.length origArray)
 
           extract c@(DiffCommand DiffAddition _oi  di s) = (c, V.slice di s destArray)
           extract c@(DiffCommand DiffDeletion  oi _di s) = (c, V.slice oi s origArray)
           extract c@(DiffCommand DiffNeutral   oi _di s) = (c, V.slice oi s origArray)
+          extract c@(DiffLineReplace oi di _)            =
+              (c, V.fromList [origArray !!! oi, destArray !!! di])
 
 -- | Compute the script to pass from one vector to another using the
 -- Longuest common substring algorithm (implemented in the diff command)
 computeDiff :: (Eq a) => V.Vector a -> V.Vector a -> [DiffCommand]
-computeDiff orig dest = compactCommands $ runST $ do
+computeDiff orig dest = toFullCommand <$> computeDiffRaw orig dest
+
+computeDiffRaw :: (Eq a) => V.Vector a -> V.Vector a -> [RawDiffCommand]
+computeDiffRaw orig dest = compactCommands $ runST $ do
     let oSize = V.length orig
         dSize = V.length dest
 
@@ -323,15 +363,13 @@ backwardAvancement (DiffContext { origData = oData, destData = dData })
 
 -- | Main recursive function, apply a divide and conquer strategy to find
 -- diffs
-lcs :: (Eq a) => DiffContext s a -> Range -> Range -> ST s [DiffCommand]
+lcs :: (Eq a) => DiffContext s a -> Range -> Range -> ST s [RawDiffCommand]
 lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) =
     let (oBeg, dBeg) = forwardAvancement ctxt origRange destRange
         (oEnd, dEnd) = backwardAvancement ctxt (oBeg, origEnd) (dBeg, destEnd)
     in case (oBeg == oEnd, dBeg == dEnd) of
-            ( True,     _) ->
-                return [DiffCommand DiffAddition oBeg dBeg (dEnd - dBeg)]
-            (_    ,  True) ->
-                return [DiffCommand DiffDeletion oBeg dBeg (oEnd - oBeg)]
+            ( True,     _) -> return [DiffAdd oBeg dBeg (dEnd - dBeg)]
+            (_    ,  True) -> return [DiffDel oBeg dBeg (oEnd - oBeg)]
             (False, False) -> do
                 (subBeg, subEnd) <- findMiddleSnake ctxt oBeg oEnd dBeg dEnd
                 mappend <$> lcs ctxt (oBeg, subBeg) (dBeg, subEnd)
