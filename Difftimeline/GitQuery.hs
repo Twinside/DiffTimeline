@@ -65,6 +65,7 @@ data CommitTreeDiff = AddElement T.Text Ref
                     | NeutralElement T.Text Ref
                     | TreeElement T.Text Ref [CommitTreeDiff]
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
+                    | ModifyBinaryElement T.Text Ref
                     deriving (Eq, Show)
 
 flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
@@ -74,6 +75,7 @@ flattenTreeDiff = inner mempty
           inner n (DelElement t r) = [DelElement (n <//> t) r]
           inner n (NeutralElement t r) = [NeutralElement (n <//> t) r]
           inner n (ModifyElement t r diff) = [ModifyElement (n <//> t) r diff]
+          inner n (ModifyBinaryElement t r) = [ModifyBinaryElement (n <//> t) r]
           inner n (TreeElement t _ sub) = concatMap (inner $ n <//> t) sub
 
 filterCommitTreeDiff :: (CommitTreeDiff -> Bool) -> CommitTreeDiff
@@ -110,10 +112,19 @@ instance ToJSON CommitTreeDiff where
                , "name" .= name
                , "hash" .= toHexString r]
 
-    toJSON (ModifyElement name r diffs) =
+    toJSON (ModifyBinaryElement name r) =
         object $ [ "kind" .= ("modification" :: T.Text)
                  , "name" .= name
-                 , "hash" .= toHexString r] ++ diffElement
+                 , "hash" .= toHexString r
+                 , "binary" .= True
+                 ]
+
+    toJSON (ModifyElement name r diffs) =
+        object $ [ "kind"   .= ("modification" :: T.Text)
+                 , "name"   .= name
+                 , "hash"   .= toHexString r
+                 , "binary" .= False
+                 ] ++ diffElement
           where diffElement | null diffs = []
                             | otherwise = ["diff" .= map adder diffs]
                 adder (d, content) = object $ diffToJson d ++ ["data" .= content]
@@ -160,6 +171,11 @@ instance ToJSON CommitPath where
              , "timestamp" .= pathTimestamp cp
              , "timezone"  .= pathTimezone cp
              ]
+
+-- | Try to detect binary element given a blob
+detectBinary :: L.ByteString -> Bool
+detectBinary = L.any (== 0) . L.take binaryDetectionSize
+    where binaryDetectionSize = 8 * 1024
 
 
 -- | Want same behaviour between windows & Unix
@@ -285,12 +301,16 @@ diffCommit repository contextSize deep ref = runErrorT $ do
             where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
                   sortedRight = sortBy (\(_,a,_) (_,b,_) -> compare a b) right
         inner name (Blob c1) _r1 (Blob c2) r2
+            | isBinary  = return [ModifyBinaryElement (T.pack name) r2]
             | not deep  = return [ModifyElement (T.pack name) r2 []]
             | otherwise = return
                 [ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight]
                     where strictify = B.concat . L.toChunks
                           txtLeft = decodeUtf8 $ strictify c1
                           txtRight = decodeUtf8 $ strictify c2
+
+                          isBinary = detectBinary c2
+
         inner _ _ _ _ _ = return []
 
         maySubTree f name r = do
@@ -465,6 +485,5 @@ basePage _logger repository path = runErrorT $ do
         parentCommitAuthor = decodeUtf8 $ authorName author,
         parentCommitTimestamp = authorTimestamp author,
         parentCommmitTimezone = authorTimezone author
-
     }
 
