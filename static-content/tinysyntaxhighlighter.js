@@ -219,9 +219,11 @@ var TinySyntaxHighlighter = (function () {
                 if (this.activeStack.length > 1)
                     this.activeStack.pop();
 
-                var newNode = line_hi(current_region.kind, line, currentIndex, 
-                                      line.slice(currentIndex,
-                                                 currentIndex + consumed_chars));
+                var to_add = textAccumulator;
+                textAccumulator = '';
+                var newNode = line_hi(current_region.kind,
+                                      to_add + line.slice(currentIndex,
+                                                          currentIndex + consumed_chars));
                 addNode(newNode);
                 currentIndex += consumed_chars;
                 continue;
