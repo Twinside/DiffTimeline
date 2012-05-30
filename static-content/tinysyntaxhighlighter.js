@@ -67,17 +67,17 @@ var PositionnalHighlighter = function() {
 
     var split_produce = function(producer, str) {
         var size = str.length;
-        var split = index_splitter(idx, size);
+        var split = index_splitter(previousIndex, size);
         var curr_idx = previousIndex;
 
         while (split > 0) {
-            producer('sub', str.splice(curr_idx - previousIndex, split - previousIndex));
+            producer('sub', str.slice(curr_idx - previousIndex, split - previousIndex));
             curr_idx = split;
             split = index_splitter(idx, size);
         }
 
-        if (curr_idx < idx + size)
-            producer('', str.splice(curr_idx - previousIndex, size));
+        if (curr_idx < previousIndex + size)
+            producer('', str.slice(curr_idx - previousIndex, size));
 
         previousIndex += str.length;
     };
@@ -119,6 +119,14 @@ var TinySyntaxHighlighter = (function () {
         return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
     }
 
+    var context_free_highlight = function(kind, txt) {
+        var span = document.createElement('span');
+        var txtNode = document.createTextNode(txt);
+        span.setAttribute('class', kind);
+        span.appendChild(txtNode);
+        return span
+    }
+
     var highlight = function(kind, txt) {
         var ret = [];
         pos_highlight.split_parts(function(k, sub_str) {
@@ -149,6 +157,8 @@ var TinySyntaxHighlighter = (function () {
         var ret = [];
         var textAccumulator = "";
 
+        pos_highlight.reset();
+
         var globNode = function(kind, tok) {
             var span = document.createElement('span');
             var maxi = ret.length;
@@ -174,12 +184,14 @@ var TinySyntaxHighlighter = (function () {
                     sub_span.appendChild(document.createTextNode(sub_str));
                     rep.push(sub_span);
                 }
-            });
+            }, textAccumulator);
+
+            textAccumulator = '';
         };
 
         var line_hi = function(kind, txt) {
             flushText();
-            highlight(kind, txt);
+            return highlight(kind, txt);
         };
 
         var addNode = function(nodes) {
@@ -266,14 +278,16 @@ var TinySyntaxHighlighter = (function () {
         // end of line, we must close all the
         // active tags (have to be reoppened a
         // the beginning
-        for ( var i = this.activeStack.length - 1; i > 0; i-- )
-            { globNode(this.activeStack[i].kind); }
+        for ( var i = this.activeStack.length - 1; i > 0; i-- ) {
+            globNode(this.activeStack[i].kind);
+        }
 
         ret.unshift(this.compute_line_number());
         return ret;
     };
 
     var basic_highlighter = function(line) {
+        pos_highlight.reset();
         return [this.compute_line_number(), document.createTextNode(line)];
     }
 
@@ -297,7 +311,7 @@ var TinySyntaxHighlighter = (function () {
             var ret = '';
             if (this.with_line_number) {
               this.current_line = this.current_line + 1;
-              return highlight('syntax_line_number', this.current_line - 1);
+              return context_free_highlight('syntax_line_number', this.current_line - 1);
             }
             return undefined;
           };

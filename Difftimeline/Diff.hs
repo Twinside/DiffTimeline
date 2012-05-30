@@ -46,12 +46,17 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
-                 | DiffLineReplace
+                 | DiffRefined !DiffAction
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
-                               ![[DiffCommand]]           -- ^ What have between the two lines
+                               {-# UNPACK #-}!Int         -- ^ Size of the modification
+                               ![[DiffCommand]]           -- ^ Refined diff
                  deriving (Eq, Show)
 
+wayText :: DiffAction -> T.Text
+wayText DiffAddition = "+"
+wayText DiffDeletion = "-"
+wayText DiffNeutral  = "="
 
 diffToJson :: DiffCommand -> [(T.Text, Value)]
 diffToJson (DiffCommand way bego begdest s) =
@@ -59,13 +64,11 @@ diffToJson (DiffCommand way bego begdest s) =
          , "orig_idx" .= bego
          , "dest_idx" .= begdest
          , "size"     .= s]
-    where wayText DiffAddition = "+" :: T.Text
-          wayText DiffDeletion = "-"
-          wayText DiffNeutral  = "="
-diffToJson (DiffLineReplace oi di lst) =
-         [ "way"      .= ("-+" :: T.Text)
+diffToJson (DiffRefined way oi di s lst) =
+         [ "way"      .= wayText way
          , "orig_idx" .= oi
          , "dest_idx" .= di
+         , "size"     .= s
          , "sub"      .= map (map diffToJson) lst
          ]
 
@@ -107,14 +110,20 @@ refineMonolineDiff converter orig dest = inner
     where inner [] = []
           inner [a] = [a]
           inner ( DiffCommand DiffDeletion oi1 di1 s1
-                : DiffCommand DiffAddition _oi2 di2 s2
-                : xs)
+                : DiffCommand DiffAddition oi2 di2 s2 : xs)
                 | s1 == s2 && di1 == di2 =
-                    DiffLineReplace oi1 di2 subDiff : inner xs
+                    DiffRefined DiffDeletion oi1 di1 s1 dels : 
+                    DiffRefined DiffAddition oi2 di2 s2 adds : inner xs
                       where origs = V.map converter $ V.slice oi1 s1 orig
                             dests = V.map converter $ V.slice di2 s2 dest
+
                             subDiff = [computeDiff o d
                                             | (o,d) <- zip (V.toList origs) (V.toList dests)]
+
+                            dels = [[a | a@(DiffCommand DiffDeletion _ _ _) <- line]
+                                            | line <- subDiff]
+                            adds = [[a | a@(DiffCommand DiffAddition _ _ _) <- line]
+                                            | line <- subDiff]
 
           inner (x:xs) = x : inner xs
 
@@ -195,18 +204,25 @@ addContextInformation contextSize origSize = inner False
 
 -- | Compute the diff and extract the modification lines from the original text
 computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
-computeTextScript contextSize orig dest = map extract $ addNeutral diffs
+computeTextScript contextSize orig dest = map extract
+                                        . textRefiner origArray destArray
+                                        $ addNeutral diffs
     where origArray = V.fromList $ T.lines orig
           destArray = V.fromList $ T.lines dest
           diffs = computeDiffRaw origArray destArray
 
           addNeutral = addContextInformation contextSize (V.length origArray)
 
-          extract c@(DiffCommand DiffAddition _oi  di s) = (c, V.slice di s destArray)
-          extract c@(DiffCommand DiffDeletion  oi _di s) = (c, V.slice oi s origArray)
-          extract c@(DiffCommand DiffNeutral   oi _di s) = (c, V.slice oi s origArray)
-          extract c@(DiffLineReplace oi di _)            =
-              (c, V.fromList [origArray !!! oi, destArray !!! di])
+          extract c@(DiffCommand DiffAddition _oi  di s)   = (c, V.slice di s destArray)
+          extract c@(DiffRefined DiffAddition _oi  di s _) = (c, V.slice di s destArray)
+          extract c@(DiffCommand DiffDeletion  oi _di s)   = (c, V.slice oi s origArray)
+          extract c@(DiffRefined DiffDeletion  oi _di s _) = (c, V.slice oi s origArray)
+          extract c@(DiffCommand DiffNeutral   oi _di s)   = (c, V.slice oi s origArray)
+          extract c@(DiffRefined DiffNeutral   oi _di s _) = (c, V.slice oi s origArray)
+
+textRefiner :: V.Vector T.Text -> V.Vector T.Text -> [DiffCommand]
+            -> [DiffCommand]
+textRefiner = refineMonolineDiff (V.fromList . T.unpack)
 
 -- | Compute the script to pass from one vector to another using the
 -- Longuest common substring algorithm (implemented in the diff command)
