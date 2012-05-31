@@ -1,25 +1,46 @@
 
-/** @constructor */
+/** @typedef ({way: string, beg:number, end:number}) */
+var subrange;
+
+/** @typedef ({positional_setter:function(Array.<subrange>),
+ *                         reset:function(),
+ *                   split_parts:function(function(string, string), string)}) */
+var SubHighlighter;
+
+/**
+ * @type {function(new:SubHighlighter)}
+ */
 var PositionnalHighlighter = function() {
     "use strict";
 
     /* Array storing information about diff at the line
      * level (inner subdiff), Should be used by all node
      * creating function to interleave proper syntax
-     * highlighting and inner diff. */
+     * highlighting and inner diff.
+     * @type {Array.<subrange>}
+     */
     var positionalHighlight = [];
+
+    /** @type {number} */
     var currentPositionIndex = -1;
+
+    /** @type {number} */
     var currentRealBeginning = -1;
+
+    /** @type {number} */
     var huge_index = 999999;
+
+    /** @type {number} */
     var previousIndex = 0;
 
+    /** @type {function()} */
     var inner_reset = function() {
         currentPositionIndex = 0;
         previousIndex = 0;
 
         if (positionalHighlight.length > 0) {
             currentPositionIndex = 0;
-            curr_pos = positionalHighlight[currentPositionIndex];
+            var curr_pos = positionalHighlight[currentPositionIndex];
             currentRealBeginning = curr_pos.beg;
         }
         else {
@@ -29,7 +50,9 @@ var PositionnalHighlighter = function() {
     }
 
     /* Update the state of the sub line highlighter,
-     * update indices and detect end of boundary. */
+     * update indices and detect end of boundary.
+     * @type {function(number)}
+     */
     var use_to_position = function( pos ) {
         var curr_pos = positionalHighlight[currentPositionIndex];
         if (pos < curr_pos.end) {
@@ -49,7 +72,9 @@ var PositionnalHighlighter = function() {
         }
     };
 
-    /* @return value <= 0 if no split is needed,
+    /**
+     * @type {function(number,number) : number}
+     * return value <= 0 if no split is needed,
      *         value > n otherwise.
      */
     var index_splitter = function(index, size) {
@@ -65,6 +90,9 @@ var PositionnalHighlighter = function() {
         return splitIndex;
     };
 
+    /**
+     * @type {function(function(string, string), string)}
+     */
     var split_produce = function(producer, str) {
         var size = str.length;
         var split = index_splitter(previousIndex, size);
@@ -73,7 +101,7 @@ var PositionnalHighlighter = function() {
         while (split > 0) {
             producer('sub', str.slice(curr_idx - previousIndex, split - previousIndex));
             curr_idx = split;
-            split = index_splitter(idx, size);
+            split = index_splitter(curr_idx, size);
         }
 
         if (curr_idx < previousIndex + size)
@@ -82,19 +110,39 @@ var PositionnalHighlighter = function() {
         previousIndex += str.length;
     };
 
-    return {
-        positional_setter: function(lst) {
-            positionalHighlight  = lst;
-        },
+    /** @type {function(Array.<subrange>)} */
+    var setter = function(lst) {
+        positionalHighlight  = lst;
+    }
 
+    return {
+        positional_setter: setter,
         reset: inner_reset,
         split_parts: split_produce
     };
 };
 
+/** @typedef ({kind: string, recognizer: function(string, number) : string}) */
+var SyntaxParser;
+
+/** @typedef ({  colorLine: function(string) : Array.<Element>,
+ *        with_line_number: boolean,
+ *    setPositionHighlight: function(Array.<subrange>),
+ *     compute_line_number: function(),
+ * set_current_line_number: function(number)}) */
+var LineHighlighter;
+
+/** @typedef (function (string, number) : number) */
+var RegionParser;
+
+/** @typedef ({regions: Array.<LangDef>}) */
+var LangDef;
+
+/** @module */
 var TinySyntaxHighlighter = (function () {
     "use strict";
 
+    /** @type {SubHighlighter} */
     var pos_highlight = new PositionnalHighlighter();
 
     function isTokenPrefixOf( pref, line, base ) {
@@ -159,11 +207,14 @@ var TinySyntaxHighlighter = (function () {
 
         pos_highlight.reset();
 
+        /** @type {function(string, string)} */
         var globNode = function(kind, tok) {
+            /** @type {Element} */
             var span = document.createElement('span');
             var maxi = ret.length;
 
-            addText(tok);
+            if (tok !== '') addText(tok);
+
             span.setAttribute('class', kind);
 
             for ( var i = 0; i < maxi; i++ )
@@ -182,7 +233,7 @@ var TinySyntaxHighlighter = (function () {
                     var sub_span = document.createElement('span');
                     sub_span.setAttribute('class', k);
                     sub_span.appendChild(document.createTextNode(sub_str));
-                    rep.push(sub_span);
+                    ret.push(sub_span);
                 }
             }, textAccumulator);
 
@@ -232,7 +283,7 @@ var TinySyntaxHighlighter = (function () {
             for ( var i in current_region.regions )
             {
                 var r = current_region.regions[i];
-                var consumed_chars = r.begin(line, currentIndex);
+                consumed_chars = r.begin(line, currentIndex);
 
                 if (consumed_chars > 0)
                 {
@@ -281,7 +332,7 @@ var TinySyntaxHighlighter = (function () {
         // active tags (have to be reoppened a
         // the beginning
         for ( var i = this.activeStack.length - 1; i > 0; i-- ) {
-            globNode(this.activeStack[i].kind);
+            globNode(this.activeStack[i].kind, '');
         }
 
         ret.unshift(this.compute_line_number());
@@ -294,7 +345,7 @@ var TinySyntaxHighlighter = (function () {
     }
 
     /** Create a highlighter which just pass-through the line
-     * @constructor
+     * @type {function(new:LineHighlighter, boolean)}
      */
     var create_empty_highlighter = function(with_line_number) {
         this.colorLine = basic_highlighter;
@@ -327,7 +378,7 @@ var TinySyntaxHighlighter = (function () {
     };
 
     /** Create a highlighter for a give language
-     * @constructor
+     * @type {function(new:LineHighlighter, boolean, LangDef)}
      */
     var create_highlighter = function( with_line_number, highlight_def ) {
         create_empty_highlighter.call( this, with_line_number );
@@ -344,6 +395,7 @@ var TinySyntaxHighlighter = (function () {
         return { kind: k, recognizer: p.recognizer };
     };
 
+    /** @type {Object.<string, SyntaxParser>} */
     var generic_parsers = {
         integer:
             { kind: 'syntax_number'
@@ -449,7 +501,10 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     }
 
-    var null_region = function () { return 0; }
+    /** @type {RegionParser} */
+    var null_region = function (line, base) { return 0; }
+
+    /** @type {function(string) : RegionParser} */
     var tok_region = function(tok) {
         return function(line, base) {
             if ( isTokenPrefixOf(tok, line, base) )
@@ -459,6 +514,7 @@ var TinySyntaxHighlighter = (function () {
         }
     };
 
+    /** @type {function(string, regex) : SyntaxParser} */
     var rexp_parser = function( k, rexp ) {
         return {
             kind: k,
@@ -691,7 +747,7 @@ var TinySyntaxHighlighter = (function () {
             )
         };
 
-        $.extend(true, cppOnlyDef, cDef);
+        // $.extend(true, cppOnlyDef, cDef);
 
         return cppOnlyDef;
     })();
