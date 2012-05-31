@@ -11,8 +11,8 @@ all:
 # on windows, instead, prepare a tiny tar gz and install
 # it manually
 prepare:
-	cd hit; make pack
-	cabal-dev add-source hit/hit-0.3.tar.gz
+	cd hit-simple; make pack
+	cabal-dev add-source hit-simple/hit-simple-0.3.tar.gz
 	cabal-dev install
 
 place:
