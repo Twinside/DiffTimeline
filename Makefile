@@ -19,4 +19,4 @@ place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/
 
 check:
-	java -jar compiler.jar --warning_level VERBOSE --js static-content/tinysyntaxhighlighter.js
+	java -jar compiler.jar --warning_level VERBOSE --externs jquery-1.6.js --js static-content/tinysyntaxhighlighter.js

@@ -1,3 +1,6 @@
+// meh, there is no real type for that
+/** @typedef (Object) */
+var regexp;
 
 /** @typedef ({way: string, beg:number, end:number}) */
 var subrange;
@@ -125,18 +128,20 @@ var PositionnalHighlighter = function() {
 /** @typedef ({kind: string, recognizer: function(string, number) : string}) */
 var SyntaxParser;
 
+
+/** @typedef ({regions: Array.<LangDef>}) */
+var LangDef;
+
 /** @typedef ({  colorLine: function(string) : Array.<Element>,
  *        with_line_number: boolean,
  *    setPositionHighlight: function(Array.<subrange>),
  *     compute_line_number: function(),
- * set_current_line_number: function(number)}) */
+ * set_current_line_number: function(number),
+ *                    lang: LangDef}) */
 var LineHighlighter;
 
 /** @typedef (function (string, number) : number) */
 var RegionParser;
-
-/** @typedef ({regions: Array.<LangDef>}) */
-var LangDef;
 
 /** @module */
 var TinySyntaxHighlighter = (function () {
@@ -198,6 +203,7 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     }
 
+    /** @type {function(this:LineHighlighter, string) : Array.<Element>} */
     var colorLine = function ( line ) {
         var maxIndex = line.length;
         var currentIndex = 0;
@@ -304,9 +310,9 @@ var TinySyntaxHighlighter = (function () {
 
                 if (parserRet !== '')
                 {
-                    if (this.def.keywords.hasOwnProperty(parserRet))
+                    if (this.lang.keywords.hasOwnProperty(parserRet))
                     {
-                        var found_class = this.def.keywords[parserRet]
+                        var found_class = this.lang.keywords[parserRet]
                         addNode( line_hi(found_class, parserRet) );
                     }
                     else if (parser.kind !== '')
@@ -387,7 +393,9 @@ var TinySyntaxHighlighter = (function () {
         };
         this.activeStack = [highlight_def];
         this.colorLine = colorLine;
-        this.def = highlight_def;
+
+        /** @type {LangDef} */
+        this.lang = highlight_def;
         return this;
     };
 
@@ -514,7 +522,7 @@ var TinySyntaxHighlighter = (function () {
         }
     };
 
-    /** @type {function(string, regex) : SyntaxParser} */
+    /** @type {function(string, regexp) : SyntaxParser} */
     var rexp_parser = function( k, rexp ) {
         return {
             kind: k,
@@ -530,7 +538,9 @@ var TinySyntaxHighlighter = (function () {
         };
     }
 
-    /** @const */
+    /** @const
+     * @type {LangDef}
+     */
     var rubyDef = {
         begin:null_region, end:null_region,
 
@@ -555,6 +565,7 @@ var TinySyntaxHighlighter = (function () {
         regions:[]
     };
 
+    /** @type {LangDef} */
     var xmlDef = {
         begin:null_region, end:null_region,
         keywords: [],
@@ -599,6 +610,7 @@ var TinySyntaxHighlighter = (function () {
                  ]
     };
 
+    /** @type {LangDef} */
     var pythonDef = {
         begin:null_region, end:null_region,
 
@@ -629,6 +641,7 @@ var TinySyntaxHighlighter = (function () {
         return region;
     }
 
+    /** @type {LangDef} */
     var haskellDef = {
         begin:null_region, end:null_region,
 
@@ -655,6 +668,7 @@ var TinySyntaxHighlighter = (function () {
             ])
     };
 
+    /** @type {LangDef} */
     var javascriptDef = {
         begin:null_region, end:null_region,
 
@@ -687,7 +701,7 @@ var TinySyntaxHighlighter = (function () {
             ])
     };
 
-    /** @const */
+    /** @type {LangDef} */
     var cDef = {
         begin:null_region, end:null_region,
 
@@ -731,6 +745,7 @@ var TinySyntaxHighlighter = (function () {
             ])
     };
 
+    /** @const */
     var cppDef = (function() {
         var cppOnlyDef = {
             keywords:expand_keyword_groups(
@@ -747,7 +762,7 @@ var TinySyntaxHighlighter = (function () {
             )
         };
 
-        // $.extend(true, cppOnlyDef, cDef);
+        $.extend(true, cppOnlyDef, cDef);
 
         return cppOnlyDef;
     })();
