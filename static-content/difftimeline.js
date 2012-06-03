@@ -15,7 +15,9 @@ var breadcrumb = (function() {
                 count = current_index + 1;
             }
 
-            $('#breadcrumb').append(ich.breadcrumbelem({name:name, id:count}));
+            /** @type {Elem} */
+            var elem = ich.breadcrumbelem({name:name, id:count});
+            $('#breadcrumb').append(elem);
             current_index = count++;
         },
 
