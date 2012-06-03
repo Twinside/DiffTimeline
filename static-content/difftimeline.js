@@ -302,13 +302,22 @@ var DiffManipulator = (function () {
      */
     var calculate_fold_set = function (removings, addings) {
         var ranges = [];
-        var lefts = _.toArray(_.map(removings, function (c) { 
-            return { way: '-', beg: c.orig_idx, end: c.orig_idx + c.size}
-        }));
+        var lefts = [];
+        var rights = [];
+        var tempElem;
 
-        var rights = _.toArray( _.map(addings, function (c) { 
-                return { way: '+', beg: c.dest_idx, end: c.dest_idx + c.size}
-        }));
+        for ( var i = 0; i < removings.length; i++ ) {
+            tempElem = removings[i];
+            lefts.push({ way: '-', beg: tempElem.orig_idx,
+                        end: tempElem.orig_idx + tempElem.size});
+            
+        }
+
+        for ( i = 0; i < addings.length; i++ ) {
+            tempElem = addings[i];
+            rights.push({ way: '+', beg: tempElem.dest_idx,
+                          end: tempElem.dest_idx + tempElem.size});
+        }
 
         var combiner = function(a,b) {
             if (a == '+' && b == '-')
