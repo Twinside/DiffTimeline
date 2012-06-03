@@ -23,7 +23,7 @@ import Control.Monad.ST( ST, runST )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
-import Data.Aeson( Value, (.=) )
+import Data.Aeson( ToJSON(..), Value, (.=), object )
 
 type Index = Int
 
@@ -32,6 +32,11 @@ data DiffAction = DiffAddition  -- ^ Data which should be inserted
                 | DiffDeletion  -- ^ Data which should be removed
                 | DiffNeutral   -- ^ Only used to render context
                 deriving (Eq, Show)
+
+-- | Basic modification on a line, used for refined highlighting.
+data SubModification = SubModification {-# UNPACK #-}!Int  -- ^ Begin
+                                       {-# UNPACK #-}!Int  -- ^ End
+        deriving (Eq, Show)
 
 data RawDiffCommand = DiffAdd {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                               {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
@@ -50,7 +55,7 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
-                               ![[DiffCommand]]           -- ^ Refined diff
+                               ![[SubModification]]       -- ^ Refined diff
                  deriving (Eq, Show)
 
 wayText :: DiffAction -> T.Text
@@ -58,18 +63,28 @@ wayText DiffAddition = "+"
 wayText DiffDeletion = "-"
 wayText DiffNeutral  = "="
 
+instance ToJSON SubModification where
+  toJSON (SubModification beg end) =
+        object ["beg" .= beg, "end" .= end]
+
+
 diffToJson :: DiffCommand -> [(T.Text, Value)]
 diffToJson (DiffCommand way bego begdest s) =
          [ "way"      .= wayText way
          , "orig_idx" .= bego
          , "dest_idx" .= begdest
-         , "size"     .= s]
+         , "size"     .= s
+         ]
+
+diffToJson (DiffRefined way oi di s [[]]) =
+    diffToJson (DiffCommand way oi di s)
+
 diffToJson (DiffRefined way oi di s lst) =
          [ "way"      .= wayText way
          , "orig_idx" .= oi
          , "dest_idx" .= di
          , "size"     .= s
-         , "sub"      .= map (map diffToJson) lst
+         , "sub"      .= lst
          ]
 
 -- | Merge diff commands which are contiguous of the same direction.
@@ -120,10 +135,13 @@ refineMonolineDiff converter orig dest = inner
                             subDiff = [computeDiff o d
                                             | (o,d) <- zip (V.toList origs) (V.toList dests)]
 
-                            dels = [[a | a@(DiffCommand DiffDeletion _ _ _) <- line]
-                                            | line <- subDiff]
-                            adds = [[a | a@(DiffCommand DiffAddition _ _ _) <- line]
-                                            | line <- subDiff]
+                            dels = [ [SubModification oi $ oi + s
+                                                | DiffCommand DiffDeletion oi _ s <- line]
+                                            | line <- subDiff ]
+
+                            adds = [ [SubModification di $ di + s
+                                                | DiffCommand DiffAddition _ di s <- line]
+                                            | line <- subDiff ]
 
           inner (x:xs) = x : inner xs
 

@@ -2,7 +2,7 @@
 /** @typedef (Object) */
 var regexp;
 
-/** @typedef ({way: string, beg:number, end:number}) */
+/** @typedef ({beg:number, end:number}) */
 var subrange;
 
 /** @typedef ({positional_setter:function(Array.<subrange>),
@@ -31,6 +31,9 @@ var PositionnalHighlighter = function() {
     var currentRealBeginning = -1;
 
     /** @type {number} */
+    var currentEnd = -1;
+
+    /** @type {number} */
     var huge_index = 999999;
 
     /** @type {number} */
@@ -45,10 +48,12 @@ var PositionnalHighlighter = function() {
             currentPositionIndex = 0;
             var curr_pos = positionalHighlight[currentPositionIndex];
             currentRealBeginning = curr_pos.beg;
+            currentEnd = curr_pos.end;
         }
         else {
             currentPositionIndex = -1;
             currentRealBeginning = huge_index;
+            currentEnd = huge_index;
         }
     }
 
@@ -72,6 +77,7 @@ var PositionnalHighlighter = function() {
         else {
             curr_pos = positionalHighlight[currentPositionIndex];
             currentRealBeginning = curr_pos.beg;
+            currentEnd = curr_pos.end;
         }
     };
 
@@ -86,7 +92,7 @@ var PositionnalHighlighter = function() {
         if (index + size < currentRealBeginning)
             return 0;
 
-        var splitIndex = Math.min(index + size, currentRealBeginning + size);
+        var splitIndex = Math.min(index + size, currentEnd);
 
         use_to_position( splitIndex );
 
@@ -98,8 +104,14 @@ var PositionnalHighlighter = function() {
      */
     var split_produce = function(producer, str) {
         var size = str.length;
-        var split = index_splitter(previousIndex, size);
         var curr_idx = previousIndex;
+
+        if (curr_idx < currentRealBeginning && currentRealBeginning <= str.length) {
+            producer('', str.slice(curr_idx, currentRealBeginning));
+            curr_idx = currentRealBeginning;
+        }
+
+        var split = index_splitter(curr_idx, size);
 
         while (split > 0) {
             producer('sub', str.slice(curr_idx - previousIndex, split - previousIndex));
@@ -203,6 +215,23 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     }
 
+    var writeSubSplittedText = function( str ) {
+        var ret = [];
+
+        pos_highlight.split_parts(function( k, sub_str ) {
+            if (k === '')
+            ret.push(document.createTextNode(sub_str));
+            else {
+                var sub_span = document.createElement('span');
+                sub_span.setAttribute('class', k);
+                sub_span.appendChild(document.createTextNode(sub_str));
+                ret.push(sub_span);
+            }
+        }, str);
+
+        return ret;
+    }
+
     /** @type {function(this:LineHighlighter, string) : Array.<Element>} */
     var colorLine = function ( line ) {
         var maxIndex = line.length;
@@ -231,17 +260,10 @@ var TinySyntaxHighlighter = (function () {
 
         var flushText = function() {
             if (textAccumulator === '') return;
+            var rez = writeSubSplittedText( textAccumulator );
 
-            pos_highlight.split_parts(function( k, sub_str ) {
-                if (k === '')
-                    ret.push(document.createTextNode(sub_str));
-                else {
-                    var sub_span = document.createElement('span');
-                    sub_span.setAttribute('class', k);
-                    sub_span.appendChild(document.createTextNode(sub_str));
-                    ret.push(sub_span);
-                }
-            }, textAccumulator);
+            for (var i = 0; i < rez.length; i++)
+                ret.push(rez[i]);
 
             textAccumulator = '';
         };
@@ -347,7 +369,11 @@ var TinySyntaxHighlighter = (function () {
 
     var basic_highlighter = function(line) {
         pos_highlight.reset();
-        return [this.compute_line_number(), document.createTextNode(line)];
+
+        var ret = writeSubSplittedText( line );
+        ret.unshift(this.compute_line_number());
+
+        return ret;
     }
 
     /** Create a highlighter which just pass-through the line

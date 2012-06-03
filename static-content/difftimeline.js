@@ -492,7 +492,13 @@ var Commit = function(key, data) {
 
             for ( var i = 0; i < e.diff.length; i++ )
             {
+                var has_sub = false;
+
                 curr_diff = e.diff[i];
+                if (curr_diff.hasOwnProperty('sub')) {
+                    has_sub = true;
+                }
+
                 if (curr_diff.way == '+') {
                     diff_node = div_node("diff_addition");
                     hl.set_current_line_number(curr_diff.dest_idx + 1);
@@ -508,7 +514,15 @@ var Commit = function(key, data) {
 
                 for ( var l = 0; l < curr_diff.data.length; l++ )
                 {
+                    if (has_sub) {
+                        hl.setPositionHighlight(curr_diff.sub[l]);
+                    }
+
                     var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
+                    if (has_sub) {
+                        hl.setPositionHighlight([]);
+                    }
+
                     for ( var node = 0; node < lineNodes.length; node++ )
                         diff_node.appendChild(lineNodes[node]);
                 }
