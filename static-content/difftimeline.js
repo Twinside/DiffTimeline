@@ -714,6 +714,11 @@ var CommitRenderer = (function() {
             var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
 
             fetch_commit(prev_id, function(data) {
+                if (data['error']) {
+                    show_error( data );
+                    return;
+                }
+
                 var new_commit = new Commit(data.key, data);
 
                 var new_node = new_commit.create_dom();
