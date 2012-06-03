@@ -240,9 +240,14 @@ diffCommitTree repository contextSize deep ref = runErrorT $ do
                           txtRight = decodeUtf8 $ strictify c2
         inner _ _ _ _ _ = throwError "Wrong git object kind"
 
+        maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
+                   -> ErrorT String IO CommitTreeDiff
         maySubTree f name r = do
-            sub <- errorIO "Dip dup" $ accessObject repository r
-            batchSubTree f name r sub
+            sub <- liftIO $ accessObject repository r
+            -- | Sometimes, there is nothing to see
+            case sub of
+               Nothing -> return $ f (T.pack name) r
+               Just el  -> batchSubTree f name r el
 
         batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
                      -> ErrorT String IO CommitTreeDiff
@@ -313,9 +318,14 @@ diffCommit repository contextSize deep ref = runErrorT $ do
 
         inner _ _ _ _ _ = return []
 
+        maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
+                   -> ErrorT String IO [CommitTreeDiff]
         maySubTree f name r = do
-            sub <- errorIO "Dip dup" $ accessObject repository r
-            batchSubTree f name r sub
+            sub <- liftIO $ accessObject repository r
+            -- | Sometimes, there is nothing to see
+            case sub of
+               Nothing -> return [f (T.pack name) r]
+               Just el  -> batchSubTree f name r el
 
         batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
                      -> ErrorT String IO [CommitTreeDiff]
