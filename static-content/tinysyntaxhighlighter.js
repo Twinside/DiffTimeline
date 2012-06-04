@@ -105,22 +105,25 @@ var PositionnalHighlighter = function() {
     var split_produce = function(producer, str) {
         var size = str.length;
         var curr_idx = previousIndex;
+        var beg_distance = Math.min(size, Math.max(0, currentRealBeginning - curr_idx));
 
-        if (curr_idx < currentRealBeginning && currentRealBeginning <= str.length) {
-            producer('', str.slice(curr_idx, currentRealBeginning));
-            curr_idx = currentRealBeginning;
+        if (curr_idx < currentRealBeginning && beg_distance > 0) {
+            producer('', str.slice(0, beg_distance));
+            curr_idx += beg_distance;
+            size -= beg_distance;
         }
 
         var split = index_splitter(curr_idx, size);
 
         while (split > 0) {
             producer('sub', str.slice(curr_idx - previousIndex, split - previousIndex));
+            size -= split - curr_idx;
             curr_idx = split;
             split = index_splitter(curr_idx, size);
         }
 
-        if (curr_idx < previousIndex + size)
-            producer('', str.slice(curr_idx - previousIndex, size));
+        if (curr_idx < previousIndex + str.length)
+            producer('', str.slice(curr_idx - previousIndex, str.length));
 
         previousIndex += str.length;
     };

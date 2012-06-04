@@ -73,7 +73,7 @@ pre
     display: block;
 }
 
-.diff_deletion > .sub {
+.diff_deletion .sub {
     background-color: #FF8888;
 }
 
@@ -87,7 +87,7 @@ pre
     display: block;
 }
 
-.diff_addition > .sub {
+.diff_addition .sub {
     background-color: #88FF88;
 }
 
