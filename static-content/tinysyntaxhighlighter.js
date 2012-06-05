@@ -64,7 +64,7 @@ var PositionnalHighlighter = function() {
     var use_to_position = function( pos ) {
         var curr_pos = positionalHighlight[currentPositionIndex];
         if (pos < curr_pos.end) {
-            currentRealBeginning = pos + 1;
+            currentRealBeginning = pos;
             return;
         }
 
@@ -105,25 +105,31 @@ var PositionnalHighlighter = function() {
     var split_produce = function(producer, str) {
         var size = str.length;
         var curr_idx = previousIndex;
-        var beg_distance = Math.min(size, Math.max(0, currentRealBeginning - curr_idx));
+        var split = 1;
 
-        if (curr_idx < currentRealBeginning && beg_distance > 0) {
-            producer('', str.slice(0, beg_distance));
-            curr_idx += beg_distance;
-            size -= beg_distance;
-        }
+        while (size > 0)
+        {
+            var beg_distance = Math.min(size, Math.max(0, currentRealBeginning - curr_idx));
 
-        var split = index_splitter(curr_idx, size);
+            if (curr_idx < currentRealBeginning && beg_distance > 0) {
+                var beg = curr_idx - previousIndex;
+                producer('', str.slice(beg, beg + beg_distance));
+                curr_idx += beg_distance;
+                size -= beg_distance;
+            }
 
-        while (split > 0) {
-            producer('sub', str.slice(curr_idx - previousIndex, split - previousIndex));
-            size -= split - curr_idx;
-            curr_idx = split;
+            if (size <= 0) break;
+
             split = index_splitter(curr_idx, size);
-        }
 
-        if (curr_idx < previousIndex + str.length)
-            producer('', str.slice(curr_idx - previousIndex, str.length));
+            if (split > 0) {
+                var sub = str.slice(curr_idx - previousIndex, split - previousIndex);
+                producer('sub', sub);
+                size -= split - curr_idx;
+                curr_idx = split;
+            }
+            
+        } 
 
         previousIndex += str.length;
     };
