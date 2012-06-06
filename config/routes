@@ -15,8 +15,8 @@
 /static-content/difftimeline.css             DifftimelineCss         GET
 /static-content/difftimeline.js              DifftimelineJs          GET
 /static-content/favicon.ico                  Favicon                 GET
-/static-content/jquery-1.6.4.min.js          Jquery                  GET
 /static-content/screen.css                   Screen                  GET
+
+/static-content/jquery-1.6.4.min.js          Jquery                  GET
 /static-content/syntax-highlight.css         Syntax_highlight        GET
 /static-content/tinysyntaxhighlighter.js     Tinysyntaxhighlighter   GET
-/static-content/underscore-min.js            Underscore_min          GET

@@ -435,14 +435,24 @@ var DiffManipulator = (function () {
      * @param diffs [{way: String, ...}]
      */
     var filter_adds = function(diffs) {
-        return _.filter(diffs, function (c) { return c.way === '+'; })
+        var ret = [];
+        for (var i = 0; i < diffs.length; i++) {
+            if (diffs[i].way === '+')
+                ret.push(diffs[i]);
+        }
+        return ret;
     }
 
     /** Keep only the diff information of adding (with a '-' way property)
      * @param diffs [{way: String, ...}]
      */
     var filter_rems = function(diffs) {
-        return _.filter(diffs, function (c) { return c.way === '-'; })
+        var ret = [];
+        for (var i = 0; i < diffs.length; i++) {
+            if (diffs[i].way === '+')
+                ret.push(diffs[i]);
+        }
+        return ret;
     }
 
     return {
@@ -897,8 +907,9 @@ var FileBlob = function (filename, data) {
 
         if (path_length > maximum_path_length)
         {
-            this.path_beg = _.first(this.path, maximum_path_length / 2);
-            this.path_end = _.last(this.path, maximum_path_length / 2);
+            this.path_beg = this.path.slice(0, maximum_path_length / 2);
+            this.path_end = this.path.slice(this.path.length - maximum_path_length / 2,
+                                            this.path.length - 1);
             processed = ich.commitfile_huge_path(this);
         }
         else
