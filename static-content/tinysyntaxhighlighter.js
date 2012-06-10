@@ -10,17 +10,20 @@ var subrange;
  *                   split_parts:function(function(string, string), string)}) */
 var SubHighlighter;
 
+/** @typedef (string) */
+var classname;
+
 /**
  * @type {function(new:SubHighlighter)}
  */
 var PositionnalHighlighter = function() {
     "use strict";
 
-    /* Array storing information about diff at the line
+    /** Array storing information about diff at the line
      * level (inner subdiff), Should be used by all node
      * creating function to interleave proper syntax
      * highlighting and inner diff.
-     * @type {Array.<subrange>}
+     * @type {!Array.<subrange>}
      */
     var positionalHighlight = [];
 
@@ -46,6 +49,7 @@ var PositionnalHighlighter = function() {
 
         if (positionalHighlight.length > 0) {
             currentPositionIndex = 0;
+
             var curr_pos = positionalHighlight[currentPositionIndex];
             currentRealBeginning = curr_pos.beg;
             currentEnd = curr_pos.end;
@@ -57,12 +61,13 @@ var PositionnalHighlighter = function() {
         }
     }
 
-    /* Update the state of the sub line highlighter,
+    /** Update the state of the sub line highlighter,
      * update indices and detect end of boundary.
      * @type {function(number)}
      */
     var use_to_position = function( pos ) {
         var curr_pos = positionalHighlight[currentPositionIndex];
+
         if (pos < curr_pos.end) {
             currentRealBeginning = pos;
             return;
@@ -134,7 +139,7 @@ var PositionnalHighlighter = function() {
         previousIndex += str.length;
     };
 
-    /** @type {function(Array.<subrange>)} */
+    /** @type {function(!Array.<subrange>)} */
     var setter = function(lst) {
         positionalHighlight  = lst;
     }
@@ -171,6 +176,7 @@ var TinySyntaxHighlighter = (function () {
     /** @type {SubHighlighter} */
     var pos_highlight = new PositionnalHighlighter();
 
+    /** @type {function(string, string, number) : boolean} */
     function isTokenPrefixOf( pref, line, base ) {
         if (line.length < pref.length || pref.length === 0) return false;
 
@@ -183,16 +189,19 @@ var TinySyntaxHighlighter = (function () {
         return true;
     }
 
+    /** @type {function(string, number) : number} */
     var nextSpaceIndex = function ( line, idx ) {
         var spaceIndex = line.indexOf(' ', idx );
         var tabIndex = line.indexOf('\t', idx );
         return Math.min( spaceIndex, tabIndex );
     }
 
+    /** @type {function(string) : string} */
     var html_encodize = function(snipp) {
         return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
     }
 
+    /** @type {function(classname, string) : Element} */
     var context_free_highlight = function(kind, txt) {
         var span = document.createElement('span');
         var txtNode = document.createTextNode(txt);
@@ -201,8 +210,11 @@ var TinySyntaxHighlighter = (function () {
         return span
     }
 
+    /** @type {function(classname, string) : Array.<Element>} */
     var highlight = function(kind, txt) {
+        /** @type {Array.<Element>} */
         var ret = [];
+
         pos_highlight.split_parts(function(k, sub_str) {
             var span = document.createElement('span');
             var txtNode = document.createTextNode(sub_str);
@@ -224,7 +236,9 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     }
 
+    /** @type {function(string) : Array.<Element>} */
     var writeSubSplittedText = function( str ) {
+        /** @type {Array.<Element>} */
         var ret = [];
 
         pos_highlight.split_parts(function( k, sub_str ) {
@@ -243,11 +257,20 @@ var TinySyntaxHighlighter = (function () {
 
     /** @type {function(this:LineHighlighter, string) : Array.<Element>} */
     var colorLine = function ( line ) {
+        /** @type {number} */
         var maxIndex = line.length;
+
+        /** @type {number} */
         var currentIndex = 0;
+
+        /** @type {boolean} */
         var consumed = false;
+
+        /** @type {Array.<Element>} */
         var ret = [];
-        var textAccumulator = "";
+
+        /** @type {string} */
+        var textAccumulator = '';
 
         pos_highlight.reset();
 
@@ -267,6 +290,7 @@ var TinySyntaxHighlighter = (function () {
             ret = [span];
         };
 
+        /** @type {function()} */
         var flushText = function() {
             if (textAccumulator === '') return;
             var rez = writeSubSplittedText( textAccumulator );
@@ -277,16 +301,19 @@ var TinySyntaxHighlighter = (function () {
             textAccumulator = '';
         };
 
+        /** @type {function(classname, string)} */
         var line_hi = function(kind, txt) {
             flushText();
             return highlight(kind, txt);
         };
 
+        /** @type {function(!Array.<Element>)} */
         var addNode = function(nodes) {
             for ( var i = 0; i < nodes.length; i++ )
                 ret.push(nodes[i]);
         };
 
+        /** @param {!string} txt */
         var addText = function(txt) {
             textAccumulator += txt;
         }
@@ -376,6 +403,7 @@ var TinySyntaxHighlighter = (function () {
         return ret;
     };
 
+    /** @type {function(string) : Array.<Element>} */
     var basic_highlighter = function(line) {
         pos_highlight.reset();
 
@@ -780,7 +808,9 @@ var TinySyntaxHighlighter = (function () {
             ])
     };
 
-    /** @const */
+    /** @const
+     * @type {LangDef}
+     */
     var cppDef = (function() {
         var cppOnlyDef = {
             keywords:expand_keyword_groups(

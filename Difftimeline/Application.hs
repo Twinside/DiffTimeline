@@ -5,7 +5,7 @@ import Difftimeline.Import
 import System.Directory( getCurrentDirectory )
 import Network.Wai( Application )
 import Yesod.Default.Config
-import Yesod.Default.Handlers (getFaviconR, getRobotsR)
+import Yesod.Default.Handlers (getFaviconR)
 import Yesod.Logger (Logger, logBS, logString)
 import Network.Wai.Middleware.RequestLogger (logCallbackDev)
 

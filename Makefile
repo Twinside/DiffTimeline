@@ -21,7 +21,12 @@ place:
 check:
 	java -jar compiler.jar \
 		 --warning_level VERBOSE \
+		 --js_output_file composed.js \
+		 --jscomp_warning=checkTypes \
 		 --externs jquery-1.6.js \
-		 --js static-content/difftimeline.js \
+		 --externs icanhaz.extern.js \
+		 --summary_detail_level 3 \
 		 --js static-content/tinysyntaxhighlighter.js
 
+meh:
+		 --js static-content/difftimeline.js \

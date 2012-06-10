@@ -1,13 +1,26 @@
+
+var Project = {};
+
+/** @typedef (string) */
+var ref;
+
 /////////////////////////////////////////////////////////////////////
 //              Initial state
 /////////////////////////////////////////////////////////////////////
+/**
+ * @namespace
+ */
 var breadcrumb = (function() {
     "use strict";
 
+    /** @type {number} */
     var count = 0;
+
+    /** @type {number} */
     var current_index = 0;
 
     return {
+        /** @type {function(string) : void} */
         append_breadcrumb: function( name ) {
             if (current_index < count - 1)
             {
@@ -15,50 +28,106 @@ var breadcrumb = (function() {
                 count = current_index + 1;
             }
 
-            /** @type {Elem} */
+            /** @type {jQuery} */
             var elem = ich.breadcrumbelem({name:name, id:count});
             $('#breadcrumb').append(elem);
             current_index = count++;
         },
 
+        /** @type {function(number) : void} */
         click_index: function( idx ) {
             current_index = idx;
-            application_state.jump_context(idx);
+            Project.state.jump_context(idx);
         }
     };
 })();
 
+/** @interface */
+var ResultSet = function() {};
+
+ResultSet.prototype.create_all_dom = function() {};
+ResultSet.prototype.render_all = function() {};
+
+ResultSet.prototype.send_message = function( msg ) {};
+ResultSet.prototype.fetch_previous = function() {};
+
+/** @enum {number} */
+Project.ViewMode = {
+    VIEW_FULL: 1,
+    VIEW_COMPACT: 0
+};
+
+/** @enum {string} */
+Project.DiffChar = {
+    DIFF_ADD: '+',
+    DIFF_DEL: '-',
+    DIFF_DELADD: '~',
+    DIFF_ADDDEL: '!'
+};
+
+/** @enum {string} */
+Project.DiffKind = {
+    KIND_MODIFICATION: 'modification',
+    KIND_ADDITION: 'addition',
+    KIND_DELETION: 'deletion'
+}
+
 /**
- * @constructor
+ * @type {Object}
  */
-var application_state = (function () {  
+Project.state = (function () {  
     "use strict";
-    var view_mode = 'full';
+
+    /** @type {Project.ViewMode} */
+    var view_mode = Project.ViewMode.VIEW_FULL;
+
+    /** @type {boolean} */
     var apply_syntax_coloration = true;
+
+    /** @type {number} */
     var context_size = 2;
+
+    /** @type {number} */
     var max_commit_delta_show = 15;
+
+    /** @type {Array.<ResultSet>} */
     var states = [];
+
+    /** @type {Array.<ResultSet>} */
     var forward_states = [];
+
+    /** @type {number} */
     var commit_delta_margin = 6;
+
+    /** @type {number} */
     var apparition_duration = 750;
+
+    /** @type {number} */
     var apparition_pane_duration = 500;
 
-    var btn_toggle_text = {
-        full: '&#x25bc;<br/>&#x25b2;',
-        compact:  '&#x25b2;<br/>&#x25bc;'
-    };
+    /** @type {Object.<Project.ViewMode, string>} */
+    var btn_toggle_text = {}
+    btn_toggle_text[Project.ViewMode.VIEW_FULL] =  '&#x25bc;<br/>&#x25b2;';
+    btn_toggle_text[Project.ViewMode.VIEW_COMPACT] =  '&#x25b2;<br/>&#x25bc;';
 
 
     return {
+        /** @type {function() : Project.ViewMode} */
         active_view_mode: function() { return view_mode; },
+
+        /** @type {function() : number} */
         active_context_size: function() { return context_size; },
+
+        /** @type {function() : number} */
         apparition_duration: function() { return apparition_duration; },
 
+        /** @type {function(string) : void} */
         send_state_message: function(message) {
             var last_path = states[ states.length - 1 ];
             last_path.send_message(message);
         },
 
+        /** @type {function() : void} */
         create_all_dom: function() {
             var last_path = states[ states.length - 1 ];
             last_path.create_all_dom();
@@ -74,6 +143,9 @@ var application_state = (function () {
             last_path.fetch_previous();
         },
 
+        /**
+         * @type {function(string, ref, ref) : void}
+         */
         switch_file: function(file, fkey, start_commit) {
             this.clear_display();
             states.push(
@@ -81,16 +153,14 @@ var application_state = (function () {
             breadcrumb.append_breadcrumb(file);
         },
 
+        /** @type {function(ref) : void} */
         switch_commit: function(id) {
             this.clear_display();
             states.push(new CommitRenderer.create_from_arg(id));
             breadcrumb.append_breadcrumb(id);
         },
 
-        push_last_commit: function(v) {
-            states[ states.length - 1 ].val.unshift(v);
-        },
-
+        /** @type {function(number) : void} */
         jump_context: function(idx) {
             if (states.length - 1 == idx) return;
 
@@ -115,23 +185,24 @@ var application_state = (function () {
 
         increase_context_size: function() {
             context_size = context_size + 1;
-            $('.toolbar div textarea').text(context_size);
+            $('.toolbar div textarea').text(context_size.toString());
 
-            if (view_mode === 'compact') { this.render_all(); }
+            if (view_mode === Project.ViewMode.VIEW_COMPACT) { this.render_all(); }
         },
 
         decrease_context_size: function() {
             context_size = Math.max(0, context_size - 1);
-            $('.toolbar div textarea').text(context_size);
+            $('.toolbar div textarea').text(context_size.toString());
 
-            if (view_mode === 'compact') { this.render_all(); }
+            if (view_mode === Project.ViewMode.VIEW_COMPACT) { this.render_all(); }
         },
 
         toggle_diff_full: function() {
             var ranges = null;
 
-            if (view_mode === 'full') view_mode = 'compact';
-            else view_mode = 'full';
+            if (view_mode === Project.ViewMode.VIEW_FULL)
+                view_mode = Project.ViewMode.VIEW_COMPACT;
+            else view_mode = Project.ViewMode.VIEW_FULL;
 
             $('.btn_toggleview').html(btn_toggle_text[view_mode]);
             this.render_all();
@@ -149,21 +220,33 @@ var application_state = (function () {
     };
 })();
 
+/**
+ * @param {Element} node
+ * @return {void}
+ */
 var remove_children = function(node) {
     while (node.hasChildNodes()) {
         node.removeChild(node.lastChild);
     }
 };
 
+/** @typedef ({way: Project.DiffChar, orig_idx: number, dest_idx: number, size: number}) */
+var DiffInfo = {};
+
+/** @typedef({way: Project.DiffChar, beg: number, end: number}) */
+var DiffRange = {};
+
 ////////////////////////////////////////////////////////////
 ////  Diff handling
 ////////////////////////////////////////////////////////////
-/**
- * @constructor
- */
+/** @namespace */
 var DiffManipulator = (function () {
     "use strict";
-
+    /**
+     * @param {Element} n
+     * @param {Array.<Element>} lst
+     * @return {Element}
+     */
     var append_all = function(n, lst) {
         var maxi = lst.length;
 
@@ -176,6 +259,11 @@ var DiffManipulator = (function () {
         return n;
     }
 
+    /**
+     * @param {string} kind
+     * @param {Array.<Array.<Element>>} nodeList
+     * @return {Array.<Array.<Element>>}
+     */
     var glob = function(kind, nodeList) {
         var newNode = document.createElement('div');
         newNode.setAttribute('class', kind);
@@ -187,19 +275,37 @@ var DiffManipulator = (function () {
         return [[newNode]];
     };
 
-    var begs = {
-        '+': function (n) { return glob("diff_addition", n); },
-        '-': function (n) { return glob("diff_deletion", n); },
-        '~': function (n) { return glob("diff_addition", glob( "diff_deletion", n)); },
-        '!': function (n) { return glob("diff_deletion", glob( "diff_addition", n)); },
-        '|': ''
-    };
+    /** @type {Object.<Project.DiffChar, function(Array.<Array.<Element>>) : Array.<Array.<Element>>>} */
+    var begs = {};
+    begs[Project.DiffChar.DIFF_ADD] =
+        function (n) { return glob("diff_addition", n); };
+    begs[Project.DiffChar.DIFF_DEL] =
+        function (n) { return glob("diff_deletion", n); };
+    begs[Project.DiffChar.DIFF_DELADD] =
+        function (n) { return glob("diff_addition", glob( "diff_deletion", n)); };
+    begs[Project.DiffChar.DIFF_DELADD] =
+        function (n) { return glob("diff_deletion", glob( "diff_addition", n)); };
 
+    /**
+     * @param {string} filename
+     * @param {boolean} isLineNumberRequired
+     * @param {string} data
+     * @param {Array.<DiffRange>} diff
+     * @param {Element} node
+     */
     var generate_full_html = function (filename, isLineNumberRequired, data, diff, node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
+
+        /** @type {Array.<string>} */
         var lines = data.split("\n");
+
+        /** @type {number} */
         var diff_count = diff.length;
+
+        /** @type {number} */
         var current_line = 0;
+
+        /** @type {Array.<Array.<Element>>} */
         var diff_node;
 
         remove_children(node);
@@ -228,19 +334,24 @@ var DiffManipulator = (function () {
     }
 
     /** Generate an HTML representation of a diff and a file content.
-     * @param filename filename of the file, used for syntax detection
-     * @param contextSize Int
-     * @param isLineNumberRequired {Bool}
-     * @param data {String} file content.
-     * @param diff [{way:String, beg:Int, end:Int}] diff ranges
+     * @param {string} filename filename of the file, used for syntax detection
+     * @param {number} contextSize
+     * @param {boolean} isLineNumberRequired
+     * @param {string} data content.
+     * @param {Array.<DiffRange>} diff diff ranges
+     * @param {Element} node
      */
     var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff, node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
+
+        /** @type {Array.<string>} */
         var lines = data.split('\n');
 
+        /** @type {Array.<Array.<Element>>} */
         var processed_lines = [];
+
+        /** @type {number} */
         var last_outputted_line = -1;
-        var colorized;
 
         remove_children(node);
         var i;
@@ -296,14 +407,21 @@ var DiffManipulator = (function () {
 
     /** Combine two diff list into one list of edition
      * ranges.
-     * @param removings [{way: String, orig_idx: Int, size: Int}]
-     * @param addings   [{way: String, dest_idx: Int, size: Int}]
-     * @return [{way: String, beg: Int, end: Int}]
+     * @param {Array.<DiffInfo>} removings 
+     * @param {Array.<DiffInfo>} addings   
+     * @return {Array.<DiffRange>}
      */
     var calculate_fold_set = function (removings, addings) {
+        /** @type {Array.<DiffRange>} */
         var ranges = [];
+
+        /** @type {Array.<DiffRange>} */
         var lefts = [];
+
+        /** @type {Array.<DiffRange>} */
         var rights = [];
+
+        /** @type DiffInfo */
         var tempElem;
 
         for ( var i = 0; i < removings.length; i++ ) {
@@ -464,12 +582,20 @@ var DiffManipulator = (function () {
     };
 })();
 
+/**
+ * @param {number} stamp
+ * @return {string}
+ */
 var timestamp_to_string = function(stamp) {
     var d = new Date();
     d.setTime(stamp * 1000);
     return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
 
+/**
+ * @param {string} snipp
+ * @return {string}
+ */
 var html_encodize = function(snipp) {
     return snipp.replace(/\&/g, '\&amp;').replace(/</g, '\&lt;').replace(/</g, '\&gt;');
 }
@@ -491,75 +617,77 @@ var Commit = function(key, data) {
     this.tree_fetched = false;
     this.tree_opened = false;
 
-    var kind_formater = {
-        'modification': function(e) {
-            var hl = TinySyntaxHighlighter.from_filename(true, e.name);
-            var rez_node = ich.commit_file_modification_detailed(e);
-            var code_node = rez_node.find('pre')[0];
+    /** @type {Object.<Project.DiffKind, function(json) : jQuery>} */
+    var kind_formater = {};
+    kind_formater[Project.DiffKind.KIND_DELETION] = ich.commit_file;
+    kind_formater[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
+    kind_formater[Project.DiffKind.KIND_MODIFICATION] = function(e) {
+        var hl = TinySyntaxHighlighter.from_filename(true, e.name);
+        var rez_node = ich.commit_file_modification_detailed(e);
 
-            var curr_diff;
-            var acc = ""
-            var diff_node;
+        /** @type {Element} */
+        var code_node = rez_node.find('pre')[0];
 
-            var div_node = function(kind) {
-                var node = document.createElement('div');
-                node.setAttribute('class', kind);
-                return node;
-            };
+        var curr_diff;
+        var acc = ""
+        var diff_node;
 
-            if (e.binary) {
-                return rez_node;
-            }
+        var div_node = function(kind) {
+            var node = document.createElement('div');
+            node.setAttribute('class', kind);
+            return node;
+        };
 
-            for ( var i = 0; i < e.diff.length; i++ )
-            {
-                var has_sub = false;
-
-                curr_diff = e.diff[i];
-                if (curr_diff.hasOwnProperty('sub')) {
-                    has_sub = true;
-                }
-
-                if (curr_diff.way == '+') {
-                    diff_node = div_node("diff_addition");
-                    hl.set_current_line_number(curr_diff.dest_idx + 1);
-                }
-                else if (curr_diff.way == '-') {
-                    diff_node = div_node("diff_deletion");
-                    hl.set_current_line_number(curr_diff.dest_idx + 1);
-                }
-                else {
-                    diff_node = div_node("diff_context");
-                    hl.set_current_line_number(curr_diff.dest_idx + 1);
-                }
-
-                for ( var l = 0; l < curr_diff.data.length; l++ )
-                {
-                    if (has_sub) {
-                        hl.setPositionHighlight(curr_diff.sub[l]);
-                    }
-
-                    var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
-                    if (has_sub) {
-                        hl.setPositionHighlight([]);
-                    }
-
-                    for ( var node = 0; node < lineNodes.length; node++ )
-                        diff_node.appendChild(lineNodes[node]);
-                }
-
-                code_node.appendChild(diff_node);
-
-                if (i < e.diff.length - 1 &&
-                    curr_diff.dest_idx + curr_diff.size < e.diff[i + 1].dest_idx )
-                    code_node.appendChild(document.createTextNode("...\n"));
-
-            }
-
+        if (e.binary) {
             return rez_node;
-        },
-        'addition':ich.commit_file,
-        'deletion':ich.commit_file
+        }
+
+        for ( var i = 0; i < e.diff.length; i++ )
+        {
+            var has_sub = false;
+
+            curr_diff = e.diff[i];
+            if (curr_diff.hasOwnProperty('sub')) {
+                has_sub = true;
+            }
+
+            if (curr_diff.way == '+') {
+                diff_node = div_node("diff_addition");
+                hl.set_current_line_number(curr_diff.dest_idx + 1);
+            }
+            else if (curr_diff.way == '-') {
+                diff_node = div_node("diff_deletion");
+                hl.set_current_line_number(curr_diff.dest_idx + 1);
+            }
+            else {
+                diff_node = div_node("diff_context");
+                hl.set_current_line_number(curr_diff.dest_idx + 1);
+            }
+
+            for ( var l = 0; l < curr_diff.data.length; l++ )
+            {
+                if (has_sub) {
+                    hl.setPositionHighlight(curr_diff.sub[l]);
+                }
+
+                var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
+                if (has_sub) {
+                    hl.setPositionHighlight([]);
+                }
+
+                for ( var node = 0; node < lineNodes.length; node++ )
+                    diff_node.appendChild(lineNodes[node]);
+            }
+
+            code_node.appendChild(diff_node);
+
+            if (i < e.diff.length - 1 &&
+                curr_diff.dest_idx + curr_diff.size < e.diff[i + 1].dest_idx )
+                code_node.appendChild(document.createTextNode("...\n"));
+
+        }
+
+        return rez_node;
     };
 
     this.render_tree = function(node, depth, tree_path, elem) {
@@ -678,9 +806,6 @@ var Commit = function(key, data) {
     return this;
 };
 
-/**
- * @constructor
- */
 var CommitRenderer = (function() {
     "use strict";
 
@@ -707,6 +832,10 @@ var CommitRenderer = (function() {
         this.keys[init_data.key] = new_commit;
     }
 
+    /**
+     * @constructor
+     * @implements {ResultSet}
+     */
     var init_methods = function() {
         this.keys = {};
         this.render_all = function() {
@@ -745,7 +874,7 @@ var CommitRenderer = (function() {
                 var new_node = new_commit.create_dom();
                 new_node.animate({'width':'toggle'}, 0);
                 new_commit.render();
-                new_node.animate({'width':'toggle'}, application_state.apparition_duration());
+                new_node.animate({'width':'toggle'}, Project.state.apparition_duration());
 
                 this_obj.collection.push(new_commit);
                 this_obj.keys[data.key] = new_commit;
@@ -778,24 +907,40 @@ var CommitRenderer = (function() {
 var FileBlob = function (filename, data) {
     "use strict";
 
+    /** @type {function(string, Array.<string>) : Array.<Element>} */
     var add_syntax_coloration = function( filename, lines )
     {
+        /** @type {Array.<Element>} */
         var ret = [];
         var highlighter = TinySyntaxHighlighter.from_filename(true, filename);
 
-        for ( var i = 0; i < lines.length; i++ )
+        /** @type {number} */
+        var i;
+
+        for ( i = 0; i < lines.length; i++ )
             ret.push(highlighter.colorLine(lines[i]));
 
         return ret;
     }
 
+    /** @type {boolean} */
     this.detail_fetched = false;
+
+    /** @type {string} */
     this.file = filename;
+
     this.diff = data.diff;
     this.data = data.data;
+
     this.commit_date = timestamp_to_string(data.timestamp);
+
+    /** @type {ref} */
     this.filekey = data.filekey;
+
+    /** @type {ref} */
     this.key = data.key;
+
+    /** @type {string} */
     this.message = data.message;
     this.parent_commit = data.parent_commit;
     this.path = data.path;
@@ -832,7 +977,7 @@ var FileBlob = function (filename, data) {
         else
             btn_node.html("&#x25bc");
 
-        detail.animate({height: 'toggle'}, application_state.apparition_pane_duration);
+        detail.animate({height: 'toggle'}, Project.state.apparition_duration);
     };
 
     this.fetch_details = function() {
@@ -890,8 +1035,8 @@ var FileBlob = function (filename, data) {
 
         var clean_cr_lf_data = data.replace(/\r/g, '');
 
-        if (application_state.active_view_mode() === 'compact')
-            DiffManipulator.generateCompactHtml(filename, application_state.active_context_size(),
+        if (Project.state.active_view_mode() === 'compact')
+            DiffManipulator.generateCompactHtml(filename, Project.state.active_context_size(),
                                                 true, clean_cr_lf_data, ranges, node[0]);
         else // render full
             DiffManipulator.generateFullHtml(filename, true, clean_cr_lf_data, ranges, node[0]);
@@ -937,8 +1082,9 @@ var FileBlob = function (filename, data) {
     return this;
 };
 
+
 /**
- * @constructor
+ * @namespace
  */
 var FileRenderer = (function() {
     "use strict";
@@ -969,8 +1115,13 @@ var FileRenderer = (function() {
         return this;
     }
 
-    var init_methods = function(init_data) {
+    /** 
+     * @constructor
+     * @implements {ResultSet}
+     */
+    var init_methods = function() {
 
+        /** @type {Array.<FileBlob>} */
         this.collection = [];
         this.keys = {};
 
@@ -1026,7 +1177,7 @@ var FileRenderer = (function() {
                 node.animate({'width': 'toggle'}, 0);
                 this_obj.collection[0].render([]);
                 this_obj.collection[1].render(new_commit.diff);
-                node.animate({'width': 'toggle'}, application_state.apparition_duration() * 2);
+                node.animate({'width': 'toggle'}, Project.state.apparition_duration() * 2);
             });
         };
         return this;

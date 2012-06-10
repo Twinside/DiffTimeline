@@ -32,6 +32,3 @@ syntaxhighlihgtCss = $(embedFile "static-content/syntax-highlight.css")
 tinySyntaxHighlightJs :: B.ByteString
 tinySyntaxHighlightJs = $(embedFile "static-content/tinysyntaxhighlighter.js")
 
-underscoreJs :: B.ByteString
-underscoreJs = $(embedFile "static-content/underscore-min.js")
-

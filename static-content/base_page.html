@@ -13,14 +13,14 @@
         <script id="commit_file" type="text/html">
             <div class="file_{{kind}}">
                 <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span> {{name}}
+                      onclick="Project.state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span> {{name}}
             </div>
         </script>
 
         <script id="commit_file_modification_detailed" type="text/html">
             <div class="file_modification">
                 <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
+                      onclick="Project.state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
                 <div>
                     {{#binary}}Binary file modification{{/binary}}
                     <pre class="syntax_highlighted"></pre>
@@ -31,7 +31,7 @@
         <script id="tree_elem" type="text/html">
             <div class="tree_{{kind}}">
                 <span class="commit_diff_symbol"
-                      onclick="application_state.switch_file('{{full_path}}', '{{hash}}', '{{key}}')"></span>
+                      onclick="Project.state.switch_file('{{full_path}}', '{{hash}}', '{{key}}')"></span>
                 <span>{{name}}</span>
             </div>
         </script>
@@ -64,7 +64,7 @@
                         <h4 title="{{message}}">{{{split_message}}}</h4>
                     </div>
                     <span class="show_tree_btn"
-                          onclick="application_state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
+                          onclick="Project.state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
                         <span class="btn_indicator">&#x25bc;</span> Tree
                     </span>
                     <div class="commit_tree">
@@ -76,7 +76,7 @@
         </script>
 
         <script id="commit_button_file" type="text/html">
-            <a onclick="application_state.switch_commit('{{commit}}')">full commit</a>
+            <a onclick="Project.state.switch_commit('{{commit}}')">full commit</a>
         </script>
 
         <script id="breadcrumbelem" type="text/html">
@@ -87,7 +87,7 @@
         </script>
         <script id="commitcircle" type="text/html">
             <div class="delta_commit_circle"
-                 onclick="application_state.switch_commit('{{commit}}')">
+                 onclick="Project.state.switch_commit('{{commit}}')">
                 <div>
                     <div>{{{splited_message}}}</div>
                     <div class="author">{{author}}</div>
@@ -109,7 +109,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="application_state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>
@@ -136,7 +136,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="application_state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>
@@ -169,19 +169,19 @@
         </div>
         <div class="toolbar">
             <div class="btn_toggleview"
-                 onClick="application_state.toggle_diff_full()"
+                 onClick="Project.state.toggle_diff_full()"
                  title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
             <div class="btn_returnpast"
-                 onClick="application_state.get_previous()"
+                 onClick="Project.state.get_previous()"
                  title="Fetch previous version">&lt;</div>
             <div>
                 <span class="label">Context size</span><br />
                 <textarea readonly="true" rows="1">2</textarea>
                 <div>
                     <button type="button"
-                            onClick="application_state.increase_context_size()">+</button>
+                            onClick="Project.state.increase_context_size()">+</button>
                     <button type="button"
-                            onClick="application_state.decrease_context_size()">-</button>
+                            onClick="Project.state.decrease_context_size()">-</button>
                 </div>
             </div>
 

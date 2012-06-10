@@ -1,6 +1,5 @@
 
 /favicon.ico FaviconR GET
-/robots.txt RobotsR GET
 
 / RootR GET
 
@@ -8,6 +7,7 @@
 /ask_commit/#String         CommitOverviewR GET
 /ask_commit_tree/#String    CommitTreeR     GET
 /commit/#String             CommitR         GET
+/commit_list/#Int/#String   CommitListR     GET
 /initial_info.js            InitialInfoR    GET
 /quit                       QuitR           GET
 

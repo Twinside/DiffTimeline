@@ -2,12 +2,15 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitDetail( .. )
                             , CommitPath( .. )
                             , ParentFile( .. )
+                            , CommitOverview( .. )
+
                             , diffCommit
                             , diffCommitTree
                             , findFirstCommit
                             , findParentFile
                             , basePage
                             , decodeUtf8
+                            , commitList
 
 
                             -- * Manipulation functions
@@ -66,7 +69,7 @@ data CommitTreeDiff = AddElement T.Text Ref
                     | TreeElement T.Text Ref [CommitTreeDiff]
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     | ModifyBinaryElement T.Text Ref
-                    deriving (Eq, Show)
+                    deriving (Eq)
 
 flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
 flattenTreeDiff = inner mempty
@@ -138,7 +141,6 @@ data CommitDetail = CommitDetail
     , commitDetailAuthor  :: T.Text
     , commitDetailChanges :: [CommitTreeDiff]
     }
-    deriving (Eq, Show)
 
 instance ToJSON CommitDetail where
     toJSON detail = object $
@@ -160,7 +162,6 @@ data CommitPath = CommitPath
     , pathTimezone      :: Int
     , pathAuthor        :: T.Text
     }
-    deriving (Eq, Show)
 
 instance ToJSON CommitPath where
     toJSON cp =
@@ -456,7 +457,6 @@ data ParentFile = ParentFile
     , parentCommitTimestamp :: Int
     , parentCommmitTimezone :: Int
     }
-    deriving (Eq, Show)
 
 instance ToJSON ParentFile where
     toJSON p =
@@ -471,6 +471,39 @@ instance ToJSON ParentFile where
              ,"timestamp"     .= parentCommitTimestamp p
              ,"timezone"      .= parentCommmitTimezone p
              ]
+
+data CommitOverview = CommitOverview
+    { commitOverviewParent    :: [Ref]
+    , commitOverviewMessage   :: T.Text
+    , commitOverviewRef       :: Ref
+    , commitOverviewAuthor    :: T.Text
+    , commitOverviewTimestamp :: Int
+    }
+
+instance ToJSON CommitOverview where
+    toJSON c = object
+        [ "parent_commit" .= map toHexString (commitOverviewParent c)
+        , "message"       .= commitOverviewMessage c
+        , "key"           .= toHexString (commitOverviewRef c)
+        , "author"        .= commitOverviewAuthor c
+        , "timestamp"     .= commitOverviewTimestamp c
+        ]
+
+commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
+commitList repository count = runErrorT . inner count
+    where inner 0 _ = return []
+          inner n _ | n < 0 = return []
+          inner n r = do
+              Commit commit <- accessCommit "" repository r
+              (prepare r commit :) <$> inner (n - 1) (head $ commitParents commit)
+
+          prepare r c = CommitOverview
+              { commitOverviewParent = commitParents c
+              , commitOverviewMessage = decodeUtf8 $ commitMessage c
+              , commitOverviewRef = r
+              , commitOverviewAuthor = decodeUtf8 . authorName $ commitAuthor c
+              , commitOverviewTimestamp = authorTimestamp $ commitAuthor c
+              }
 
 basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
 basePage _logger repository path = runErrorT $ do

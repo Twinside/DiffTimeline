@@ -38,13 +38,12 @@ getScreen =  return . RepCss $ toContent screenCssEmbedded
 getSyntax_highlight = return . RepCss $ toContent  syntaxhighlihgtCss
 
 getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, 
-    getTinysyntaxhighlighter, getUnderscore_min :: Handler RepPlain
+    getTinysyntaxhighlighter :: Handler RepPlain
 getICanHaz_min = return . RepPlain $ toContent icanHazEmbedded 
 getDifftimelineJs = return . RepPlain $ toContent diffTimlineJsEmbedded 
 getFavicon = return . RepPlain $ toContent faviconEmbed
 getJquery = return . RepPlain $ toContent jqueryEmbedded 
 getTinysyntaxhighlighter = return . RepPlain $ toContent tinySyntaxHighlightJs 
-getUnderscore_min = return . RepPlain $ toContent underscoreJs
 
 getFileParentR :: [Text] -> Handler RepJson
 getFileParentR filePathes = do
@@ -62,7 +61,8 @@ getFileParentR filePathes = do
        Left err -> jsonToRepJson $ object ["error" .= err]
        Right info -> jsonToRepJson $ toJSON info
 
-withRepository :: (ToJSON a, Show a) => (Git -> IO (Either String a)) -> Handler RepJson
+withRepository :: (ToJSON a)
+               => (Git -> IO (Either String a)) -> Handler RepJson
 withRepository act = do
     app <- getYesod
     let repository = getRepository app
@@ -86,6 +86,11 @@ getCommitTreeR :: String -> Handler RepJson
 getCommitTreeR commitSha = withRepository extractor
     where extractor repository =
               diffCommitTree repository 0 False $ fromHexString commitSha
+
+getCommitListR :: Int -> String -> Handler RepJson
+getCommitListR count commitSha = withRepository extractor
+    where extractor repository =
+              commitList repository count $ fromHexString commitSha 
 
 javascriptize :: T.Text -> T.Text
 javascriptize = T.replace quo quoRep
@@ -111,7 +116,7 @@ getInitialCommit = do
     Right rez ->
         renderJavascript $ [julius|
             var first_state = #{decodeUtf8 $ strictify $ encode $ toJSON rez};
-            application_state.start_commit( first_state ); |] ("" :: Text)
+            Project.state.start_commit( first_state ); |] ("" :: Text)
 
 getInitialFile :: FilePath -> Handler RepPlain
 getInitialFile filename = do
@@ -135,7 +140,7 @@ getInitialFile filename = do
                                             diff: [],
                                             path: [] };
 
-                        application_state.start_file( first_state ); |] ("" :: Text)
+                        Project.state.start_file( first_state ); |] ("" :: Text)
     return . RepPlain $ toContent rendered
 
 getInitialInfoR :: Handler RepPlain
