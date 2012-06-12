@@ -260,31 +260,39 @@ var DiffManipulator = (function () {
     }
 
     /**
-     * @param {string} kind
+     * @param {Array.<string>} kind
      * @param {Array.<Array.<Element>>} nodeList
      * @return {Array.<Array.<Element>>}
      */
-    var glob = function(kind, nodeList) {
-        var newNode = document.createElement('div');
-        newNode.setAttribute('class', kind);
+    var glob = function(kinds, nodeList) {
+        var nodes = [];
+
+        if (kinds.length === 0) return [];
+
+        for (var j = 0; j < kinds.length; j++) {
+            var node = document.createElement('div');
+            node.setAttribute('class', kinds[j]);
+            nodes.push(node);
+            if (j > 0) nodes[j - 1].appendChild(node);
+        }
 
         for (var i = 0; i < nodeList.length; i++) {
-            append_all(newNode, nodeList[i])
+            append_all(nodes[nodes.length - 1], nodeList[i])
         }
         
-        return [[newNode]];
+        return [[ nodes[0] ]];
     };
 
     /** @type {Object.<Project.DiffChar, function(Array.<Array.<Element>>) : Array.<Array.<Element>>>} */
     var begs = {};
     begs[Project.DiffChar.DIFF_ADD] =
-        function (n) { return glob("diff_addition", n); };
+        function (n) { return glob(["diff_addition"], n); };
     begs[Project.DiffChar.DIFF_DEL] =
-        function (n) { return glob("diff_deletion", n); };
+        function (n) { return glob(["diff_deletion"], n); };
     begs[Project.DiffChar.DIFF_DELADD] =
-        function (n) { return glob("diff_addition", glob( "diff_deletion", n)); };
-    begs[Project.DiffChar.DIFF_DELADD] =
-        function (n) { return glob("diff_deletion", glob( "diff_addition", n)); };
+        function (n) { return glob(["diff_addition", "diff_deletion"], n); };
+    begs[Project.DiffChar.DIFF_ADDDEL] =
+        function (n) { return glob(["diff_deletion", "diff_addition"], n); };
 
     /**
      * @param {string} filename
@@ -318,7 +326,7 @@ var DiffManipulator = (function () {
             var curr_diff = diff[i];
             var diff_nodes = [];
 
-            for (var j = curr_diff.beg; j < curr_diff.end; j++) {
+            for (var j = curr_diff.beg; j < curr_diff.end && current_line < lines.length; j++) {
                 diff_nodes.push( highlighter.colorLine(lines[current_line++]) );
             }
 
