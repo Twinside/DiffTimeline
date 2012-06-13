@@ -1083,6 +1083,7 @@ var FileBlob = function (filename, data) {
     this.render = function(prev_diff) {
         var node_query = "#" + this.key + " .file_content";
         var render_node = $(node_query + " .syntax_highlighted");
+        render_node.detach();
         this.render_file_data(prev_diff, render_node);
         render_node.appendTo(node_query);
     }
