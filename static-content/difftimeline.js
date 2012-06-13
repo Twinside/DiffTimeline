@@ -1043,7 +1043,7 @@ var FileBlob = function (filename, data) {
 
         var clean_cr_lf_data = data.replace(/\r/g, '');
 
-        if (Project.state.active_view_mode() === 'compact')
+        if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT)
             DiffManipulator.generateCompactHtml(filename, Project.state.active_context_size(),
                                                 true, clean_cr_lf_data, ranges, node[0]);
         else // render full
