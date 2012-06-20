@@ -20,8 +20,9 @@ var breadcrumb = (function() {
     var current_index = 0;
 
     return {
-        /** @type {function(string) : void} */
-        append_breadcrumb: function( name ) {
+        append_breadcrumb:
+		/** @type {function(string) : void} */
+						   function( name ) {
             if (current_index < count - 1)
             {
                 $('#breadcrumb > span').slice(current_index + 1).remove();
@@ -34,8 +35,9 @@ var breadcrumb = (function() {
             current_index = count++;
         },
 
+        click_index: 
         /** @type {function(number) : void} */
-        click_index: function( idx ) {
+					function( idx ) {
             current_index = idx;
             Project.state.jump_context(idx);
         }
@@ -415,8 +417,8 @@ var DiffManipulator = (function () {
 
     /** Combine two diff list into one list of edition
      * ranges.
-     * @param {Array.<DiffInfo>} removings 
-     * @param {Array.<DiffInfo>} addings   
+     * @param {Array.<DiffCommand>} removings 
+     * @param {Array.<DiffCommand>} addings   
      * @return {Array.<DiffRange>}
      */
     var calculate_fold_set = function (removings, addings) {
@@ -429,7 +431,7 @@ var DiffManipulator = (function () {
         /** @type {Array.<DiffRange>} */
         var rights = [];
 
-        /** @type DiffInfo */
+        /** @type {DiffCommand} */
         var tempElem;
 
         for ( var i = 0; i < removings.length; i++ ) {
@@ -445,17 +447,28 @@ var DiffManipulator = (function () {
                           end: tempElem.dest_idx + tempElem.size});
         }
 
+		/**
+		 * @param a {string}
+		 * @param b {string}
+		 * @return {string}
+		 */
         var combiner = function(a,b) {
-            if (a == '+' && b == '-')
+            if (a === '+' && b === '-')
                 { return '~' }
             else
                 { return '!' }
         };
 
+		/** @type {number} */
         var left_read_index = 0;
+
+		/** @type {number} */
         var right_read_index = 0;
 
+        /** @type {DiffRange} */
         var left = lefts[left_read_index];
+
+        /** @type {DiffRange} */
         var right = rights[right_read_index];
 
         var swapArrays = function() {
@@ -558,7 +571,8 @@ var DiffManipulator = (function () {
     }
 
     /** Keep only the diff information of adding (with a '+' way property)
-     * @param diffs [{way: String, ...}]
+     * @param {Array.<(DiffCommand|DiffRange)>} diffs
+     * @return {Array.<(DiffCommand|DiffRange)>}
      */
     var filter_adds = function(diffs) {
         var ret = [];
@@ -570,7 +584,8 @@ var DiffManipulator = (function () {
     }
 
     /** Keep only the diff information of adding (with a '-' way property)
-     * @param diffs [{way: String, ...}]
+     * @param {Array.<(DiffCommand|DiffRange)>} diffs
+     * @return {Array.<(DiffCommand|DiffRange)>}
      */
     var filter_rems = function(diffs) {
         var ret = [];
@@ -611,6 +626,8 @@ var html_encodize = function(snipp) {
 ////  Commit
 ////////////////////////////////////////////////////////////
 /**
+ * @param {Ref} key
+ * @param {CommitDetail} data
  * @constructor
  */
 var Commit = function(key, data) {
@@ -625,12 +642,25 @@ var Commit = function(key, data) {
     this.tree_fetched = false;
     this.tree_opened = false;
 
+    if (data.hasOwnProperty('file_changes')) {
+        this.fully_fetched = true;
+        this.file_changes = data.file_changes;
+    } else {
+        this.fully_fetched = false;
+        this.file_changes = [];
+    }
+
+
     /** @type {Object.<Project.DiffKind, function(json) : jQuery>} */
     var kind_formater = {};
     kind_formater[Project.DiffKind.KIND_DELETION] = ich.commit_file;
     kind_formater[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
-    kind_formater[Project.DiffKind.KIND_MODIFICATION] = function(e) {
+    kind_formater[Project.DiffKind.KIND_MODIFICATION] = 
+    	/** @param {CommitTreeDiff} e */
+				function(e) {
         var hl = TinySyntaxHighlighter.from_filename(true, e.name);
+
+        /** @type {Element} */
         var rez_node = ich.commit_file_modification_detailed(e);
 
         /** @type {Element} */
@@ -640,6 +670,7 @@ var Commit = function(key, data) {
         var acc = ""
         var diff_node;
 
+		/** @type {function(string) : Element} */
         var div_node = function(kind) {
             var node = document.createElement('div');
             node.setAttribute('class', kind);
@@ -698,7 +729,16 @@ var Commit = function(key, data) {
         return rez_node;
     };
 
+	/**
+	 * @param {jquer} node
+	 * @param {number} depth
+	 * @param {string} tree_path
+	 * @param {CommitTreeDiff} elem
+	 * @return {jquery}
+	 */
     this.render_tree = function(node, depth, tree_path, elem) {
+
+		/** @type {jquery} */
         var new_node;
         var opened = false;
 
@@ -765,7 +805,9 @@ var Commit = function(key, data) {
             error: function() {
                 show_error({error: 'Communication error with the server while fetching commit tree'});
             },
-            success: function(data) {
+            success: 
+				/** @param {(CommitTreeDiff|ErrorReturn)} data */
+				function(data) {
 
                 if (data['error']) { 
                     show_error( data );
@@ -797,7 +839,7 @@ var Commit = function(key, data) {
         return this.orig_node;
     };
 
-    this.render = function() {
+    this.render_full = function() {
         for ( var change in this.file_changes ) {
             var e = this.file_changes[change];
             var kind = e['kind'];
@@ -810,6 +852,21 @@ var Commit = function(key, data) {
                 this.orig_node.append(ich.commit_file(e));
         }
     };
+
+    this.render_compact = function() {
+    };
+
+    this.render = function() {
+        if (Project.state.active_view_mode == Project.ViewMode.VIEW_FULL) {
+            if (!this.fully_fetched) {
+                // fetch
+            }
+            else this.render_full();
+        }
+        else if (Project.state.active_view_mode == Project.ViewMode.VIEW_COMPACT) {
+            this.render_compact();
+        }
+    };
     
     return this;
 };
@@ -817,7 +874,12 @@ var Commit = function(key, data) {
 var CommitRenderer = (function() {
     "use strict";
 
-    var fetch_commit = function( id, f ) {
+    var fetch_commit =
+		/**
+		 * @param {Ref} id
+		 * @param {function(CommitDetail | ErrorReturn)} f
+		 */
+				function( id, f ) {
         var this_obj = this;
 
         $.ajax({
@@ -910,6 +972,8 @@ var CommitRenderer = (function() {
 })();
 
 /**
+ * @param {string} filename
+ * @param {ParentFile} data
  * @constructor
  */
 var FileBlob = function (filename, data) {
@@ -1003,7 +1067,10 @@ var FileBlob = function (filename, data) {
             error: function() {
                 show_error({error: 'Communication error with the server while fetching commit details'});
             },
-            success: function(data) {
+            success: 
+            
+				/** @param {ParentFile|ErrorReturn} data */
+				function(data) {
                 if (data === null) {
                     show_error({error: 'Communication error with the server'});
                     return;

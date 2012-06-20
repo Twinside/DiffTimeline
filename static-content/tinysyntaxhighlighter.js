@@ -260,9 +260,6 @@ var TinySyntaxHighlighter = (function () {
         /** @type {number} */
         var maxIndex = line.length;
 
-        /** @type {number} */
-        var currentIndex = 0;
-
         /** @type {boolean} */
         var consumed = false;
 
@@ -313,10 +310,13 @@ var TinySyntaxHighlighter = (function () {
                 ret.push(nodes[i]);
         };
 
-        /** @param {!string} txt */
+        /** @type {function(!string)} txt */
         var addText = function(txt) {
             textAccumulator += txt;
         }
+
+        /** @type {number} */
+        var currentIndex = 0;
 
         while (currentIndex < maxIndex)
         {
@@ -470,7 +470,10 @@ var TinySyntaxHighlighter = (function () {
     var generic_parsers = {
         integer:
             { kind: 'syntax_number'
-            , recognizer: function( line, idx ) {
+            , recognizer: 
+                    /** @type {function( string, number ) : string} */
+                    function( line, idx ) {
+                    /** @type {number} */
                     var currIdx = idx;
                     while (currIdx < line.length && line[currIdx].match(/[0-9]/))
                         { currIdx++; }
@@ -481,7 +484,10 @@ var TinySyntaxHighlighter = (function () {
 
         c_like_identifier:
             { kind: ''
-            , recognizer: function( line, idx ) {
+            , recognizer: 
+                    /** @type {function( string, number ) : string} */
+                    function( line, idx ) {
+                /** @type {number} */
                 var currIdx = idx;
 
                 if (currIdx < line.length && !line[currIdx++].match(/[a-zA-Z]/))
@@ -496,10 +502,14 @@ var TinySyntaxHighlighter = (function () {
 
         c_like_preproc:
             { kind: 'syntax_preproc'
-            , recognizer: function( line, idx ) {
+            , recognizer: 
+                    /** @type {function( string, number ) : string} */
+                    function( line, idx ) {
                     if (line[idx] !== '#') return '';
 
+                    /** @type {number} */
                     var currIdx = idx + 1;
+
                     while (currIdx < line.length && line[currIdx].match(/ \t/))
                         currIdx++;
 
@@ -514,10 +524,14 @@ var TinySyntaxHighlighter = (function () {
 
         simple_quote_string:
             { kind: 'syntax_string'
-            , recognizer: function( line, idx ) {
+            , recognizer:
+                /** @type {function( string, number ) : string} */
+                function( line, idx ) {
                 if (line[idx] !== "'") return '';
 
+                /** @type {number} */
                 var currIdx = idx + 1;
+
                 while (currIdx < line.length)
                 {
                     if (line[currIdx] === "'") {
@@ -535,6 +549,7 @@ var TinySyntaxHighlighter = (function () {
             , recognizer: function( line, idx ) {
                 if (line[idx] !== '"') return '';
 
+                /** @type {number} */
                 var currIdx = idx + 1;
                 while (currIdx < line.length)
                 {

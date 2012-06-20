@@ -1,5 +1,10 @@
+all: check
+
 build:
 	runhaskell Setup.hs build
+
+clos:
+	ghc -package-conf=cabal-dev/packages-7.4.1.conf --make .\clos_test.hs
 
 conf:
 	cabal-dev install
@@ -25,8 +30,8 @@ check:
 		 --jscomp_warning=checkTypes \
 		 --externs jquery-1.6.js \
 		 --externs icanhaz.extern.js \
+		 --externs difftimeline.extern.js \
 		 --summary_detail_level 3 \
+		 --js static-content/difftimeline.js \
 		 --js static-content/tinysyntaxhighlighter.js
 
-meh:
-		 --js static-content/difftimeline.js \

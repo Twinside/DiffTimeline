@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitDetail( .. )
                             , CommitPath( .. )
@@ -91,6 +92,14 @@ filterCommitTreeDiff f = inner
           inner a@(TreeElement n r sub) | f a =
                 [TreeElement n r $ concatMap inner sub]
           inner _ = []
+
+treeDiffToKind :: CommitTreeDiff -> T.Text
+treeDiffToKind (TreeElement name r children) = "neutral"
+treeDiffToKind (NeutralElement _ _) = "neutral"
+treeDiffToKind (AddElement _ _ ) = "addition"
+treeDiffToKind (DelElement _ _) = "deletion"
+treeDiffToKind (ModifyBinaryElement _ _) = "modification"
+treeDiffToKind (ModifyElement _ _ _) = "modification"
 
 instance ToJSON CommitTreeDiff where
     toJSON (TreeElement name r children) =
