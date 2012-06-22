@@ -13,6 +13,9 @@ import System.FilePath( splitDirectories  )
 import Data.Git( Git, getHead, toHexString, fromHexString )
 import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 
+import Text.Language.Closure( renderClosureEnvironment )
+
+import Difftimeline.Externs
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
 
@@ -86,6 +89,10 @@ getCommitTreeR :: String -> Handler RepJson
 getCommitTreeR commitSha = withRepository extractor
     where extractor repository =
               diffCommitTree repository 0 False $ fromHexString commitSha
+
+getJSONExternR :: Handler RepPlain
+getJSONExternR = return . RepPlain . toContent
+			   $ renderClosureEnvironment difftimelineEnv 
 
 getCommitListR :: Int -> String -> Handler RepJson
 getCommitListR count commitSha = withRepository extractor

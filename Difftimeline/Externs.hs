@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Difftimeline.Externs( difftimelineEnv ) where
+
+import Prelude
 
 import Data.Git
 import qualified Data.Text as T
@@ -13,7 +16,7 @@ data ErrorReturn = ErrorReturn
     }
 
 treeDiffToKind :: CommitTreeDiff -> T.Text
-treeDiffToKind (TreeElement name r children) = "neutral"
+treeDiffToKind (TreeElement _ _ _) = "neutral"
 treeDiffToKind (NeutralElement _ _) = "neutral"
 treeDiffToKind (AddElement _ _ ) = "addition"
 treeDiffToKind (DelElement _ _) = "deletion"

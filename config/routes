@@ -11,6 +11,8 @@
 /initial_info.js            InitialInfoR    GET
 /quit                       QuitR           GET
 
+/difftimeline.extern.js		JSONExternR		GET
+
 /static-content/ICanHaz.min.js               ICanHaz_min             GET
 /static-content/difftimeline.css             DifftimelineCss         GET
 /static-content/difftimeline.js              DifftimelineJs          GET
