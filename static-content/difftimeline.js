@@ -59,7 +59,10 @@ Project.ViewMode = {
     VIEW_COMPACT: 0
 };
 
-/** @enum {string} */
+/**
+ * @const
+ * @enum {string}
+ */
 Project.DiffChar = {
     DIFF_ADD: '+',
     DIFF_DEL: '-',
@@ -577,7 +580,7 @@ var DiffManipulator = (function () {
     var filter_adds = function(diffs) {
         var ret = [];
         for (var i = 0; i < diffs.length; i++) {
-            if (diffs[i].way === '+')
+            if (diffs[i].way === Project.DiffChar.DIFF_ADD)
                 ret.push(diffs[i]);
         }
         return ret;
@@ -590,7 +593,7 @@ var DiffManipulator = (function () {
     var filter_rems = function(diffs) {
         var ret = [];
         for (var i = 0; i < diffs.length; i++) {
-            if (diffs[i].way === '+')
+            if (diffs[i].way === Project.DiffChar.DIFF_DEL)
                 ret.push(diffs[i]);
         }
         return ret;
@@ -857,13 +860,14 @@ var Commit = function(key, data) {
     };
 
     this.render = function() {
-        if (Project.state.active_view_mode == Project.ViewMode.VIEW_FULL) {
+    	var view_mode = Project.state.active_view_mode();
+        if (view_mode == Project.ViewMode.VIEW_FULL) {
             if (!this.fully_fetched) {
                 // fetch
             }
             else this.render_full();
         }
-        else if (Project.state.active_view_mode == Project.ViewMode.VIEW_COMPACT) {
+        else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
             this.render_compact();
         }
     };
@@ -1029,7 +1033,6 @@ var FileBlob = function (filename, data) {
 
     this.create_dom_details = function() {
         var detail_node = $('#' + this.key + ' .commit_detail');
-        detail_node.append(ich.commit_button_file({commit: this.key}));
 
         for ( var i = 0; i < this.details.length; i++ )
         {

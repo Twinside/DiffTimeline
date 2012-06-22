@@ -54,6 +54,17 @@
             </div>
         </script>
 
+        <script id="" type="text/html">
+            <div class="commit" id="{{key}}">
+                <div class="commitmsg">
+                    <span class="id">{{key}}</span>
+                    <span class="time">{{commit_date}}</span>
+                    <hr />
+                    <h4 title="{{message}}">{{{split_message}}}</h4>
+                </div>
+            </div>
+        </script>
+
         <script id="commit_detailed" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
@@ -74,11 +85,6 @@
                 </div>
             </div>
         </script>
-
-        <script id="commit_button_file" type="text/html">
-            <a onclick="Project.state.switch_commit('{{commit}}')">full commit</a>
-        </script>
-
         <script id="breadcrumbelem" type="text/html">
             <span class="breadcrumb_elem">
                 <span>&nbsp;&gt;&gt;</span>
@@ -198,11 +204,8 @@
         </div>
         <div id="container" class="container" />
         <br/>
-        <!--
-        <div id="miniatures" class="miniatures">
-            &nbsp;
-        </div> -->
     </body>
     <!-- Pseudo file created on the fly containing the initial application state-->
-    <script language="javascript" type="text/javascript" src="/initial_info.js"></script>
+    <script language="javascript" type="text/javascript" src="/initial_info.js">
+    </script>
 </html>

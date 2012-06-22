@@ -54,12 +54,6 @@ ich.prototype.commit_detailed = function(arg) {};
  * @param {json} arg
  * @return {jQuery}
  */
-ich.prototype.commit_button_file = function(arg) {};
-
-/**
- * @param {json} arg
- * @return {jQuery}
- */
 ich.prototype.tree_folder = function(arg) {};
 
 /**
