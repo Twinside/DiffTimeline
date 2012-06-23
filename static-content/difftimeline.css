@@ -316,9 +316,7 @@ pre
     width: 14px;
     height: 14px;
     background: #333;
-    border-radius: 5px;
-    -moz-border-radius: 7px;
-    -webkit-border-radius: 7px;
+    border-radius: 7px;
 }
 
 .delta_commit_circle .author:before {
