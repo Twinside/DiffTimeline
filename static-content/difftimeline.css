@@ -292,6 +292,7 @@ pre
     background: black;
     color: white;
     display: block;
+    z-index: 0;
 
     text-align: center;
     width:		100%;
