@@ -1,3 +1,6 @@
 [submodule "hit-simple"]
 	path = hit-simple
 	url = https://Twinside@github.com/Twinside/hit-simple.git
+[submodule "ClosureExternalProducer"]
+	path = ClosureExternalProducer
+	url = https://github.com/Twinside/ClosureExternalProducer.git

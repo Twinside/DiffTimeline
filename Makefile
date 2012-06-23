@@ -1,4 +1,4 @@
-all: check
+all: build
 
 build:
 	runhaskell Setup.hs build
@@ -18,6 +18,10 @@ all:
 prepare:
 	cd hit-simple; make pack
 	cabal-dev add-source hit-simple/hit-simple-0.3.tar.gz
+	cd ClosureExternalProducer; make pack
+	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
+	cabal-dev install
+
 	cabal-dev install
 
 place:
