@@ -689,9 +689,8 @@ var Commit = function(key, data) {
             var has_sub = false;
 
             curr_diff = e.diff[i];
-            if (curr_diff.hasOwnProperty('sub')) {
-                has_sub = true;
-            }
+			has_sub = (curr_diff.hasOwnProperty('sub') &&
+					   curr_diff.sub.length > 0);
 
             if (curr_diff.way == '+') {
                 diff_node = div_node("diff_addition");
@@ -749,7 +748,7 @@ var Commit = function(key, data) {
         elem.full_path = (depth > 0) ? tree_path + "/" + elem.name
                                      : elem.name;
 
-        if (elem.hasOwnProperty('children'))
+        if (elem.hasOwnProperty('children') && elem.children.length > 0)
         {
             if (depth == 0) {
                 for ( var i = 0; i < elem.children.length; i++ )
@@ -980,7 +979,7 @@ var CommitRenderer = (function() {
  * @param {ParentFile} data
  * @constructor
  */
-var FileBlob = function (filename, data) {
+var FileBlob = function (data) {
     "use strict";
 
     /** @type {function(string, Array.<string>) : Array.<Element>} */
@@ -1003,7 +1002,7 @@ var FileBlob = function (filename, data) {
     this.detail_fetched = false;
 
     /** @type {string} */
-    this.file = filename;
+    this.file = data.filename;
 
     this.diff = data.diff;
     this.data = data.data;
@@ -1183,7 +1182,7 @@ var FileRenderer = (function() {
     };
 
     var init = function(init_data) {
-        var init_file = new FileBlob(init_data.file, init_data);
+        var init_file = new FileBlob(init_data);
 
         this.collection = [init_file];
         this.keys[init_file.key] = init_file;
@@ -1246,7 +1245,7 @@ var FileRenderer = (function() {
                     return;
                 }
 
-                var new_commit = new FileBlob(last_commit.file, data);
+                var new_commit = new FileBlob(data);
 
                 var node = new_commit.create_dom();
 

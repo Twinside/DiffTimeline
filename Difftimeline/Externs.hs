@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Difftimeline.Externs( difftimelineEnv ) where
+module Difftimeline.Externs( ErrorReturn( .. ), difftimelineEnv ) where
 
 import Prelude
 
@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import Difftimeline.GitQuery
 import Difftimeline.Diff
 import Text.Language.Closure
+import qualified Data.Vector as V
 
 data ErrorReturn = ErrorReturn
     { errorMessage :: String
@@ -43,6 +44,14 @@ treeDiffIsBinary :: CommitTreeDiff -> Bool
 treeDiffIsBinary (ModifyBinaryElement _ _) = True
 treeDiffIsBinary _ = False
 
+treeDiffToDiffs :: CommitTreeDiff -> [(DiffCommand, V.Vector T.Text)]
+treeDiffToDiffs (ModifyElement _ _ lst) = lst
+treeDiffToDiffs _ = []
+
+treeDiffChildren :: CommitTreeDiff -> [CommitTreeDiff]
+treeDiffChildren (TreeElement _ _ lst) = lst
+treeDiffChildren _ = []
+
 instance ClosureDescriptable ErrorReturn Serializable where
     typename _ = "ErrorReturn"
     toClosureDesc _ = record [ "error" .: errorMessage ]
@@ -54,10 +63,12 @@ instance ClosureDescriptable Ref Serializable where
 instance ClosureDescriptable CommitTreeDiff Serializable where
     typename _ = "CommitTreeDiff"
     toClosureDesc _ = record
-        [ "kind"   .: treeDiffToKind
-        , "name"   .: treeDiffToName
-        , "hash"   .: treeDiffToRef
-        , "binary" .: treeDiffIsBinary
+        [ "kind"     .: treeDiffToKind
+        , "name"     .: treeDiffToName
+        , "hash"     .: treeDiffToRef
+        , "binary"   .: treeDiffIsBinary
+        , "children" .: treeDiffChildren
+        , "diff"     .: (map DiffWithContext . treeDiffToDiffs)
         ]
 
 instance ClosureDescriptable CommitDetail Serializable where
@@ -107,6 +118,36 @@ instance ClosureDescriptable SubModification Serializable where
         where beg (SubModification b _) = b
               end (SubModification _ e) = e
 
+newtype DiffWithContext =
+        DiffWithContext (DiffCommand, V.Vector T.Text)
+
+instance ClosureDescriptable DiffWithContext Serializable where
+    typename _ = "DiffWithContext"
+    toClosureDesc _ = record
+             [ "way"      .: wayExtract
+             , "orig_idx" .: orig
+             , "dest_idx" .: dest
+             , "size"     .: size
+             , "sub"      .: sub
+             , "data"     .: dataExtract
+             ]
+        where dataExtract (DiffWithContext (_, d)) = d
+
+              wayExtract (DiffWithContext (DiffCommand way _ _ _, _)) = way
+              wayExtract (DiffWithContext (DiffRefined way _ _ _ _, _)) = way
+
+              orig (DiffWithContext (DiffCommand _ o _ _, _)) = o
+              orig (DiffWithContext (DiffRefined _ o _ _ _, _)) = o
+
+              dest (DiffWithContext (DiffCommand _ _ d _, _)) = d
+              dest (DiffWithContext (DiffRefined _ _ d _ _, _)) = d
+
+              size (DiffWithContext (DiffCommand _ _ _ s, _)) = s
+              size (DiffWithContext (DiffRefined _ _ _ s _, _)) = s
+
+              sub (DiffWithContext (DiffRefined _ _ _ _ l, _)) = l
+              sub _ = []
+
 instance ClosureDescriptable DiffCommand Serializable where
     typename _ = "DiffCommand"
     toClosureDesc _ = record
@@ -136,6 +177,7 @@ instance ClosureDescriptable ParentFile Serializable where
     toClosureDesc _ =
       record ["data"          .: fileData
              ,"filekey"       .: fileRef
+             ,"filename"      .: fileName
              ,"parent_commit" .: (last . parentRef)
              ,"message"       .: fileMessage
              ,"diff"          .: fileDiff
@@ -153,6 +195,7 @@ difftimelineEnv = do
     declare (undefined :: CommitTreeDiff)
     declare (undefined :: CommitDetail)
     declare (undefined :: DiffAction)
+    declare (undefined :: DiffWithContext)
     declare (undefined :: SubModification)
     declare (undefined :: DiffCommand)
     declare (undefined :: CommitPath)

@@ -21,7 +21,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
 
 import Prelude
 
-import Data.List( sortBy )
+import Data.List( sortBy, foldl' )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
@@ -31,7 +31,6 @@ import Control.Monad.IO.Class( liftIO )
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
-import Data.Aeson
 import Data.List( find )
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
@@ -46,8 +45,6 @@ import Data.Git( GitObject( .. )
                , getHead
                , Ref
                , fromHexString
-               , toHexString
-               , toHex
 
                , TreeEntry
                )
@@ -61,9 +58,6 @@ import Yesod.Logger
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
-refToText :: Ref -> T.Text
-refToText = decodeUtf8 . toHex
-
 data CommitTreeDiff = AddElement T.Text Ref
                     | DelElement T.Text Ref
                     | NeutralElement T.Text Ref
@@ -71,6 +65,10 @@ data CommitTreeDiff = AddElement T.Text Ref
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     | ModifyBinaryElement T.Text Ref
                     deriving (Eq)
+
+joinBytePath :: [BC.ByteString] -> T.Text
+joinBytePath = foldl' (<//>) mempty
+    where (<//>) t n = t `mappend` T.pack "/" `mappend` (decodeUtf8 n)
 
 flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
 flattenTreeDiff = inner mempty
@@ -93,54 +91,6 @@ filterCommitTreeDiff f = inner
                 [TreeElement n r $ concatMap inner sub]
           inner _ = []
 
-treeDiffToKind :: CommitTreeDiff -> T.Text
-treeDiffToKind (TreeElement name r children) = "neutral"
-treeDiffToKind (NeutralElement _ _) = "neutral"
-treeDiffToKind (AddElement _ _ ) = "addition"
-treeDiffToKind (DelElement _ _) = "deletion"
-treeDiffToKind (ModifyBinaryElement _ _) = "modification"
-treeDiffToKind (ModifyElement _ _ _) = "modification"
-
-instance ToJSON CommitTreeDiff where
-    toJSON (TreeElement name r children) =
-        object [ "kind" .= ("neutral" :: T.Text)
-               , "name" .= name
-               , "hash" .= toHexString r
-               , "children" .= children
-               ]
-
-    toJSON (NeutralElement name r) =
-        object [ "kind" .= ("neutral" :: T.Text)
-               , "name" .= name
-               , "hash" .= toHexString r]
-
-    toJSON (AddElement name r) =
-        object [ "kind" .= ("addition" :: T.Text)
-               , "name" .= name
-               , "hash" .= toHexString r]
-
-    toJSON (DelElement name r) =
-        object [ "kind" .= ("deletion" :: T.Text)
-               , "name" .= name
-               , "hash" .= toHexString r]
-
-    toJSON (ModifyBinaryElement name r) =
-        object $ [ "kind" .= ("modification" :: T.Text)
-                 , "name" .= name
-                 , "hash" .= toHexString r
-                 , "binary" .= True
-                 ]
-
-    toJSON (ModifyElement name r diffs) =
-        object $ [ "kind"   .= ("modification" :: T.Text)
-                 , "name"   .= name
-                 , "hash"   .= toHexString r
-                 , "binary" .= False
-                 ] ++ diffElement
-          where diffElement | null diffs = []
-                            | otherwise = ["diff" .= map adder diffs]
-                adder (d, content) = object $ diffToJson d ++ ["data" .= content]
-
 data CommitDetail = CommitDetail
     { commitDetailMessage :: T.Text
     , commitDetailParents :: [Ref]
@@ -151,18 +101,6 @@ data CommitDetail = CommitDetail
     , commitDetailChanges :: [CommitTreeDiff]
     }
 
-instance ToJSON CommitDetail where
-    toJSON detail = object $
-      [ "message"      .= commitDetailMessage detail
-      , "parents_sha"  .= (toJSON . map toHexString $ commitDetailParents detail)
-      , "key"          .= (toHexString $ commitDetailKey detail)
-      , "author"       .= commitDetailAuthor detail
-      , "file_changes" .= toJSON (commitDetailChanges detail)
-      , "timestamp"    .= commitDetailTimestamp detail
-      , "timezone"     .= commitDetailTimezone detail
-      ]
-
-
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
     , pathParentRef     :: Ref
@@ -171,16 +109,6 @@ data CommitPath = CommitPath
     , pathTimezone      :: Int
     , pathAuthor        :: T.Text
     }
-
-instance ToJSON CommitPath where
-    toJSON cp =
-      object [ "commit" .= refToText (pathCommitRef cp)
-             , "parent_commit" .= refToText (pathParentRef cp)
-             , "message" .= pathMessage cp
-             , "author"    .= pathAuthor cp
-             , "timestamp" .= pathTimestamp cp
-             , "timezone"  .= pathTimezone cp
-             ]
 
 -- | Try to detect binary element given a blob
 detectBinary :: L.ByteString -> Bool
@@ -443,6 +371,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
 
             return $ ParentFile
                 { fileData = T.filter (/= '\r') thisData
+                , fileName = T.pack path
                 , fileRef = currentFileRef
                 , parentRef = commitParents firstNfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
@@ -456,6 +385,7 @@ findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
 
 data ParentFile = ParentFile
     { fileData    :: T.Text
+    , fileName    :: T.Text
     , fileRef     :: Ref
     , parentRef   :: [Ref]
     , fileMessage :: T.Text
@@ -467,20 +397,6 @@ data ParentFile = ParentFile
     , parentCommmitTimezone :: Int
     }
 
-instance ToJSON ParentFile where
-    toJSON p =
-      object ["data"          .= fileData p
-             ,"filekey"       .= (refToText $ fileRef p)
-             ,"parent_commit" .= (refToText . last $ parentRef p)
-             ,"message"       .= fileMessage p
-             ,"diff"          .= (toJSON . map (object . diffToJson) $ fileDiff p)
-             ,"path"          .= toJSON (commitPath p)
-             ,"key"           .= refToText (commitRef p)
-             ,"author"        .= parentCommitAuthor p
-             ,"timestamp"     .= parentCommitTimestamp p
-             ,"timezone"      .= parentCommmitTimezone p
-             ]
-
 data CommitOverview = CommitOverview
     { commitOverviewParent    :: [Ref]
     , commitOverviewMessage   :: T.Text
@@ -488,15 +404,6 @@ data CommitOverview = CommitOverview
     , commitOverviewAuthor    :: T.Text
     , commitOverviewTimestamp :: Int
     }
-
-instance ToJSON CommitOverview where
-    toJSON c = object
-        [ "parent_commit" .= map toHexString (commitOverviewParent c)
-        , "message"       .= commitOverviewMessage c
-        , "key"           .= toHexString (commitOverviewRef c)
-        , "author"        .= commitOverviewAuthor c
-        , "timestamp"     .= commitOverviewTimestamp c
-        ]
 
 commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
 commitList repository count = runErrorT . inner count
@@ -529,6 +436,7 @@ basePage _logger repository path = runErrorT $ do
     return $ ParentFile {
     	commitRef = headRef,
     	fileRef = foundFileRef,
+    	fileName = joinBytePath path,
     	commitPath = [],
     	fileDiff = [],
     	fileData = decodeUtf8 $ toStrict content,

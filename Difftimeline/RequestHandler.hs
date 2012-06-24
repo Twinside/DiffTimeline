@@ -10,7 +10,7 @@ import Text.Julius( julius, renderJavascript )
 import Yesod.Json( jsonToRepJson )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
-import Data.Git( Git, getHead, toHexString, fromHexString )
+import Data.Git( Git, getHead, fromHexString )
 import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 
 import Text.Language.Closure( renderClosureEnvironment )
@@ -125,6 +125,9 @@ getInitialCommit = do
             var first_state = #{decodeUtf8 $ strictify $ encode $ toJSON rez};
             Project.state.start_commit( first_state ); |] ("" :: Text)
 
+renderJson :: (ToJSON a) => a -> T.Text
+renderJson = decodeUtf8 . BC.concat . LC.toChunks . encode . toJSON
+
 getInitialFile :: FilePath -> Handler RepPlain
 getInitialFile filename = do
     app <- getYesod
@@ -137,17 +140,11 @@ getInitialFile filename = do
                 renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
 
             Right initialAnswer ->
-                    renderJavascript $ [julius|
-                        var first_state = { file: "#{javascriptize $ T.pack filename}",
-                                             key: "#{toHexString $ commitRef initialAnswer}",
-                                         filekey: "#{toHexString $ fileRef initialAnswer}",
-                                   parent_commit: "#{toHexString $ head $ parentRef initialAnswer}", 
-                                            data: "#{javascriptize $ fileData initialAnswer}",
-                                         message: "#{javascriptize $ fileMessage initialAnswer}",
-                                            diff: [],
-                                            path: [] };
-
+            	let renderedAnswer = renderJson initialAnswer
+				in renderJavascript $ [julius|
+                        var first_state = #{renderedAnswer};
                         Project.state.start_file( first_state ); |] ("" :: Text)
+
     return . RepPlain $ toContent rendered
 
 getInitialInfoR :: Handler RepPlain
