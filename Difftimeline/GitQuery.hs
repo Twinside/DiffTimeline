@@ -437,7 +437,13 @@ basePage _logger repository path = runErrorT $ do
     	commitRef = headRef,
     	fileRef = foundFileRef,
     	fileName = joinBytePath path,
-    	commitPath = [],
+    	commitPath = [CommitPath { pathCommitRef = headRef
+                                 , pathParentRef = head $ commitParents cInfo
+                                 , pathMessage = decodeUtf8 $ commitMessage cInfo
+                                 , pathTimestamp = authorTimestamp author
+                                 , pathTimezone = authorTimezone author
+                                 , pathAuthor = decodeUtf8 $ authorName author
+                                 }],
     	fileDiff = [],
     	fileData = decodeUtf8 $ toStrict content,
     	parentRef = commitParents cInfo,
