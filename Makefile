@@ -22,8 +22,6 @@ prepare:
 	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
 	cabal-dev install
 
-	cabal-dev install
-
 place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/
 

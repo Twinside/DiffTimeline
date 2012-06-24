@@ -1,96 +1,29 @@
-.syntax_highlighted {
-    color: #586e75 !important;
-    background: #fdf6e3 !important;
-}
-
-.syntax_comment {
-    color: #839496 !important;
-}
-
-.syntax_repeat {
-    color: #859900;
-}
-
-.syntax_conditional {
-    color: #859900;
-}
-
-.syntax_keyword {
-    color: #859900;
-}
-
-.syntax_number {
-    color: #2aa198;
-}
-
-.syntax_statement {
-    color: #859900;
-}
-
-.syntax_preproc {
-    color: #cb4b16;
-}
-
-.syntax_identifier {
-    color: #268bd2;
-}
-
-.syntax_bool {
-    color: #2aa198;
-}
-
-.syntax_constant {
-    color: #2aa198;
-}
-
-.syntax_string {
-    color: #2aa198;
-}
-
-.syntax_type {
-    color: #b58900;
-}
-
-.syntax_storage_class {
-    color: #b58900;
-}
-
-.syntax_structure {
-    color: #b58900;
-}
-
-.syntax_label {
-    color: #859900;
-}
-
-.syntax_operator {
-    color: #859900;
-}
-
 .syntax_line_number {
     width: 25px;
     display: inline-block;
-    background-color: #EEE8D5;
-    color:            #93A1A1;
     margin-right: 5px;
 }
 
-.syntax_tag {
-    color:  #4e4e4e; 
-}
-
-.syntax_tag_name {
-    color:  #0087ff;
-}
-
-.syntax_tag_param {
-    color: #585858;
-}
-
-.syntax_special {
-    color: #d70000;
-}
-
-.syntax_function {
-    color: #268bd2;
-}
+.syntax_highlighted { color: #e0e2e4; background: #1f2223; }
+.syntax_line_number { color: #81969a; background: ; }
+.syntax_normal { color:#e0e2e4; }
+.syntax_comment { color:#7d8c93; }
+.syntax_repeat { color:#e0e2e4; }
+.syntax_identifier { color:#d77481; }
+.syntax_conditional { color:#e0e2e4; }
+.syntax_keyword { color:#e0e2e4; }
+.syntax_number { color:#ca9c81; }
+.syntax_statement { color:#e0e2e4; }
+.syntax_preproc { color:#a082bd; }
+.syntax_bool { color:#ca9c81; }
+.syntax_constant { color:#ca9c81; }
+.syntax_string { color:#93c79f; }
+.syntax_storage_class { color:#678cb1; }
+.syntax_structure { color:#a082bd; }
+.syntax_label { color:#e0e2e4; }
+.syntax_operator { color:#8ba4ba; }
+.syntax_tag { color:#8ba4ba; }
+.syntax_tag_name { color:#8ba4ba; }
+.syntax_tag_param { color:#678cb1; }
+.syntax_special { color:#e0e2e4; }
+.syntax_function { color:#678cb1; }

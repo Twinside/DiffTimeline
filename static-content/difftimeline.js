@@ -220,7 +220,7 @@ Project.state = (function () {
 
         start_file: function(file_obj) {
             states.push( FileRenderer.create_from_data(file_obj) );
-            breadcrumb.append_breadcrumb(file_obj.file);
+            breadcrumb.append_breadcrumb(file_obj.filename);
         }
     };
 })();
@@ -966,6 +966,10 @@ var CommitRenderer = (function() {
             var rez = new init_methods();
 
             fetch_commit(key, function(data) { 
+            	if (data['error']) {
+					show_error(data.error);
+					return undefined
+				}
                 init.call(rez, data);
             });
 
@@ -1078,12 +1082,12 @@ var FileBlob = function (data) {
                     return;
                 }
 
-                this_obj.detail_fetched = true;
-
                 if (data['error']) { 
                     show_error( data );
                     return;
                 }
+
+                this_obj.detail_fetched = true;
 
                 var kind_formater = {
                     'modification': ich.commit_file_modification,

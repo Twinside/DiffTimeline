@@ -1,7 +1,7 @@
 body
 {
-    /*background-color: #888888;*/
-    background-color: white;
+    background-color: #2C2D33;
+    color: white;
 }
 
 /** Position of various elements of the application.
@@ -15,25 +15,13 @@ body
     z-index: 0;
 }
 
-.miniatures
-{
-    width: 3000px;
-    left: 100px;
-    position: relative;
-    z-index: 0;
-}
-
 .toolbar
 {
-    background: white;
+    background: #2C2D33;
     position: fixed;
     top: 90px;
     z-index: 2;
     padding: 10px;
-
-   -moz-box-shadow: 0px 2px 2px #888;
-   -webkit-box-shadow: 0px 2px 2px#888;
-   box-shadow: 0px 2px 2px #888;
 }
 
 .commit
@@ -47,7 +35,6 @@ body
 {
     display: block;
     border: 1px solid rgb(200,200,200);
-    /*background: #EEEEEE;*/
 }
 
 .file_content .syntax_highlighted
@@ -66,7 +53,7 @@ pre
 .diff_deletion
 {
     font-family: Consolas, Inconsolata, Monospace;
-    background-color: #FFDDDD;
+    background-color: #544;
     width: 100%;
     margin: 0px;
     padding: 0px;
@@ -74,13 +61,13 @@ pre
 }
 
 .diff_deletion .sub {
-    background-color: #FF8888;
+    background-color: #744;
 }
 
 .diff_addition
 {
     font-family: Consolas, Inconsolata, Monospace;
-    background-color: #DDFFDD;
+    background-color: #454;
     width: 100%;
     margin: 0px;
     padding: 0px;
@@ -88,17 +75,17 @@ pre
 }
 
 .diff_addition .sub {
-    background-color: #88FF88;
+    background-color: #474;
 }
 
 .diff_deletion .diff_addition
 {
-    background-color: #DDDDFF;
+    background-color: #445;
 }
 
 .diff_addition .diff_deletion
 {
-    background-color: #FFFFDD;
+    background-color: #554;
 }
 
 /** The back to the past button, big blue */
@@ -113,41 +100,24 @@ pre
    padding-top:      150px;
    padding-bottom:   150px;
 
-   border-top:    1px solid #7bb7e6;
-   border-left:   1px solid #7bb7e6;
-   border-bottom: 1px solid #357BAF;
-   border-right:  1px solid #357BAF;
+   border:  1px solid #AAAAAA;
 
-   background: #419bdb;
-   background: -webkit-gradient(linear, left top, left bottom, from(#539fda), to(#419bdb));
-   background: -webkit-linear-gradient(top, #539fda, #419bdb);
-   background: -moz-linear-gradient(top, #539fda, #419bdb);
-   background: -ms-linear-gradient(top, #539fda, #419bdb);
-   background: -o-linear-gradient(top, #539fda, #419bdb);
-   -webkit-border-radius: 3px;
-   -moz-border-radius: 3px;
+   background: #6E717D;
    border-radius: 3px;
-   /*-webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   /*-moz-box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   /*box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   text-shadow: rgba(0,0,0,.4) 0 1px 0;
    color: #e1ffe0;
    font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif;
-   text-decoration: none;
    vertical-align: middle;
 }
 
 .btn_returnpast:hover 
 {
-   border-top-color: #3e8abd;
-   background: #3e8abd;
+   background: #777777;
    color: #ffffff;
 }
 
 .btn_returnpast:active 
 {
-   border-top-color: #357aaf;
-   background: #357aaf;
+   background: #666666;
 }
 
 .btn_toggleview 
@@ -161,24 +131,9 @@ pre
    padding-top:      10px;
    padding-bottom:   10px;
 
-   border-top:    1px solid #7bb7e6;
-   border-left:   1px solid #7bb7e6;
-   border-bottom: 1px solid #357BAF;
-   border-right:  1px solid #357BAF;
+   border:    1px solid #AAAAAA;
+   background: #6E717D;
 
-   background: #419bdb;
-   background: -webkit-gradient(linear, left top, left bottom, from(#539fda), to(#419bdb));
-   background: -webkit-linear-gradient(top, #539fda, #419bdb);
-   background: -moz-linear-gradient(top, #539fda, #419bdb);
-   background: -ms-linear-gradient(top, #539fda, #419bdb);
-   background: -o-linear-gradient(top, #539fda, #419bdb);
-   -webkit-border-radius: 3px;
-   -moz-border-radius: 3px;
-   border-radius: 3px;
-   /*-webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   /*-moz-box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   /*box-shadow: rgba(0,0,0,1) 0 1px 0;*/
-   text-shadow: rgba(0,0,0,.4) 0 1px 0;
    color: #e1ffe0;
    font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif;
    text-decoration: none;
@@ -187,15 +142,13 @@ pre
 
 .btn_toggleview:hover 
 {
-   border-top-color: #3e8abd;
-   background: #3e8abd;
+   background: #777777;
    color: #ffffff;
 }
 
 .btn_toggleview:active 
 {
-   border-top-color: #357aaf;
-   background: #357aaf;
+   background: #666666;
 }
 
 .toolbar div textarea
@@ -230,54 +183,46 @@ pre
 {
     border: 1px solid #cccccc;
     margin-bottom: 10px;
-
-    -webkit-border-top-left-radius: 6px;
-    -webkit-border-top-right-radius: 6px;
-    -moz-border-radius-topleft: 6px;
-    -moz-border-radius-topright: 6px;
-    border-top-left-radius: 6px;
-    border-top-right-radius: 6px;
 }
 
 .commitmsg
 {
     display:    block;
     padding-bottom: 0.3em;
-
-    /*background: #E6F1F6;*/
     font-family: Helvetica,Arial,freesans,sans-serif;
-
-    /* Navigateurs récents */
-    background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5),
-                                    to(#e2e2e2));
-    background: -webkit-linear-gradient(top, #f5f5f5, #e2e2e2);
-    background: -moz-linear-gradient(top, #f5f5f5, #e2e2e2); background: -o-linear-gradient(top, #f5f5f5, #e2e2e2);
-    background: linear-gradient(top, #f5f5f5, #e2e2e2);
+    background-color: #5F616E;
 }
 
 .commitmsg hr
 {
     width: 100%;
-    border: 1px solid #999999;
-    margin: 0px;
+/*    border: 1px solid #999999; */
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 10px;
 }
 
 .commitmsg h4
 {
     font-weight: bold;
-    margin: 0.7em
+    margin: 0.7em;
+    color: white;
 }
 
 .commitmsg .id
 {
-    color:     #666666;
+    color:     #888;
     font-size: 0.75em;
+    padding: 2px;
+    margin: 2px;
 }
 
 .commitmsg .time
 {
     position: absolute;
     right: 0;
+    font-weight: bold;
+    padding: 2px;
 }
 
 .commit_list
@@ -315,7 +260,7 @@ pre
     display: block;
     width: 14px;
     height: 14px;
-    background: #333;
+    background: #9699AD;
     border-radius: 7px;
 }
 
@@ -334,26 +279,20 @@ pre
 
 .horizontal_toolbar
 {
-   /*padding-left: 100px;*/
    height: 92px;
    z-index: 1;
-   background: white;
+   background: #2C2D33;
    position: fixed;
 
    padding-left: 10px;
    padding-right: 70px;
-
-   -moz-box-shadow: 0 0 2px #888;
-   -webkit-box-shadow: 0 0 2px#888;
-   box-shadow: 0 0 2px #888;
 }
 
 .message_carret
 {
-    background-color: orange;
-   -webkit-border-radius: 5px;
-   -moz-border-radius: 5px;
-   border-radius: 5px;
+    background-color: rgb(208,128,30);
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .legend table
@@ -375,30 +314,21 @@ pre
 }
 
 .delta_commit_circle:hover {
-    background: #336;
+    background: #6C6F7D;
 }
 
 .ellipsis:hover > div, .delta_commit_circle:hover > div {
     font-style: normal;
     display:    block;
     position:   absolute;
-    top:        80px;
-    left:       -10px;
+    top:        100px;
+    left:       -5px;
     padding:    5px;
-    color:      #000;
+    color:      #fff;
     width:      auto;
 	z-index: 1;
-    background: -webkit-gradient(linear, left top, left bottom, from(#ffffee),
-                                    to(#ddddaa));
-    background: -webkit-linear-gradient(top, #ffffee, #ddddaa);
-    background: -moz-linear-gradient(top, #ffffee, #ddddaa); background: -o-linear-gradient(top, #ffffee, #ddddaa);
-    background: linear-gradient(top, #ffffee, #ddddaa);
-
-   -webkit-border-radius: 5px;
-   -moz-border-radius: 5px;
-   border-radius: 5px;
-
-    border: 1px solid #777777;
+    background-color: #5C5F68;
+    border: 1px solid #1D1E21;
 }
 
 /* ================================================ */
@@ -407,15 +337,19 @@ pre
 #breadcrumb {
    border: 1px solid gray;
 
-   -webkit-border-radius: 2px;
-   -moz-border-radius: 2px;
-   border-radius: 2px;
    padding-right: 3px;
    padding-bottom: 7px;
 }
 
 .breadcrumb_elem a {
     cursor: pointer;
+    font-weight: bold;
+    text-decoration: none;
+    color:  #c77;
+}
+
+.breadcrumb_elem a:hover {
+    text-decoration: underlined;
 }
 
 .breadcrumb_elem > span {
@@ -438,6 +372,10 @@ pre
     position:        relative;
     margin-left:     15px;
     cursor:          pointer;
+    
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #AAA;
 }
 
 .tree_node > .node_name {
@@ -456,6 +394,10 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+    
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #AAA;
 }
 
 .tree_neutral > .commit_diff_symbol:before {
@@ -467,11 +409,15 @@ pre
     margin-left:     15px;
 
     border:   1px solid #AAAAFF;
-    background-color: #EEEEFF;
+    background-color: #779;
 
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+    
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #DDD;
 }
 
 .tree_modification > .commit_diff_symbol:before {
@@ -483,11 +429,15 @@ pre
     margin-left:     15px;
 
     border: 1px solid green;
-    background-color: #AAFFAA;
+    background-color: #797;
 
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+    
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #DDD;
 }
 
 .tree_addition > .commit_diff_symbol:before {
@@ -499,11 +449,15 @@ pre
     margin-left:     15px;
 
     border: 1px solid #FF7777;
-    background-color: #FFAAAA;
+    background-color: #977;
     
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+    
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #DDD;
 }
 
 .tree_deletion > .commit_diff_symbol:before {
@@ -514,13 +468,14 @@ pre
 /* Commit detail rules                              */
 /* ================================================ */
 .file_modification {
-    background-color: #FFFFFF;
-    border: 1px solid #EEEEEE;
-    padding: 7px;
-    margin: 5px;
-   -webkit-border-radius: 2px;
-   -moz-border-radius: 2px;
+   border: 1px solid #999;
+   padding: 7px;
+   margin: 5px;
    border-radius: 2px;
+}
+
+.file_modification > * {
+   font-size: 1.2em;
 }
 
 .file_modification > .commit_diff_symbol:before {
@@ -528,13 +483,11 @@ pre
 }
 
 .file_addition {
-    background-color: #EEFFEE;
-    border: 1px solid #DDEEDD;
+    background-color: #797;
+    border: 1px solid #999;
     padding: 7px;
     margin: 5px;
-   -webkit-border-radius: 2px;
-   -moz-border-radius: 2px;
-   border-radius: 2px;
+    border-radius: 2px;
 }
 
 .file_addition > .commit_diff_symbol:before {
@@ -542,12 +495,10 @@ pre
 }
 
 .file_deletion {
-   background-color: #ffeeee;
-   border: 1px solid #eedddd;
+   background-color: #977;
+   border: 1px solid #999;
    padding: 7px;
    margin: 5px;
-   -webkit-border-radius: 2px;
-   -moz-border-radius: 2px;
    border-radius: 2px;
 }
 
@@ -559,7 +510,6 @@ pre
    display: inline-block;
    font-size: 16px;
    font-weight: bold;
-   border: 1px solid #7B90B5;
 
    cursor: pointer;
 
@@ -567,18 +517,8 @@ pre
    height: 22px;
    text-align: center;
    margin-right: 20px;
-   -webkit-border-radius: 5px;
-   -moz-border-radius: 5px;
-   border-radius: 5px;
 
-   color: white;
+   color: #989DAD;
 
-   background: #b8c6df; /* Old browsers */
-   background: -moz-linear-gradient(top, #b8c6df 0%, #6d88b7 100%); /* FF3.6+ */
-   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#b8c6df), color-stop(100%,#6d88b7)); /* Chrome,Safari4+ */
-   background: -webkit-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* Chrome10+,Safari5.1+ */
-   background: -o-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* Opera 11.10+ */
-   background: -ms-linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* IE10+ */
-   background: linear-gradient(top, #b8c6df 0%,#6d88b7 100%); /* W3C */
+   background-color: #1D1E21;
 }
-
