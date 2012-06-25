@@ -13,14 +13,16 @@
         <script id="commit_file" type="text/html">
             <div class="file_{{kind}}">
                 <span class="commit_diff_symbol"
-                      onclick="Project.state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span> {{name}}
+                      onclick="Project.state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span>
+				<span class="filename">{{name}}</span>
             </div>
         </script>
 
         <script id="commit_file_modification_detailed" type="text/html">
             <div class="file_modification">
                 <span class="commit_diff_symbol"
-                      onclick="Project.state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span> {{name}}
+					  onclick="Project.state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span>
+				<span class="filename">{{name}}</span>
                 <div>
                     {{#binary}}Binary file modification{{/binary}}
                     <pre class="syntax_highlighted"></pre>
