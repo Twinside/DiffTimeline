@@ -3,8 +3,8 @@ all: build
 build:
 	runhaskell Setup.hs build
 
-clos:
-	ghc -package-conf=cabal-dev/packages-7.4.1.conf --make .\clos_test.hs
+tests:
+	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf test/tester.hs
 
 conf:
 	cabal-dev install
