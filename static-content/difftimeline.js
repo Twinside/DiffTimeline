@@ -644,6 +644,7 @@ var Commit = function(key, data) {
     this.split_message = (html_encodize(data.message)).replace(/\n/g, '<br/>');
     this.tree_fetched = false;
     this.tree_opened = false;
+    this.last_view_mode = Project.state.active_view_mode();
 
     if (data.hasOwnProperty('file_changes')) {
         this.fully_fetched = true;
@@ -828,14 +829,23 @@ var Commit = function(key, data) {
     };
 
     this.create_dom = function() {
-        this.orig_node = ich.commit_detailed(this);
-        $('.container').prepend(this.orig_node);
+        var view_mode = Project.state.active_view_mode();
 
-        if (this.tree_fetched) {
-            var tree_node = $("#" + this.key + " .commit_tree");
-            this.tree_opened = false;
-            tree_node.animate({height: 'toggle'});
-            this.render_tree(tree_node[0], 0, "", this.tree);
+        if (view_mode == Project.ViewMode.VIEW_FULL) {
+
+            this.orig_node = ich.commit_detailed(this);
+            $('.container').prepend(this.orig_node);
+
+            if (this.tree_fetched) {
+                var tree_node = $("#" + this.key + " .commit_tree");
+                this.tree_opened = false;
+                tree_node.animate({height: 'toggle'});
+                this.render_tree(tree_node[0], 0, "", this.tree);
+            }
+        }
+        else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
+            this.orig_node = ich.commit_compact(this);
+            $('.container').append(this.orig_node);
         }
 
         return this.orig_node;
@@ -856,17 +866,21 @@ var Commit = function(key, data) {
     };
 
     this.render_compact = function() {
+        /* nothing */
     };
 
     this.render = function() {
     	var view_mode = Project.state.active_view_mode();
-        if (view_mode == Project.ViewMode.VIEW_FULL) {
-            if (!this.fully_fetched) {
-                // fetch
-            }
-            else this.render_full();
+
+    	if (this.last_view_mode !== view_mode) {
+            this.orig_node.remove();
+            this.create_dom();
+            this.last_view_mode = view_mode;
         }
-        else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
+
+        if (view_mode == Project.ViewMode.VIEW_FULL) {
+            this.render_full();
+        } else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
             this.render_compact();
         }
     };
