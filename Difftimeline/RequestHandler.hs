@@ -113,7 +113,6 @@ getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   app <- getYesod
   let repository = getRepository app
-      strictify = BC.concat . LC.toChunks
   Just headRef <- liftIO $ getHead repository
   diffRez <- liftIO $ diffCommit repository 3 True headRef 
   return . RepPlain . toContent $ case diffRez of
@@ -122,7 +121,7 @@ getInitialCommit = do
 
     Right rez ->
         renderJavascript $ [julius|
-            var first_state = #{decodeUtf8 $ strictify $ encode $ toJSON rez};
+            var first_state = #{renderJson rez};
             Project.state.start_commit( first_state ); |] ("" :: Text)
 
 renderJson :: (ToJSON a) => a -> T.Text
