@@ -151,14 +151,14 @@ toFullCommand :: RawDiffCommand -> DiffCommand
 toFullCommand (DiffDel oi di s) = DiffCommand DiffDeletion oi di s
 toFullCommand (DiffAdd oi di s) = DiffCommand DiffAddition oi di s
 
-addContextInformation :: Int -> Int -> [RawDiffCommand] -> [DiffCommand]
-addContextInformation 0           _        = map toFullCommand
-addContextInformation contextSize origSize = inner False
+addContextInformation :: Int -> Int -> Int -> [RawDiffCommand] -> [DiffCommand]
+addContextInformation 0           _                _ = map toFullCommand
+addContextInformation contextSize origSize _destSize = inner False
   where maxGap = 2 * contextSize + 1
 
         inner _  [] = []
         inner True [a@(DiffAdd oi di s)]
-            | origSize - oi <= 0 = [toFullCommand a]
+            | origSize - (oi + s) <= 0 = [toFullCommand a]
             | otherwise =
                 [toFullCommand a, DiffCommand DiffNeutral oi (di + s) endSize]
                     where endSize = min (origSize - oi) contextSize
@@ -167,7 +167,7 @@ addContextInformation contextSize origSize = inner False
             | origSize - (oi + s) <= 0 = [toFullCommand a]
             | otherwise =
                 [toFullCommand a, DiffCommand DiffNeutral (oi + s) di endSize]
-                    where endSize = min (origSize - oi - s) contextSize
+                    where endSize = min (origSize - oi - s - 1) contextSize
 
         inner True (a@(DiffAdd oi1 di1 s1) :
                     b@(DiffAdd _oi2 di2 _s2) : xs)
@@ -183,15 +183,15 @@ addContextInformation contextSize origSize = inner False
                 | 0 < gapSize && gapSize <= maxGap =
                     toFullCommand a : DiffCommand DiffNeutral end1 di1 gapSize : inner True (b:xs)
                      where end1 = oi1 + s1
-                           gapSize = oi2 - end1
+                           gapSize = max 0 $ oi2 - end1
 
         inner True (a@(DiffAdd oi1 di1 s1) :
-                    b@(DiffDel _oi2 di2 _s2) : xs)
+                    b@(DiffDel oi2 _di2 _s2) : xs)
                 | gapSize == 0 = toFullCommand a : inner True (b:xs)
                 | 0 < gapSize && gapSize <= maxGap =
                     toFullCommand a : DiffCommand DiffNeutral oi1 end gapSize : inner True (b:xs)
                      where end = di1 + s1
-                           gapSize = di2 - oi1
+                           gapSize = max 0 $ oi2 - oi1
 
         inner True (a@(DiffDel oi1 di1 s1) :
                     b@(DiffAdd oi2 _di2 _s2) : xs)
@@ -232,13 +232,16 @@ computeTextScript contextSize orig dest = map extract
           diffs = computeDiffRaw origArray destArray
 
           addNeutral = addContextInformation contextSize (V.length origArray)
+                                                         (V.length destArray)
 
-          extract c@(DiffCommand DiffAddition _oi  di s)   = (c, V.slice di s destArray)
-          extract c@(DiffRefined DiffAddition _oi  di s _) = (c, V.slice di s destArray)
-          extract c@(DiffCommand DiffDeletion  oi _di s)   = (c, V.slice oi s origArray)
-          extract c@(DiffRefined DiffDeletion  oi _di s _) = (c, V.slice oi s origArray)
-          extract c@(DiffCommand DiffNeutral   oi _di s)   = (c, V.slice oi s origArray)
-          extract c@(DiffRefined DiffNeutral   oi _di s _) = (c, V.slice oi s origArray)
+          slicer idx size array = V.slice idx size array
+
+          extract c@(DiffCommand DiffAddition _oi  di s)   = (c, slicer di s destArray)
+          extract c@(DiffRefined DiffAddition _oi  di s _) = (c, slicer di s destArray)
+          extract c@(DiffCommand DiffDeletion  oi _di s)   = (c, slicer oi s origArray)
+          extract c@(DiffRefined DiffDeletion  oi _di s _) = (c, slicer oi s origArray)
+          extract c@(DiffCommand DiffNeutral   oi _di s)   = (c, slicer oi s origArray)
+          extract c@(DiffRefined DiffNeutral   oi _di s _) = (c, slicer oi s origArray)
 
 textRefiner :: V.Vector T.Text -> V.Vector T.Text -> [DiffCommand]
             -> [DiffCommand]

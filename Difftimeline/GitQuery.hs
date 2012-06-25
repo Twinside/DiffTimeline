@@ -64,7 +64,7 @@ data CommitTreeDiff = AddElement T.Text Ref
                     | TreeElement T.Text Ref [CommitTreeDiff]
                     | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
                     | ModifyBinaryElement T.Text Ref
-                    deriving (Eq)
+                    deriving (Eq, Show)
 
 joinBytePath :: [BC.ByteString] -> T.Text
 joinBytePath = foldl' (<//>) mempty
@@ -100,6 +100,7 @@ data CommitDetail = CommitDetail
     , commitDetailAuthor  :: T.Text
     , commitDetailChanges :: [CommitTreeDiff]
     }
+    deriving Show
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
