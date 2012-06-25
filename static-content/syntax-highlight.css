@@ -5,25 +5,28 @@
 }
 
 .syntax_highlighted { color: #e0e2e4; background: #1f2223; }
-.syntax_line_number { color: #81969a; background: ; }
-.syntax_normal { color:#e0e2e4; }
-.syntax_comment { color:#7d8c93; }
-.syntax_repeat { color:#e0e2e4; }
-.syntax_identifier { color:#d77481; }
-.syntax_conditional { color:#e0e2e4; }
-.syntax_keyword { color:#e0e2e4; }
-.syntax_number { color:#ca9c81; }
-.syntax_statement { color:#e0e2e4; }
-.syntax_preproc { color:#a082bd; }
-.syntax_bool { color:#ca9c81; }
-.syntax_constant { color:#ca9c81; }
-.syntax_string { color:#93c79f; }
-.syntax_storage_class { color:#678cb1; }
-.syntax_structure { color:#a082bd; }
-.syntax_label { color:#e0e2e4; }
-.syntax_operator { color:#8ba4ba; }
-.syntax_tag { color:#8ba4ba; }
-.syntax_tag_name { color:#8ba4ba; }
-.syntax_tag_param { color:#678cb1; }
-.syntax_special { color:#e0e2e4; }
-.syntax_function { color:#678cb1; }
+.syntax_line_number { color: #81969a;  }
+.syntax_normal { color: #e0e2e4; }
+.syntax_comment { color: #7d8c93; }
+.syntax_repeat { color: #A082BD; }
+.syntax_identifier { color: #d77481; }
+.syntax_conditional { color: #A082BD; }
+.syntax_keyword { color: #A082BD; }
+.syntax_number { color: #ca9c81; }
+.syntax_statement { color: #A082BD; }
+.syntax_preproc { color: #a082bd; }
+.syntax_bool { color: #ca9c81; }
+.syntax_constant { color: #ca9c81; }
+.syntax_string { color: #93c79f; }
+.syntax_storage_class { color: #678cb1; }
+.syntax_structure { color: #a082bd; }
+.syntax_exception { color: #e0e2e4; }
+.syntax_label { color: #D77481; }
+.syntax_operator { color: #8ba4ba; }
+.syntax_tag { color: #8ba4ba; }
+.syntax_tag_name { color: #8ba4ba; }
+.syntax_tag_param { color: #678cb1; }
+.syntax_special { color: #CA9C81; }
+.syntax_function { color: #678cb1; }
+.syntax_type { color: #678cb1; }
+.syntax_module { color: #e0e2e4; }

@@ -12,15 +12,18 @@ let s:definitions =
     \ , ["bool"        , 'Boolean'     , 'fg#']
     \ , ["constant"    , 'Constant'    , 'fg#']
     \ , ["string"      , 'string'      , 'fg#']
-    \ , ["storage_class", 'StorageClass', 'fg#']
+    \ , ["storage_class", 'StorageClass','fg#']
     \ , ["structure"   , 'Structure'   , 'fg#']
+    \ , ["exception"   , 'Exception'   , 'fg#']
     \ , ["label"       , 'Label'       , 'fg#']
     \ , ["operator"    , 'Operator'    , 'fg#']
-    \ , ["tag"         , 'htmlTag'   , 'fg#']
-    \ , ["tag_name"    , 'htmlTagName'     , 'fg#']
-	\ , ["tag_param"   , 'htmlArg', 'fg#'  ]
-	\ , ['special'	   , 'Special', 'fg#'  ]
+    \ , ["tag"         , 'htmlTag'     , 'fg#']
+    \ , ["tag_name"    , 'htmlTagName' , 'fg#']
+	\ , ["tag_param"   , 'htmlArg'	   , 'fg#']
+	\ , ['special'	   , 'Special'	   , 'fg#']
     \ , ["function"    , 'Function'    , 'fg#']
+    \ , ["type"		   , 'Type'		   , 'fg#']
+    \ , ["module"	   , 'Module'	   , 'fg#']
     \ ]
 
 fun! ConvertThemeToCss() "{{{
@@ -35,9 +38,9 @@ fun! ConvertThemeToCss() "{{{
 	call add(rez, ".syntax_line_number { color: " . lineNrfg . "; background: " . lineNrbg . "; }")
 	
 	for [name, vimAttr, info] in s:definitions
-        let guiColor = synIDattr(synIDtrans(hlID(vimAttr)), info, 'gui')
+        let guiColor = synIDattr(synIDtrans(hlID(vimAttr)), info)
 
-		call add(rez, '.syntax_' . name . ' { color:' . guiColor . '; }')
+		call add(rez, '.syntax_' . name . ' { color: ' . guiColor . '; }')
 	endfor
 
 	call append(line('$'), rez)
