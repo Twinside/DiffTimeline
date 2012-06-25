@@ -45,6 +45,7 @@ import Data.Git( GitObject( .. )
                , getHead
                , Ref
                , fromHexString
+               , toHexString
 
                , TreeEntry
                )
@@ -207,13 +208,22 @@ diffCommitTree repository contextSize deep ref = runErrorT $ do
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                               , let fullName = name </> BC.unpack item ]
         diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
-            | lName == rName = ((do
-                subL <- errorIO ("Error can't access parent commit subtree " ++ BC.unpack lName)
-                                $ accessObject repository lRef
-                subR <- errorIO ("Error can't acces commit subtree" ++ BC.unpack lName)
-                                $ accessObject repository rRef
-                (:) <$> inner (BC.unpack lName) subL lRef subR rRef)
-                               `catchError` (\_ -> return id)) <*> diffTree name ls rs
+            | lName == rName = do
+                maySubL <- liftIO $ accessObject repository lRef
+                maySubR <- liftIO $ accessObject repository rRef
+                case (maySubL, maySubR) of
+                  -- This case should happen in presence of submodules.
+                  (Nothing, Nothing) ->
+                        (ModifyElement (decodeUtf8 lName) lRef []:) <$> diffTree name ls rs
+
+                  (Just subL, Just subR) ->
+                        (((:) <$> inner (BC.unpack lName) subL lRef subR rRef)
+                                `catchError` (\_ -> return id)) <*> diffTree name ls rs
+                  (Nothing, _) ->
+                      throwError $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
+
+                  (_, Nothing) ->
+                      throwError $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
 
             | lName < rName =
                 (:) <$> maySubTree DelElement (BC.unpack lName) lRef
@@ -287,11 +297,20 @@ diffCommit repository contextSize deep ref = runErrorT $ do
         diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
             | lName == rName && lRef == rRef = diffTree name ls rs
             | lName == rName = do
-                subL <- errorIO "Error can't access parent commit subtree"
-                                $ accessObject repository lRef
-                subR <- errorIO "Error can't acces commit subtree"
-                                $ accessObject repository rRef
-                mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
+                maySubL <- liftIO $ accessObject repository lRef
+                maySubR <- liftIO $ accessObject repository rRef
+                case (maySubL, maySubR) of
+                  (Nothing, Nothing) -> 
+                    (ModifyElement (decodeUtf8 lName) lRef []:) <$> diffTree name ls rs
+
+                  (Just subL, Just subR) ->
+                    mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
+
+                  (Nothing, _) ->
+                      throwError $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
+
+                  (_, Nothing) ->
+                      throwError $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
 
             | lName < rName = mappend <$> maySubTree DelElement addName lRef
                                       <*> diffTree name ls rights
