@@ -202,13 +202,13 @@ addContextInformation contextSize origSize _destSize = inner False
                            gapSize = oi2 - end
 
         inner False lst@(DiffAdd oi di _s:_) =
-            DiffCommand DiffNeutral beg dbeg contextSize
+            DiffCommand DiffNeutral beg dbeg (min contextSize oi)
                 : inner True lst
                 where beg = max 0 $ oi - contextSize
                       dbeg = max 0 $ di - contextSize
 
         inner False lst@(DiffDel oi di _s:_) =
-            DiffCommand DiffNeutral beg dbeg contextSize
+            DiffCommand DiffNeutral beg dbeg (min contextSize oi)
                 : inner True lst
                 where beg = max 0 $ oi - contextSize
                       dbeg = max 0 $ di - contextSize
