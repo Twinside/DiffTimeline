@@ -72,7 +72,7 @@ joinBytePath = foldl' (<//>) mempty
     where (<//>) t n = t `mappend` T.pack "/" `mappend` (decodeUtf8 n)
 
 flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
-flattenTreeDiff = inner mempty
+flattenTreeDiff = starter
     where (<//>) t n = t `mappend` T.pack "/" `mappend` n
           inner n (AddElement t r) = [AddElement (n <//> t) r]
           inner n (DelElement t r) = [DelElement (n <//> t) r]
@@ -80,6 +80,13 @@ flattenTreeDiff = inner mempty
           inner n (ModifyElement t r diff) = [ModifyElement (n <//> t) r diff]
           inner n (ModifyBinaryElement t r) = [ModifyBinaryElement (n <//> t) r]
           inner n (TreeElement t _ sub) = concatMap (inner $ n <//> t) sub
+
+          starter (AddElement t r) = [AddElement t r]
+          starter (DelElement t r) = [DelElement t r]
+          starter (NeutralElement t r) = [NeutralElement t r]
+          starter (ModifyElement t r diff) = [ModifyElement t r diff]
+          starter (ModifyBinaryElement t r) = [ModifyBinaryElement t r]
+          starter (TreeElement t _ sub) = concatMap (inner t) sub
 
 filterCommitTreeDiff :: (CommitTreeDiff -> Bool) -> CommitTreeDiff
                      -> [CommitTreeDiff]
@@ -156,14 +163,29 @@ accessBlob s rep ref = do
 nullRef :: Ref
 nullRef = fromHexString $ replicate 40 '0'
 
-diffCommitTree :: Git -> Int -> Bool -> Ref -> IO (Either String CommitTreeDiff)
-diffCommitTree repository contextSize deep ref = runErrorT $ do
+batchSubTree :: Git -> (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
+             -> ErrorT String IO CommitTreeDiff
+batchSubTree  repository f = aux
+    where objAccess = errorIO "" . accessObject repository
+
+          aux name r (Blob _) = return $ f (T.pack name) r
+          aux name r (Tree t) = TreeElement (T.pack name) r <$>
+            sequence [objAccess subRef >>= (aux (BC.unpack n) subRef)
+                                        | (_, n, subRef) <- t]
+          aux _ _ _ = throwError "Wrong git object kind"
+
+diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
+diffCommitTree repository ref = liftA snd <$> createCommitDiff repository 0 False ref
+
+createCommitDiff :: Git -> Int -> Bool -> Ref
+                 -> IO (Either String (CommitInfo, CommitTreeDiff))
+createCommitDiff repository contextSize deep ref = runErrorT $ do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let prevRef = head $ commitParents thisCommit
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
-    inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
+    (,) thisCommit <$> inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
   where getObj reason = errorIO reason . accessObject repository
         inner name (Tree left) _r1 (Tree right) _r2 = 
           TreeElement (T.pack name) nullRef <$> diffTree name sortedLeft sortedRight
@@ -173,6 +195,7 @@ diffCommitTree repository contextSize deep ref = runErrorT $ do
         inner name (Blob c1) r1 (Blob c2) r2
             | r1 == r2  = return $ NeutralElement (T.pack name) r1
             | not deep  = return $ ModifyElement (T.pack name) r2 []
+            | detectBinary c2  = return $ ModifyBinaryElement (T.pack name) r2
             | otherwise = return .
                 ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight
                     where strictify = B.concat . L.toChunks
@@ -187,16 +210,7 @@ diffCommitTree repository contextSize deep ref = runErrorT $ do
             -- | Sometimes, there is nothing to see
             case sub of
                Nothing -> return $ f (T.pack name) r
-               Just el  -> batchSubTree f name r el
-
-        batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
-                     -> ErrorT String IO CommitTreeDiff
-        batchSubTree f name r (Blob _) = return $ f (T.pack name) r
-        batchSubTree f name r (Tree t) = TreeElement (T.pack name) r <$>
-          sequence [objAccess subRef >>= (batchSubTree f (BC.unpack n) subRef)
-                                            | (_, n, subRef) <- t]
-            where objAccess = getObj "dipdup2"
-        batchSubTree _ _ _ _ = throwError "Wrong git object kind"
+               Just el  -> batchSubTree repository f name r el
 
         diffTree :: String -> [TreeEntry] -> [TreeEntry]
                  -> ErrorT String IO [CommitTreeDiff]
@@ -232,95 +246,30 @@ diffCommitTree repository contextSize deep ref = runErrorT $ do
             | otherwise = (:) <$> maySubTree AddElement (BC.unpack rName) rRef
                               <*> diffTree name lefts rs
 
+filterCommitModifications :: [CommitTreeDiff] -> [CommitTreeDiff]
+filterCommitModifications = filter isModification
+    where isModification (AddElement _ _) = True
+          isModification (DelElement _ _) = True
+          isModification (NeutralElement _ _) = False
+          isModification (ModifyElement _ _ _) = True
+          isModification (ModifyBinaryElement _ _)= True
+          isModification (TreeElement _ _ _) = False
+
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
-diffCommit repository contextSize deep ref = runErrorT $ do
-    (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    let prevRef = head $ commitParents thisCommit
-    (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
-    thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
-    prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
-    diff <- inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
-    let author = commitAuthor thisCommit
-    return (CommitDetail {
-          commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
-        , commitDetailParents = commitParents thisCommit
-        , commitDetailKey     = ref
-        , commitDetailAuthor  = decodeUtf8 $ authorName author
-        , commitDetailTimestamp = authorTimestamp author
-        , commitDetailTimezone  = authorTimezone author
-        , commitDetailChanges = diff
-        })
-  where getObj reason = errorIO reason . accessObject repository
-        inner name (Tree left) _r1 (Tree right) _r2 = diffTree name sortedLeft sortedRight
-            where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
-                  sortedRight = sortBy (\(_,a,_) (_,b,_) -> compare a b) right
-        inner name (Blob c1) _r1 (Blob c2) r2
-            | isBinary  = return [ModifyBinaryElement (T.pack name) r2]
-            | not deep  = return [ModifyElement (T.pack name) r2 []]
-            | otherwise = return
-                [ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight]
-                    where strictify = B.concat . L.toChunks
-                          txtLeft = decodeUtf8 $ strictify c1
-                          txtRight = decodeUtf8 $ strictify c2
-
-                          isBinary = detectBinary c2
-
-        inner _ _ _ _ _ = return []
-
-        maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
-                   -> ErrorT String IO [CommitTreeDiff]
-        maySubTree f name r = do
-            sub <- liftIO $ accessObject repository r
-            -- | Sometimes, there is nothing to see
-            case sub of
-               Nothing -> return [f (T.pack name) r]
-               Just el  -> batchSubTree f name r el
-
-        batchSubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> GitObject
-                     -> ErrorT String IO [CommitTreeDiff]
-        batchSubTree f name r (Blob _) = return [f (T.pack name) r]
-        batchSubTree f name _ (Tree t) =
-          concat <$> sequence [objAccess r >>= (batchSubTree f (namer n) r) | (_, n, r) <- t]
-            where objAccess = getObj "dipdup2"
-                  namer n = name </> BC.unpack n
-        batchSubTree _ _ _ _ = return []
-
-        diffTree :: String -> [TreeEntry] -> [TreeEntry]
-                 -> ErrorT String IO [CommitTreeDiff]
-        diffTree _name   []     [] = return []
-        diffTree name    [] rights = concat <$> sequence
-            [maySubTree AddElement fullName r | (_, item, r) <- rights
-                                              , let fullName = name </> BC.unpack item ]
-        diffTree name lefts     [] = concat <$> sequence
-            [maySubTree DelElement fullName r | (_, item, r) <- lefts
-                                              , let fullName = name </> BC.unpack item ]
-        diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
-            | lName == rName && lRef == rRef = diffTree name ls rs
-            | lName == rName = do
-                maySubL <- liftIO $ accessObject repository lRef
-                maySubR <- liftIO $ accessObject repository rRef
-                case (maySubL, maySubR) of
-                  (Nothing, Nothing) -> 
-                    (ModifyElement (decodeUtf8 lName) lRef []:) <$> diffTree name ls rs
-
-                  (Just subL, Just subR) ->
-                    mappend <$> inner subname subL lRef subR rRef <*> diffTree name ls rs
-
-                  (Nothing, _) ->
-                      throwError $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
-
-                  (_, Nothing) ->
-                      throwError $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
-
-            | lName < rName = mappend <$> maySubTree DelElement addName lRef
-                                      <*> diffTree name ls rights
-
-            | otherwise = mappend <$> maySubTree AddElement delName rRef
-                                  <*> diffTree name lefts rs
-                where addName = name </> BC.unpack lName
-                      delName = name </> BC.unpack rName
-                      subname = name </> BC.unpack lName
-
+diffCommit repository contextSize deep ref =
+   detailer <$> createCommitDiff  repository contextSize deep ref
+    where detailer (Left err) = Left err
+          detailer (Right (thisCommit, diff)) = 
+            let author = commitAuthor thisCommit
+            in Right $ CommitDetail {
+                  commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
+                , commitDetailParents = commitParents thisCommit
+                , commitDetailKey     = ref
+                , commitDetailAuthor  = decodeUtf8 $ authorName author
+                , commitDetailTimestamp = authorTimestamp author
+                , commitDetailTimezone  = authorTimezone author
+                , commitDetailChanges = filterCommitModifications $ flattenTreeDiff diff
+                }
 
 findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path

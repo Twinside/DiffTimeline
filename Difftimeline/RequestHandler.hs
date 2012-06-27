@@ -88,7 +88,7 @@ getCommitR commitSha = withRepository extractor
 getCommitTreeR :: String -> Handler RepJson
 getCommitTreeR commitSha = withRepository extractor
     where extractor repository =
-              diffCommitTree repository 0 False $ fromHexString commitSha
+              diffCommitTree repository $ fromHexString commitSha
 
 getJSONExternR :: Handler RepPlain
 getJSONExternR = return . RepPlain . toContent
