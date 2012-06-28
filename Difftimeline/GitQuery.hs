@@ -225,10 +225,12 @@ createCommitDiff repository contextSize deep ref = runErrorT $ do
             | lName == rName = do
                 maySubL <- liftIO $ accessObject repository lRef
                 maySubR <- liftIO $ accessObject repository rRef
+
                 case (maySubL, maySubR) of
                   -- This case should happen in presence of submodules.
-                  (Nothing, Nothing) ->
-                        (ModifyElement (decodeUtf8 lName) lRef []:) <$> diffTree name ls rs
+                  (Nothing, Nothing) -> (thisElem :) <$> diffTree name ls rs
+                        where thisElem | rRef == rRef = NeutralElement (decodeUtf8 lName) lRef
+                                       | otherwise = ModifyElement (decodeUtf8 lName) lRef []
 
                   (Just subL, Just subR) ->
                         (((:) <$> inner (BC.unpack lName) subL lRef subR rRef)
