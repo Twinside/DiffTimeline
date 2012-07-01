@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitDetail( .. )
                             , CommitPath( .. )
@@ -7,6 +8,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
 
                             , diffCommit
                             , diffCommitTree
+                            , workingDirectoryChanges 
                             , findFirstCommit
                             , findParentFile
                             , basePage
@@ -36,11 +38,13 @@ import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
 
+import System.Directory( getDirectoryContents, doesFileExist )
 import Data.Git( GitObject( .. )
                , CommitAuthor( .. )
                , CommitInfo( .. )
                , Git
                , findObject
+               , gitRepoPath 
                , CommitInfo( .. )
                , getHead
                , Ref
@@ -176,6 +180,100 @@ batchSubTree  repository f = aux
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = liftA snd <$> createCommitDiff repository 0 False ref
+
+data SubKind = KindFile | KindDirectory
+
+fetchDirectoryInfo :: FilePath -> IO [(SubKind, BC.ByteString)]
+fetchDirectoryInfo name = do
+    files <- getDirectoryContents name
+    sequence [(, BC.pack sub) <$> (kindOfExist <$> doesFileExist sub) | sub <- files ]
+        where kindOfExist True = KindFile
+              kindOfExist False = KindDirectory
+
+workingDirectoryChanges  :: Git -> Int -> Ref -> IO (Either String CommitDetail)
+workingDirectoryChanges repository contextSize ref =
+   detailer <$> diffWorkingDirectory repository contextSize ref
+    where detailer (Left err) = Left err
+          detailer (Right (_, diff)) =
+            Right $ CommitDetail {
+                  commitDetailMessage = "Working directory"
+                , commitDetailParents = [ref]
+                , commitDetailKey     = nullRef
+                , commitDetailAuthor  = ""
+                , commitDetailTimestamp = 0
+                , commitDetailTimezone  = 0
+                , commitDetailChanges = filterCommitModifications
+                                      $ flattenTreeDiff diff
+                }
+
+
+diffWorkingDirectory :: Git -> Int -> Ref -> IO (Either String (CommitInfo, CommitTreeDiff))
+diffWorkingDirectory repository contextSize ref = runErrorT $ do
+    (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+    thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
+    (,) thisCommit <$> inner (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 
+  where getObj reason = errorIO reason . accessObject repository
+
+        fileComparer name bin1 r1 bin2
+            | bin1 == bin2 = NeutralElement (T.pack name) r1
+            | detectBinary bin2 = ModifyBinaryElement (T.pack name) r1
+            | otherwise = case computeTextScript contextSize txtLeft txtRight of
+                    [] -> NeutralElement (T.pack name) r1
+                    lst -> ModifyElement (T.pack name) r1 lst
+                    where strictify = B.concat . L.toChunks
+                          txtLeft = decodeUtf8 $ strictify bin1
+                          txtRight = decodeUtf8 $ strictify bin2
+
+        inner flatname name (Tree left) r = do
+          right <- liftIO $ fetchDirectoryInfo flatname
+          TreeElement (T.pack name) r <$> diffTree flatname name sortedLeft (sortFolder right)
+            where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
+                  sortFolder = sortBy (\(_,a) (_,b) -> compare a b)
+
+        inner flatname name (Blob c1) r1 = do
+            file2 <- liftIO $ L.readFile flatname
+            pure $ fileComparer name c1 r1 file2
+        inner _ _ _ _ = throwError "Wrong git object kind"
+
+        maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
+                   -> ErrorT String IO CommitTreeDiff
+        maySubTree f name r = do
+            sub <- liftIO $ accessObject repository r
+            -- | Sometimes, there is nothing to see
+            case sub of
+               Nothing -> return $ f (T.pack name) r
+               Just el  -> batchSubTree repository f name r el
+
+        diffTree :: String -> String -> [TreeEntry] -> [(SubKind, BC.ByteString)]
+                 -> ErrorT String IO [CommitTreeDiff]
+        diffTree _ _name   []     [] = return []
+        diffTree _ name    [] rights = pure
+            [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
+                                                  , let fullName = name </> BC.unpack fname ]
+
+        diffTree _flatname name lefts     [] = sequence
+            [maySubTree DelElement fullName r | (_, item, r) <- lefts
+                                              , let fullName = name </> BC.unpack item ]
+        diffTree flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
+            | rName `elem` [".", "..", ".git"] = diffTree flatname name lefts rs
+            | lName == rName = do
+                maySubL <- liftIO $ accessObject repository lRef
+
+                case maySubL of
+                  -- This case should happen in presence of submodules.
+                  Nothing -> (thisElem :) <$> diffTree flatname name ls rs
+                        where thisElem = NeutralElement (decodeUtf8 lName) lRef
+
+                  Just subL ->
+                        (((:) <$> inner (flatname </> BC.unpack lName) (BC.unpack lName) subL lRef)
+                                `catchError` (\_ -> return id)) <*> diffTree flatname name ls rs
+
+            | lName < rName =
+                (:) <$> maySubTree DelElement (BC.unpack lName) lRef
+                    <*> diffTree flatname name ls rights
+
+            | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> 
+                              diffTree flatname name lefts rs
 
 createCommitDiff :: Git -> Int -> Bool -> Ref
                  -> IO (Either String (CommitInfo, CommitTreeDiff))
@@ -405,20 +503,20 @@ basePage _logger repository path = runErrorT $ do
         author = commitAuthor cInfo
 
     return $ ParentFile {
-    	commitRef = headRef,
-    	fileRef = foundFileRef,
-    	fileName = joinBytePath path,
-    	commitPath = [CommitPath { pathCommitRef = headRef
+        commitRef = headRef,
+        fileRef = foundFileRef,
+        fileName = joinBytePath path,
+        commitPath = [CommitPath { pathCommitRef = headRef
                                  , pathParentRef = head $ commitParents cInfo
                                  , pathMessage = decodeUtf8 $ commitMessage cInfo
                                  , pathTimestamp = authorTimestamp author
                                  , pathTimezone = authorTimezone author
                                  , pathAuthor = decodeUtf8 $ authorName author
                                  }],
-    	fileDiff = [],
-    	fileData = decodeUtf8 $ toStrict content,
-    	parentRef = commitParents cInfo,
-    	fileMessage = decodeUtf8 $ commitMessage cInfo,
+        fileDiff = [],
+        fileData = decodeUtf8 $ toStrict content,
+        parentRef = commitParents cInfo,
+        fileMessage = decodeUtf8 $ commitMessage cInfo,
         parentCommitAuthor = decodeUtf8 $ authorName author,
         parentCommitTimestamp = authorTimestamp author,
         parentCommmitTimezone = authorTimezone author

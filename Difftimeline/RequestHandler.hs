@@ -114,7 +114,7 @@ getInitialCommit = do
   app <- getYesod
   let repository = getRepository app
   Just headRef <- liftIO $ getHead repository
-  diffRez <- liftIO $ diffCommit repository 3 True headRef 
+  diffRez <- liftIO $ workingDirectoryChanges repository 3 headRef 
   return . RepPlain . toContent $ case diffRez of
     Left err ->
         renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
