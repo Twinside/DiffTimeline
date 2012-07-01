@@ -188,14 +188,18 @@ addContextInformation contextSize origSize _destSize = inner False
             toFullCommand x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize
                             : inner False xs
 
+trimLineReturn :: T.Text -> T.Text
+trimLineReturn txt
+    | not (T.null txt) && T.last txt == '\r' = T.init txt
+    | otherwise = txt
 
 -- | Compute the diff and extract the modification lines from the original text
 computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
 computeTextScript contextSize orig dest = map extract
                                         . textRefiner origArray destArray
                                         $ addNeutral diffs
-    where origArray = V.fromList $ T.lines orig
-          destArray = V.fromList $ T.lines dest
+    where origArray = V.fromList $ trimLineReturn <$> T.lines orig
+          destArray = V.fromList $ trimLineReturn <$> T.lines dest
           diffs = computeDiffRaw origArray destArray
 
           addNeutral = addContextInformation contextSize (V.length origArray)
