@@ -257,7 +257,7 @@ computeDiffRaw orig dest = compactCommands $ runST $ do
     let oSize = V.length orig
         dSize = V.length dest
 
-        bias = oSize + dSize
+        bias = oSize + dSize + 1
         coeffSize = bias * 2
 
     forward <- MU.replicate coeffSize (-1)
