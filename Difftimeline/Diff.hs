@@ -17,7 +17,7 @@ module Difftimeline.Diff( -- * Types
 
 import Prelude
 import Data.Monoid( mappend )
-import Control.Applicative( (<$>), (<*>) )
+import Control.Applicative( (<$>), (<*>), pure )
 import Control.Monad.ST( ST, runST )
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -372,13 +372,13 @@ backwardAvancement (DiffContext { origData = oData, destData = dData })
 -- | Main recursive function, apply a divide and conquer strategy to find
 -- diffs
 lcs :: (Eq a) => DiffContext s a -> Range -> Range -> ST s [RawDiffCommand]
-lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) =
-    let (oBeg, dBeg) = forwardAvancement ctxt origRange destRange
+lcs ctxt origRange@(_, origEnd) destRange@(_, destEnd) = rez
+  where (oBeg, dBeg) = forwardAvancement ctxt origRange destRange
         (oEnd, dEnd) = backwardAvancement ctxt (oBeg, origEnd) (dBeg, destEnd)
-    in case (oBeg == oEnd, dBeg == dEnd) of
-            ( True,     _) -> return [DiffAdd oBeg dBeg (dEnd - dBeg)]
-            (_    ,  True) -> return [DiffDel oBeg dBeg (oEnd - oBeg)]
-            (False, False) -> do
+
+        rez | oBeg == oEnd = pure $ if dEnd == dBeg then [] else [DiffAdd oBeg dBeg (dEnd - dBeg)]
+            | dBeg == dEnd = pure $ if oEnd == oBeg then [] else [DiffDel oBeg dBeg (oEnd - oBeg)]
+            | otherwise =  do
                 (subBeg, subEnd) <- findMiddleSnake ctxt oBeg oEnd dBeg dEnd
                 mappend <$> lcs ctxt (oBeg, subBeg) (dBeg, subEnd)
                         <*> lcs ctxt (subBeg, oEnd) (subEnd, dEnd)
