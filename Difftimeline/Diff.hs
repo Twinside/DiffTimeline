@@ -8,9 +8,6 @@ module Difftimeline.Diff( -- * Types
                         , SubModification( .. )
                         , Index
 
-                          -- * Diff conversion
-                        , diffToJson
-
                           -- * Diff functions
                         , computeDiff
                         , computeTextDiff
@@ -25,7 +22,6 @@ import Control.Monad.ST( ST, runST )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
-import Data.Aeson( ToJSON(..), Value, (.=), object )
 
 type Index = Int
 
@@ -59,35 +55,6 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
                                ![[SubModification]]       -- ^ Refined diff
                  deriving (Eq, Show)
-
-wayText :: DiffAction -> T.Text
-wayText DiffAddition = "+"
-wayText DiffDeletion = "-"
-wayText DiffNeutral  = "="
-
-instance ToJSON SubModification where
-  toJSON (SubModification beg end) =
-        object ["beg" .= beg, "end" .= end]
-
-
-diffToJson :: DiffCommand -> [(T.Text, Value)]
-diffToJson (DiffCommand way bego begdest s) =
-         [ "way"      .= wayText way
-         , "orig_idx" .= bego
-         , "dest_idx" .= begdest
-         , "size"     .= s
-         ]
-
-diffToJson (DiffRefined way oi di s [[]]) =
-    diffToJson (DiffCommand way oi di s)
-
-diffToJson (DiffRefined way oi di s lst) =
-         [ "way"      .= wayText way
-         , "orig_idx" .= oi
-         , "dest_idx" .= di
-         , "size"     .= s
-         , "sub"      .= lst
-         ]
 
 -- | Merge diff commands which are contiguous of the same direction.
 compactCommands :: [RawDiffCommand] -> [RawDiffCommand]
