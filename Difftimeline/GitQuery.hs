@@ -38,6 +38,8 @@ import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
 
+import Data.Time.Clock.POSIX( getPOSIXTime )
+
 import System.Directory( getDirectoryContents, doesFileExist )
 import Data.Git( GitObject( .. )
                , CommitAuthor( .. )
@@ -191,16 +193,17 @@ fetchDirectoryInfo name = do
               kindOfExist False = KindDirectory
 
 workingDirectoryChanges  :: Git -> Int -> Ref -> IO (Either String CommitDetail)
-workingDirectoryChanges repository contextSize ref =
-   detailer <$> diffWorkingDirectory repository contextSize ref
-    where detailer (Left err) = Left err
-          detailer (Right (_, diff)) =
+workingDirectoryChanges repository contextSize ref = do
+   time <- truncate <$> getPOSIXTime 
+   detailer time <$> diffWorkingDirectory repository contextSize ref
+    where detailer _ (Left err) = Left err
+          detailer time (Right (_, diff)) =
             Right $ CommitDetail {
                   commitDetailMessage = "Working directory"
                 , commitDetailParents = [ref]
                 , commitDetailKey     = nullRef
                 , commitDetailAuthor  = ""
-                , commitDetailTimestamp = 0
+                , commitDetailTimestamp = time
                 , commitDetailTimezone  = 0
                 , commitDetailChanges = filterCommitModifications
                                       $ flattenTreeDiff diff
