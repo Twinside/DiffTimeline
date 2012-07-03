@@ -193,6 +193,11 @@ pre
     background-color: #5F616E;
 }
 
+.commitmsg p
+{
+    max-width: 600px;
+}
+
 .commitmsg hr
 {
     width: 100%;

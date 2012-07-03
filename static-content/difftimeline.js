@@ -168,7 +168,11 @@ Project.state = (function () {
         switch_commit: function(id) {
             this.clear_display();
             states.push(new CommitRenderer.create_from_arg(id));
-            breadcrumb.append_breadcrumb(id);
+
+            if (id !== null_ref)
+                breadcrumb.append_breadcrumb(id);
+            else
+                breadcrumb.append_breadcrumb('HEAD');
         },
 
         /** @type {function(number) : void} */
@@ -221,7 +225,11 @@ Project.state = (function () {
 
         start_commit: function(commit_obj) {
             states.push( CommitRenderer.create_from_data(commit_obj) );
-            breadcrumb.append_breadcrumb(commit_obj.key);
+
+            if (commit_obj.key !== null_ref)
+                breadcrumb.append_breadcrumb(commit_obj.key);
+            else
+                breadcrumb.append_breadcrumb('HEAD');
         },
 
         start_file: function(file_obj) {
@@ -642,12 +650,28 @@ var html_encodize = function(snipp) {
 var Commit = function(key, data) {
     "use strict";
 
-    this.key = key;
+    this.key = key === null_ref ? 'Working directory' : key;
     this.commit_date = timestamp_to_string(data.timestamp);
     this.parents_sha = data.parents_sha;
     this.file_changes = data.file_changes;
+    this.author = data.author
     this.message = data.message;
-    this.split_message = (html_encodize(data.message)).replace(/\n/g, '<br/>');
+
+    var messages_lines = data.message.split('\n');
+    var first_non_null = 0;
+
+    while (messages_lines[first_non_null] === '')
+        { first_non_null++; }
+    
+    this.head_message =
+        html_encodize(messages_lines[first_non_null]);
+
+    this.sub_message =
+        html_encodize(messages_lines.slice(first_non_null + 1,
+                                             messages_lines.length).join('\n')).replace(/\n/g, '<br/>');
+    
+    this.split_message =
+        (html_encodize(data.message)).replace(/\n/g, '<br/>');
     this.tree_fetched = false;
     this.tree_opened = false;
     this.last_view_mode = Project.state.active_view_mode();

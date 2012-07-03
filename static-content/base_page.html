@@ -73,7 +73,11 @@
                         <span class="id">{{key}}</span>
                         <span class="time">{{commit_date}}</span>
                         <hr />
-                        <h4 title="{{message}}">{{{split_message}}}</h4>
+                        <h4 title="{{message}}">{{{head_message}}}</h4>
+                        <p>
+                            {{{sub_message}}}
+                        </p>
+                        Author : <span class="author">{{author}}</span>
                     </div>
                     <span class="more_info"
                           onclick="Project.state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
