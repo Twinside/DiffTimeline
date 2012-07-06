@@ -466,6 +466,17 @@ var TinySyntaxHighlighter = (function () {
         return { kind: k, recognizer: p.recognizer };
     };
 
+    /** @type {function(string, SyntaxParser) : string} */
+    var prefix_parser_kind = function(prefix, f) {
+        return function( line, idx ) {
+            if (line[idx] !== prefix)
+                return '';
+            var sub = f.recognizer(line, idx + 1);
+            if (sub === '') return '';
+            return prefix + sub;
+        };
+    }
+
     /** @type {Object.<string, SyntaxParser>} */
     var generic_parsers = {
         integer:
@@ -688,6 +699,59 @@ var TinySyntaxHighlighter = (function () {
                  ]
     };
 
+    var cssDef = {
+        begin:null_region, end:null_region,
+
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
+                 , parsers:[], keywords:[] 
+                 , regions:[]}
+
+                ,{ begin:tok_region("{")
+                 , end:tok_region("}")
+                 , kind:""
+                 , regions:[]
+                 , parsers:
+                    [ generic_parsers.double_quote_string
+                    , rexp_parser( 'syntax_storage_class', /[a-zA-Z][a-zA-Z0-9-]*\s*(?=:)/ )
+                    , rexp_parser( 'syntax_number',
+                                   /[-+]?\d+(\.\d*)?(%|mm|cm|in|pt|pc|em|ex|px)/ )
+                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{6}/ )
+                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{3}/ )
+                    ]
+                 , keywords:[]
+                 }
+                ],
+
+        parsers:[ { kind:'syntax_structure'
+                  , recognizer:prefix_parser_kind('.', generic_parsers.c_like_identifier )}
+                , { kind:'syntax_function'
+                  , recognizer:prefix_parser_kind('#', generic_parsers.c_like_identifier )}
+                , { kind:'syntax_preproc'
+                  , recognizer:prefix_parser_kind(':', generic_parsers.c_like_identifier )}
+                , generic_parsers.c_like_identifier
+                ],
+            
+        keywords:expand_keyword_groups(
+            [ { kind:'syntax_statement'
+              , words: [ "abbr", "acronym", "address", "applet", "area", "a", "b"
+                       , "base", "basefont", "bdo", "big", "blockquote", "body"
+                       , "br", "button", "caption", "center", "cite", "code", "col"
+                       , "colgroup", "dd", "del", "dfn", "dir", "div", "dl", "dt"
+                       , "em", "fieldset", "font", "form", "frame", "frameset", "h1"
+                       , "h2", "h3", "h4", "h5", "h6", "head", "hr", "html", "img"
+                       , "i", "iframe", "img", "input", "ins", "isindex", "kbd"
+                       , "label", "legend", "li", "link", "map", "menu", "meta"
+                       , "noframes", "noscript", "ol", "optgroup", "option", "p"
+                       , "param", "pre", "q", "s", "samp", "script", "select", "small"
+                       , "span", "strike", "strong", "style", "sub", "sup", "tbody"
+                       , "td", "textarea", "tfoot", "th", "thead", "title", "tr"
+                       , "tt", "ul", "u", "var", "table"
+                       ] }
+            ])
+    };
+
     /** @type {LangDef} */
     var pythonDef = {
         begin:null_region, end:null_region,
@@ -858,6 +922,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter(with_line_number, cppDef );
         else if (filename.match(/\.hs$/))
             return new create_highlighter(with_line_number, haskellDef );
+        else if (filename.match(/\.css$/))
+            return new create_highlighter(with_line_number, cssDef );
         else if (filename.match(/\.py$/))
             return new create_highlighter(with_line_number, pythonDef );
         else if (filename.match(/\.js$/))
@@ -871,6 +937,9 @@ var TinySyntaxHighlighter = (function () {
     return {
         c_highlighter: function (with_line_number)
             { return new create_highlighter( with_line_number, cDef ); },
+
+        css_highlighter: function (with_line_number)
+            { return new create_highlighter( with_line_number, cssDef ); },
 
         cpp_highlighter: function (with_line_number)
             { return new create_highlighter( with_line_number, cppDef ); },
