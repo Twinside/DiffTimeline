@@ -800,7 +800,7 @@ var TinySyntaxHighlighter = (function () {
         keywords: expand_keyword_groups(
             [ { kind:'syntax_conditional', words: ['if', 'then', 'else'] }
             , { kind:'syntax_statement', words:['do', 'case', 'of', 'let', 'in'  ] }
-            , { kind:'syntax_module', words:['module'] }
+            , { kind:'syntax_structure', words:['module'] }
             , { kind:'syntax_preproc', words:['import'] }
             , { kind:'syntax_type'
               , words:[ 'Int', 'Integer', 'Char', 'Bool', 'Float'
