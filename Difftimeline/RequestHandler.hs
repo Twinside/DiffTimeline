@@ -146,12 +146,29 @@ getInitialFile filename = do
 
     return . RepPlain $ toContent rendered
 
+
+getInitialBranch :: String -> String -> Handler RepPlain
+getInitialBranch b1 b2 = do
+  app <- getYesod
+  let repository = getRepository app
+  diffRez <- liftIO $ compareBranches repository 3 b1 b2
+  return . RepPlain . toContent $ case diffRez of
+    Left err ->
+        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+
+    Right rez ->
+        renderJavascript $ [julius|
+            var first_state = #{renderJson rez};
+            Project.state.start_commit( first_state ); |] ("" :: Text)
+
+
 getInitialInfoR :: Handler RepPlain
 getInitialInfoR = do
     app <- getYesod
-    case initialPath app of
-        Nothing -> getInitialCommit
-        Just fname -> getInitialFile fname
+    case initialCommand app of
+        DiffWorking -> getInitialCommit
+        DiffFile fname -> getInitialFile fname
+        DiffCompare b1 b2 -> getInitialBranch b1 b2
 
 getQuitR :: Handler RepJson
 getQuitR = do

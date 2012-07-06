@@ -2,8 +2,7 @@ import Prelude
 
 import Control.Monad( when )
 import Data.List( foldl' )
-import Data.Maybe( listToMaybe )
-import Difftimeline.Application( getApplication )
+import Difftimeline.Application( getApplication, Command( .. )  )
 
 import Network.Wai.Handler.Launch( runUrlPort )
 import Network.Socket( socket
@@ -46,6 +45,7 @@ data Flag = Port String
 data Conf = Conf
     { confShowHelp :: !Bool
     , confPort     :: Maybe Int
+    , confCommand  :: Command
     }
 
 -- | Initial and default configuration
@@ -53,6 +53,7 @@ defaultConf :: Conf
 defaultConf = Conf
     { confShowHelp = False
     , confPort     = Nothing
+    , confCommand  = DiffWorking
     }
 
 -- | Command line description
@@ -63,11 +64,17 @@ options =
     , Option "" ["help"] (NoArg Help) "Show help (this screen)"
     ]
 
+commandOfRest :: [String] -> Command
+commandOfRest [] = DiffWorking
+commandOfRest ("compare":c1:c2:_) = DiffCompare c1 c2
+commandOfRest (a:_) = DiffFile a
+
 parseArgs :: IO (Conf, [String])
 parseArgs = do
     args <- getArgs
     let (opt, rest, _) = getOpt Permute options args
-    return (foldl' configurator defaultConf opt, rest)
+        cmd = commandOfRest rest
+    return (foldl' configurator (defaultConf { confCommand = cmd }) opt, [])
 
      where configurator c Help = c{ confShowHelp = True }
            configurator c (Port n) = c { confPort = Just $ read n }
@@ -85,12 +92,28 @@ findNextPort = do
     sClose s
     return $ fromIntegral i
 
+helpText :: String
+helpText =
+    "Difftimeline v" ++ version ++ "\n" ++
+    "usage: difftimeline [options] [file]\n" ++
+    "       difftimeline [options] compare branch1 branch2\n" ++
+    "\n" ++
+    "Without argument, difftimeline will start diff from the current\n" ++
+    "directory to HEAD.\n" ++
+    "\n" ++
+    "With a file, begin to track file diff\n" ++
+    "\n" ++
+    "With the compare command, it will compare two branches\n" ++
+    "\n\n" ++
+    "Options :\n" ++
+    "=========\n"
+
 main :: IO ()
 main = do
-    (conf, args) <- parseArgs
+    (conf, _args) <- parseArgs
 
     when (confShowHelp conf)
-         (do putStrLn $ usageInfo ("Difftimeline v" ++ version) options
+         (do putStrLn $ usageInfo helpText options
              exitWith ExitSuccess)
 
     usePort <- case confPort conf of
@@ -106,6 +129,6 @@ main = do
       }
 
     logger <- defaultDevelopmentLogger
-    app <- getApplication (listToMaybe args) config logger
+    app <- getApplication (confCommand conf) config logger
     runUrlPort usePort "" app
 

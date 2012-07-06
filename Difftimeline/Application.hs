@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Difftimeline.Application( getApplication ) where
+module Difftimeline.Application( getApplication, Command( .. ) ) where
 
 import Difftimeline.Import
 import System.Directory( getCurrentDirectory )
@@ -52,23 +52,24 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: Maybe FilePath -> AppConfig DefaultEnv () -> Logger 
+getApplication :: Command -> AppConfig DefaultEnv () -> Logger 
                -> IO Application
-getApplication Nothing conf logger = do
-    initRepo <- getCurrentDirectory >>= initRepository logger
-    let foundation = DiffTimeline conf logger initRepo Nothing
-    app <- toWaiAppPlain foundation
-    return $ logCallbackDev (logBS logger) app
 
-getApplication (Just fname) conf logger = do
+getApplication (DiffFile fname) conf logger = do
     cwd <- getCurrentDirectory 
     let name = if isRelative fname
             then simplifyPath $ cwd </> fname
             else simplifyPath fname
     initRepo <- initRepository logger $ takeDirectory name
     let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) name
-        foundation = DiffTimeline conf logger initRepo (Just initPath)
+        foundation = DiffTimeline conf logger initRepo (DiffFile initPath)
     liftIO . logString logger $ "Initial file : " ++ initPath
+    app <- toWaiAppPlain foundation
+    return $ logCallbackDev (logBS logger) app
+
+getApplication cmd conf logger = do
+    initRepo <- getCurrentDirectory >>= initRepository logger
+    let foundation = DiffTimeline conf logger initRepo cmd
     app <- toWaiAppPlain foundation
     return $ logCallbackDev (logBS logger) app
 

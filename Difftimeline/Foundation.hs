@@ -1,6 +1,7 @@
 module Difftimeline.Foundation
     ( DiffTimeline (..)
     , Route (..)
+    , Command (..)
     , DiffTimelineMessage (..)
     , resourcesDiffTimeline
     , Handler
@@ -16,6 +17,10 @@ import Yesod.Logger (Logger, logMsg, formatLogText)
 import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
 
+data Command = DiffCompare String String
+             | DiffFile String
+             | DiffWorking
+
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
 -- starts running, such as database connections. Every handler will have
@@ -24,7 +29,7 @@ data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv ()
     , getLogger :: Logger
     , getRepository :: Git
-    , initialPath   :: Maybe FilePath
+    , initialCommand   :: Command
     }
 
 -- Set up i18n messages. See the message folder.

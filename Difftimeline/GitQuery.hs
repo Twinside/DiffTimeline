@@ -7,6 +7,8 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitOverview( .. )
 
                             , diffCommit
+                            , diffBranches
+                            , compareBranches
                             , diffCommitTree
                             , workingDirectoryChanges 
                             , findFirstCommit
@@ -27,6 +29,7 @@ import Data.List( sortBy, foldl' )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
+import Control.Monad( when )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -52,6 +55,8 @@ import Data.Git( GitObject( .. )
                , Ref
                , fromHexString
                , toHexString
+               , doesHeadExist
+               , readBranch
 
                , TreeEntry
                )
@@ -180,8 +185,42 @@ batchSubTree  repository f = aux
                                         | (_, n, subRef) <- t]
           aux _ _ _ = throwError "Wrong git object kind"
 
+compareBranches :: Git -> Int -> String -> String
+                -> IO (Either String CommitDetail)
+compareBranches repo contextSize b1 b2 = runErrorT $ do
+    detailer <$> diffBranches repo contextSize b1 b2
+  where detailer diff = CommitDetail
+            { commitDetailMessage = T.pack $ "Comparing " ++ b1 ++ " and " ++ b2
+            , commitDetailParents = [nullRef]
+            , commitDetailKey     = nullRef
+            , commitDetailAuthor  = ""
+            , commitDetailTimestamp = 0
+            , commitDetailTimezone  = 0
+            , commitDetailChanges = filterCommitModifications
+                                  $ flattenTreeDiff diff
+            }
+
+
+diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
+diffBranches repo contextSize branch1 branch2 = do
+    isB1 <- liftIO $ doesHeadExist repo branch1
+    when (not isB1)
+        $ throwError ("Error branch " ++ branch1 ++ " doesnt exist")
+
+    isB2 <- liftIO $ doesHeadExist repo branch2
+    when (not isB2) 
+        $ throwError ("Error branch " ++ branch2 ++ " doesnt exist")
+
+    b1Ref <- liftIO $ readBranch repo branch1
+    b2Ref <- liftIO $ readBranch repo branch2
+
+    snd <$> createCommitDiff  repo contextSize True b1Ref b2Ref
+
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
-diffCommitTree repository ref = liftA snd <$> createCommitDiff repository 0 False ref
+diffCommitTree repository ref = runErrorT $ do
+    (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+    let prevRef = head $ commitParents thisCommit
+    snd <$> createCommitDiff repository 0 False ref prevRef
 
 data SubKind = KindFile | KindDirectory
 
@@ -278,11 +317,10 @@ diffWorkingDirectory repository contextSize ref = runErrorT $ do
             | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> 
                               diffTree flatname name lefts rs
 
-createCommitDiff :: Git -> Int -> Bool -> Ref
-                 -> IO (Either String (CommitInfo, CommitTreeDiff))
-createCommitDiff repository contextSize deep ref = runErrorT $ do
+createCommitDiff :: Git -> Int -> Bool -> Ref -> Ref
+                 -> ErrorT String IO (CommitInfo, CommitTreeDiff)
+createCommitDiff repository contextSize deep ref prevRef = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    let prevRef = head $ commitParents thisCommit
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
@@ -359,12 +397,13 @@ filterCommitModifications = filter isModification
           isModification (TreeElement _ _ _) = False
 
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
-diffCommit repository contextSize deep ref =
-   detailer <$> createCommitDiff  repository contextSize deep ref
-    where detailer (Left err) = Left err
-          detailer (Right (thisCommit, diff)) = 
+diffCommit repository contextSize deep ref = runErrorT $ do
+   (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+   let prevRef = head $ commitParents thisCommit
+   detailer <$> createCommitDiff  repository contextSize deep ref prevRef
+    where detailer (thisCommit, diff) = 
             let author = commitAuthor thisCommit
-            in Right $ CommitDetail {
+            in CommitDetail {
                   commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
                 , commitDetailParents = commitParents thisCommit
                 , commitDetailKey     = ref
