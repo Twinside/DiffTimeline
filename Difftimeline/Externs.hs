@@ -172,6 +172,13 @@ instance ClosureDescriptable DiffCommand Serializable where
               sub (DiffRefined _ _ _ _ l) = l
               sub _ = []
 
+instance ClosureDescriptable BranchInfo Serializable where
+    typename _ = "BranchInfo"
+    toClosureDesc _ =
+        record ["name" .: branchName
+               ,"key"  .: branchRef
+               ]
+
 instance ClosureDescriptable ParentFile Serializable where
     typename _ = "ParentFile"
     toClosureDesc _ =
@@ -201,4 +208,5 @@ difftimelineEnv = do
     declare (undefined :: CommitPath)
     declare (undefined :: ParentFile)
     declare (undefined :: CommitOverview)
+    declare (undefined :: BranchInfo)
 

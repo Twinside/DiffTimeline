@@ -6,7 +6,8 @@
         <link href="static-content/syntax-highlight.css" type="text/css" rel="stylesheet" />
         <link href="static-content/screen.css" type="text/css" rel="stylesheet" />
         <link href="static-content/difftimeline.css" type="text/css" rel="stylesheet" />
-        <script language="javascript" type="text/javascript" src="static-content/jquery-1.6.4.min.js"></script>
+        <script language="javascript" type="text/javascript" src="static-content/jquery.min.js"></script>
+        <script language="javascript" type="text/javascript" src="static-content/jquery-ui.min.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/ICanHaz.min.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>
 
@@ -155,6 +156,24 @@
                 <div class="file_content">
                     <pre class="syntax_highlighted"></pre>
                 </div>
+            </div>
+        </script>
+        <script id="branch_comparer" type="text/html">
+            <div class="branch_list">
+                <h4>Branches</h4>
+                {{#branches}}
+                    <div class="branch_widget">
+                        {{name}}
+                    </div>
+                {{/branches}}
+            </div>
+            <div class="branch_container">
+                <div class="dropzone_a">
+                </div>
+                <div class="dropzone_b">
+                </div>
+            </div>
+            <div class="branch_diff_content">
             </div>
         </script>
         <script language="javascript" type="text/javascript" src="static-content/difftimeline.js"></script>

@@ -5,7 +5,9 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitPath( .. )
                             , ParentFile( .. )
                             , CommitOverview( .. )
+                            , BranchInfo( .. )
 
+                            , brancheslist
                             , diffCommit
                             , diffBranches
                             , compareBranches
@@ -56,7 +58,10 @@ import Data.Git( GitObject( .. )
                , fromHexString
                , toHexString
                , doesHeadExist
+               , getBranchNames
+               , getTagNames
                , readBranch
+               , readTag
 
                , TreeEntry
                )
@@ -200,6 +205,18 @@ compareBranches repo contextSize b1 b2 = runErrorT $ do
                                   $ flattenTreeDiff diff
             }
 
+data BranchInfo = BranchInfo
+    { branchName :: T.Text
+    , branchRef  :: Ref
+    }
+
+brancheslist :: Git -> IO [BranchInfo]
+brancheslist repo = do
+    let fetchBranch b = BranchInfo (T.pack b) <$> readBranch repo b
+        fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
+    branchInfo <- getBranchNames repo >>= mapM fetchBranch 
+    tagInfo <- getTagNames repo >>= mapM fetchTag
+    pure $ branchInfo ++ tagInfo
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
@@ -458,7 +475,6 @@ findInTree git pathes = inner pathes . Just
 
           extractRef (_, _, ref) = ref
           findVal v lst = extractRef <$> find (\(_, n, _) -> v == n) lst
-
 findParentFile :: Git -> String -> String -> FilePath -> IO (Either String ParentFile)
 findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
   where prevFileSha = fromHexString lastFileStrSha

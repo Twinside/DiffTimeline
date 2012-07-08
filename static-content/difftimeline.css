@@ -556,3 +556,35 @@ pre
 
    background-color: #1D1E21;
 }
+
+/* ================================================ */
+/* Branch comparison                                */
+/* ================================================ */
+.branch_list {
+    width: 150px;
+    float: left;
+}
+
+.branch_list h4 {
+    color: white;
+}
+
+.branch_widget {
+    padding: 3px;
+    border: 1px solid white;
+    width: 100px;
+    background: #777777;
+    margin: 2px;
+}
+
+.branch_container {
+    width: 600px;
+    float: left;
+}
+
+.branch_container > div {
+    width: 200px;
+    height: 60px;
+    border: 1px solid white;
+}
+

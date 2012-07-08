@@ -3,13 +3,15 @@
 
 / RootR GET
 
-/ask_parent/*Texts          FileParentR     GET
-/ask_commit/#String         CommitOverviewR GET
-/ask_commit_tree/#String    CommitTreeR     GET
-/commit/#String             CommitR         GET
-/commit_list/#Int/#String   CommitListR     GET
-/initial_info.js            InitialInfoR    GET
-/quit                       QuitR           GET
+/ask_parent/*Texts                  FileParentR       GET
+/ask_commit/#String                 CommitOverviewR   GET
+/ask_commit_tree/#String            CommitTreeR       GET
+/compare_branches/#String/#String   BranchComparisonR GET
+/branches_list                      BranchesR         GET
+/commit/#String                     CommitR           GET
+/commit_list/#Int/#String           CommitListR       GET
+/initial_info.js                    InitialInfoR      GET
+/quit                               QuitR             GET
 
 /difftimeline.extern.js		JSONExternR		GET
 
@@ -19,6 +21,7 @@
 /static-content/favicon.ico                  Favicon                 GET
 /static-content/screen.css                   Screen                  GET
 
-/static-content/jquery-1.6.4.min.js          Jquery                  GET
+/static-content/jquery.min.js                Jquery                  GET
+/static-content/jquery-ui.min.js             JqueryUI                GET
 /static-content/syntax-highlight.css         Syntax_highlight        GET
 /static-content/tinysyntaxhighlighter.js     Tinysyntaxhighlighter   GET

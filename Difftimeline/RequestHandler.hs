@@ -148,6 +148,18 @@ getInitialFile filename = do
     return . RepPlain $ toContent rendered
 
 
+getBranchesR :: Handler RepJson
+getBranchesR = withRepository extractor
+  where extractor repo = Right <$> brancheslist repo
+
+getBranchComparer :: Handler RepPlain
+getBranchComparer = return . RepPlain . toContent . renderJavascript $
+    [julius| Project.state.start_branch_comp(); |] ("" :: Text)
+
+getBranchComparisonR :: String -> String -> Handler RepJson
+getBranchComparisonR b1 b2 = withRepository extractor
+  where extractor repo = compareBranches repo 3 b1 b2
+
 getInitialBranch :: String -> String -> Handler RepPlain
 getInitialBranch b1 b2 = do
   app <- getYesod
@@ -169,6 +181,7 @@ getInitialInfoR = do
     case initialCommand app of
         DiffWorking -> getInitialCommit
         DiffFile fname -> getInitialFile fname
+        DiffCompare "" "" -> getBranchComparer
         DiffCompare b1 b2 -> getInitialBranch b1 b2
 
 getQuitR :: Handler RepJson

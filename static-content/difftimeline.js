@@ -223,6 +223,11 @@ Project.state = (function () {
             this.render_all();
         },
 
+        start_branch_comp: function() {
+            states.push( BranchComparer.create() );
+            breadcrumb.append_breadcrumb('Branches');
+        },
+
         start_commit: function(commit_obj) {
             states.push( CommitRenderer.create_from_data(commit_obj) );
 
@@ -1324,6 +1329,115 @@ var FileRenderer = (function() {
             });
 
             return rez;
+        }
+    };
+})();
+
+var BranchComparer = (function() {
+    "use strict";
+    var fetch_branch_list = function() {
+        var this_obj = this;
+
+        $.ajax({
+            url:'/branches_list', dataType: 'json',
+            data: {},
+            error: function() {
+                show_error({error: 'Communication error with server while fetching branches'}); },
+            success: function(data) {
+                if (data['error']) { 
+                    show_error( data );
+                    return;
+                }
+
+                this_obj.branches = data;
+                this_obj.create_all_dom();
+            }
+        });
+    }
+
+    var init = function() {
+        fetch_branch_list.call(this);
+    }
+
+    var init_methods = function() {
+
+        this.is_a_filled = false;
+        this.is_b_filled = false;
+
+        this.fetch_previous = function() {
+            show_error({error: 'Does not exists in this mode'});
+        };
+
+        this.render_all = function() {
+            /* nothing */
+        };
+
+        this.refresh_diff = function() {
+            if (!this.is_a_filled || !this.is_b_filled)
+                return;
+
+            var this_obj = this;
+
+            $.ajax({  
+                url:'/compare_branches/' + this.branch_a + '/' + this.branch_b,
+                dataType: 'json',
+                data: {},
+                error: function() {
+                    show_error({error: 'Communication error with server while comparing branches'}); },
+                success: function(data) {
+                    if (data['error']) { 
+                        show_error( data );
+                        return;
+                    }
+                    var rez = new Commit(data.key, data);
+
+                    rez.create_dom();
+                    rez.render();
+                }
+            });
+        }
+
+        this.create_all_dom = function() {
+            var this_obj = this;
+
+            $('.container').append(ich.branch_comparer(this));
+            $('.container .branch_widget').draggable({
+                containment: '.branch_container',
+                helper: 'clone'
+            });
+
+            $('.container .dropzone_a').droppable( {
+                drop: function(evt, ui) {
+                    $(this).find('.branch_widget').remove();
+                    $(this).append($(ui.draggable).clone());
+                    this_obj.is_a_filled = true;
+                    this_obj.branch_a = $('.dropzone_a > .branch_widget').text().replace(/^\s+|\s+$/g, '');
+                    this_obj.refresh_diff();
+                }
+            })
+
+            $('.container .dropzone_b').droppable( {
+                drop: function(evt, ui) {
+                    $(this).find('.branch_widget').remove();
+                    $(this).append($(ui.draggable).clone());
+                    this_obj.is_b_filled = true;
+                    this_obj.branch_b = $('.dropzone_b > .branch_widget').text().replace(/^\s+|\s+$/g, '');
+                    this_obj.refresh_diff();
+                }
+            })
+        };
+
+        this.send_message = function( msg ) {
+            /* nothing */
+        };
+    }
+
+    return {
+        create: function() {
+
+            var created = new init_methods();
+            init.call(created);
+            return created;
         }
     };
 })();
