@@ -21,7 +21,10 @@ faviconEmbed :: B.ByteString
 faviconEmbed = $(embedFile "static-content/favicon.ico")
 
 jqueryEmbedded :: B.ByteString
-jqueryEmbedded = $(embedFile "static-content/jquery-1.6.4.min.js")
+jqueryEmbedded = $(embedFile "static-content/jquery-1.7.2.min.js")
+
+jqueryUiEmbedded :: B.ByteString
+jqueryUiEmbedded = $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js")
 
 screenCssEmbedded :: B.ByteString
 screenCssEmbedded = $(embedFile "static-content/screen.css")

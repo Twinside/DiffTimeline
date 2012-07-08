@@ -40,12 +40,13 @@ getDifftimelineCss = return . RepCss $ toContent diffTimelineCssEmbedded
 getScreen =  return . RepCss $ toContent screenCssEmbedded
 getSyntax_highlight = return . RepCss $ toContent  syntaxhighlihgtCss
 
-getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, 
+getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, getJqueryUI,
     getTinysyntaxhighlighter :: Handler RepPlain
 getICanHaz_min = return . RepPlain $ toContent icanHazEmbedded 
 getDifftimelineJs = return . RepPlain $ toContent diffTimlineJsEmbedded 
 getFavicon = return . RepPlain $ toContent faviconEmbed
 getJquery = return . RepPlain $ toContent jqueryEmbedded 
+getJqueryUI = return . RepPlain $ toContent jqueryUiEmbedded 
 getTinysyntaxhighlighter = return . RepPlain $ toContent tinySyntaxHighlightJs 
 
 getFileParentR :: [Text] -> Handler RepJson
