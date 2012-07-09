@@ -1349,7 +1349,7 @@ var BranchComparer = (function() {
                     return;
                 }
 
-                this_obj.branches = data;
+                this_obj.ref_list = data;
                 this_obj.create_all_dom();
             }
         });

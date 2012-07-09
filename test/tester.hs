@@ -36,6 +36,7 @@ main = do
                                    {-(T.pack "Hello: Hello\r\n")-}
 
     repo <- openRepo "./.git"
-    Just headRef <- getHead repo
-    diffRez <- workingDirectoryChanges repo 3 headRef 
-    putStrLn $ show diffRez
+    branches <- brancheslist repo
+    {-Just headRef <- getHead repo-}
+    {-diffRez <- workingDirectoryChanges repo 3 headRef -}
+    putStrLn $ show branches

@@ -179,6 +179,13 @@ instance ClosureDescriptable BranchInfo Serializable where
                ,"key"  .: branchRef
                ]
 
+instance ClosureDescriptable RemoteBranches Serializable where
+    typename _ = "RemoteBranches"
+    toClosureDesc _ =
+        record ["name"     .: remoteName
+               ,"branches" .: remoteBranches
+               ]
+
 instance ClosureDescriptable ParentFile Serializable where
     typename _ = "ParentFile"
     toClosureDesc _ =

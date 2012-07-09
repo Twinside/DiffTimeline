@@ -6,6 +6,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , ParentFile( .. )
                             , CommitOverview( .. )
                             , BranchInfo( .. )
+                            , RemoteBranches( .. )
 
                             , brancheslist
                             , diffCommit
@@ -31,7 +32,7 @@ import Data.List( sortBy, foldl' )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
-import Control.Monad( when )
+import Control.Monad( when, forM )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -59,7 +60,10 @@ import Data.Git( GitObject( .. )
                , toHexString
                , doesHeadExist
                , getBranchNames
+               , getRemoteNames
+               , getRemoteBranchNames
                , getTagNames
+               , readRemoteBranch
                , readBranch
                , readTag
 
@@ -209,14 +213,36 @@ data BranchInfo = BranchInfo
     { branchName :: T.Text
     , branchRef  :: Ref
     }
+    deriving Show
 
-brancheslist :: Git -> IO [BranchInfo]
+data RemoteBranches = RemoteBranches
+    { remoteName     :: T.Text
+    , remoteBranches :: [BranchInfo]
+    }
+    deriving Show
+
+brancheslist :: Git -> IO [RemoteBranches]
 brancheslist repo = do
     let fetchBranch b = BranchInfo (T.pack b) <$> readBranch repo b
+        fetchRemoteBranch remote "HEAD" = pure[]
+        fetchRemoteBranch remote b = sequence [BranchInfo (T.pack b) <$> readRemoteBranch repo remote b]
+
         fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
     branchInfo <- getBranchNames repo >>= mapM fetchBranch 
+    remoteList <- getRemoteNames repo
+    remotes <-  forM remoteList (\remote -> do
+          branchesName <- getRemoteBranchNames repo remote 
+          branches <- concat <$> mapM (fetchRemoteBranch remote) branchesName
+          pure $ RemoteBranches { remoteName = T.pack remote
+                                , remoteBranches = branches 
+                                })
+
     tagInfo <- getTagNames repo >>= mapM fetchTag
-    pure $ branchInfo ++ tagInfo
+    let localBranch = RemoteBranches {
+        remoteName = "local",
+        remoteBranches = branchInfo ++ tagInfo
+    }
+    pure $ localBranch : remotes
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do

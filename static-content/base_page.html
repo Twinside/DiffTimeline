@@ -160,12 +160,14 @@
         </script>
         <script id="branch_comparer" type="text/html">
             <div class="branch_list">
-                <h4>Branches</h4>
-                {{#branches}}
-                    <div class="branch_widget">
-                        {{name}}
-                    </div>
-                {{/branches}}
+                {{#ref_list}}
+                    <h4>{{name}} branches</h4>
+                    {{#branches}}
+                        <div class="branch_widget">
+                            {{name}}
+                        </div>
+                    {{/branches}}
+                {{/ref_list}}
             </div>
             <div class="branch_container">
                 <div class="dropzone_a">
