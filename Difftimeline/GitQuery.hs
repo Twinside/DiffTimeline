@@ -32,7 +32,7 @@ import Data.List( sortBy, foldl' )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
-import Control.Monad( when, forM )
+import Control.Monad( forM )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -58,7 +58,6 @@ import Data.Git( GitObject( .. )
                , Ref
                , fromHexString
                , toHexString
-               , doesHeadExist
                , getBranchNames
                , getRemoteNames
                , getRemoteBranchNames
@@ -68,6 +67,8 @@ import Data.Git( GitObject( .. )
                , readTag
 
                , TreeEntry
+               , revFromString
+               , resolveRevision
                )
 
 import qualified Data.Vector as V
@@ -224,8 +225,9 @@ data RemoteBranches = RemoteBranches
 brancheslist :: Git -> IO [RemoteBranches]
 brancheslist repo = do
     let fetchBranch b = BranchInfo (T.pack b) <$> readBranch repo b
-        fetchRemoteBranch remote "HEAD" = pure[]
-        fetchRemoteBranch remote b = sequence [BranchInfo (T.pack b) <$> readRemoteBranch repo remote b]
+        fetchRemoteBranch _remote "HEAD" = pure[]
+        fetchRemoteBranch remote b =
+            sequence [BranchInfo (T.pack $ remote </> b) <$> readRemoteBranch repo remote b]
 
         fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
     branchInfo <- getBranchNames repo >>= mapM fetchBranch 
@@ -246,18 +248,14 @@ brancheslist repo = do
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
-    isB1 <- liftIO $ doesHeadExist repo branch1
-    when (not isB1)
-        $ throwError ("Error branch " ++ branch1 ++ " doesnt exist")
-
-    isB2 <- liftIO $ doesHeadExist repo branch2
-    when (not isB2) 
-        $ throwError ("Error branch " ++ branch2 ++ " doesnt exist")
-
-    b1Ref <- liftIO $ readBranch repo branch1
-    b2Ref <- liftIO $ readBranch repo branch2
-
-    snd <$> createCommitDiff  repo contextSize True b1Ref b2Ref
+    let fetchRef = liftIO . resolveRevision repo . revFromString
+    ref1 <- fetchRef branch1
+    ref2 <- fetchRef branch2
+    case (ref1, ref2) of
+      (Nothing,       _) -> throwError ("Error branch " ++ branch1 ++ " doesnt exist")
+      (      _, Nothing) -> throwError ("Error branch " ++ branch2 ++ " doesnt exist")
+      (Just b1Ref, Just b2Ref) ->
+            snd <$> createCommitDiff  repo contextSize True b1Ref b2Ref
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = runErrorT $ do

@@ -1379,7 +1379,8 @@ var BranchComparer = (function() {
             var this_obj = this;
 
             $.ajax({  
-                url:'/compare_branches/' + this.branch_a + '/' + this.branch_b,
+                url:'/compare_branches/' + encodeURIComponent(this.branch_a)
+                                   + '/' + encodeURIComponent(this.branch_b),
                 dataType: 'json',
                 data: {},
                 error: function() {
