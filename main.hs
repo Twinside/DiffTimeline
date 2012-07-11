@@ -39,6 +39,7 @@ version = "1.0"
 -- | Type representing flag present on the command line
 data Flag = Port String
           | Help
+          | Dev String
           deriving Eq
 
 -- | Command line configuration
@@ -46,6 +47,7 @@ data Conf = Conf
     { confShowHelp :: !Bool
     , confPort     :: Maybe Int
     , confCommand  :: Command
+    , confDevMode  :: Maybe FilePath
     }
 
 -- | Initial and default configuration
@@ -54,6 +56,7 @@ defaultConf = Conf
     { confShowHelp = False
     , confPort     = Nothing
     , confCommand  = DiffWorking
+    , confDevMode  = Nothing
     }
 
 -- | Command line description
@@ -62,6 +65,7 @@ options =
     [ Option "p" ["port"] (ReqArg Port "number")
                 "Server port number (random by default)"
     , Option "" ["help"] (NoArg Help) "Show help (this screen)"
+    , Option "d" ["dev"] (ReqArg Dev "Path") "Enable dev mode (load static file from current dir)"
     ]
 
 commandOfRest :: [String] -> Command
@@ -78,6 +82,7 @@ parseArgs = do
     return (foldl' configurator (defaultConf { confCommand = cmd }) opt, [])
 
      where configurator c Help = c{ confShowHelp = True }
+           configurator c (Dev p) = c{ confDevMode = Just p }
            configurator c (Port n) = c { confPort = Just $ read n }
 
 -- | Ugly workaround to find a free port :
@@ -130,6 +135,6 @@ main = do
       }
 
     logger <- defaultDevelopmentLogger
-    app <- getApplication (confCommand conf) config logger
+    app <- getApplication (confDevMode conf) (confCommand conf) config logger
     runUrlPort usePort "" app
 

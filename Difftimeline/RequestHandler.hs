@@ -2,12 +2,15 @@
 module Difftimeline.RequestHandler where
 
 import Difftimeline.Import
+import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
 import Text.Julius( julius, renderJavascript )
 
+import Control.Monad( (=<<) )
 import Yesod.Json( jsonToRepJson )
+import System.Directory( doesFileExist )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
 import Data.Git( Git, getHead, fromHexString )
@@ -29,25 +32,39 @@ import Difftimeline.StaticFiles
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
 getRootR :: Handler RepHtml
-getRootR = return $ RepHtml $ toContent basePageEmbedded 
+getRootR = fetchStatic RepHtml basePageEmbedded 
 
 newtype RepCss = RepCss Content
 instance HasReps RepCss where
     chooseRep (RepCss c) _ = return (typeCss, c)
 
+fetchStatic :: (ToContent txt)
+            => (Content -> a) -> (FilePath, txt)
+            -> Handler a
+fetchStatic outputType (path, str) = do
+  app <- getYesod
+  case getDevMode app of
+    Nothing -> return . outputType $ toContent str
+    Just devPath -> do
+        let devName = devPath ++ "/" ++ path
+        fetchable <- liftIO $ doesFileExist devName 
+        if fetchable
+           then return . outputType . toContent =<< liftIO (B.readFile devName)
+           else return . outputType $ toContent str
+
 getDifftimelineCss, getSyntax_highlight, getScreen :: Handler RepCss
-getDifftimelineCss = return . RepCss $ toContent diffTimelineCssEmbedded
-getScreen =  return . RepCss $ toContent screenCssEmbedded
-getSyntax_highlight = return . RepCss $ toContent  syntaxhighlihgtCss
+getDifftimelineCss = fetchStatic RepCss diffTimelineCssEmbedded
+getScreen =  fetchStatic RepCss screenCssEmbedded
+getSyntax_highlight = fetchStatic RepCss syntaxhighlihgtCss
 
 getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, getJqueryUI,
     getTinysyntaxhighlighter :: Handler RepPlain
-getICanHaz_min = return . RepPlain $ toContent icanHazEmbedded 
-getDifftimelineJs = return . RepPlain $ toContent diffTimlineJsEmbedded 
-getFavicon = return . RepPlain $ toContent faviconEmbed
-getJquery = return . RepPlain $ toContent jqueryEmbedded 
-getJqueryUI = return . RepPlain $ toContent jqueryUiEmbedded 
-getTinysyntaxhighlighter = return . RepPlain $ toContent tinySyntaxHighlightJs 
+getICanHaz_min = fetchStatic RepPlain icanHazEmbedded 
+getDifftimelineJs = fetchStatic RepPlain diffTimlineJsEmbedded 
+getFavicon = fetchStatic RepPlain faviconEmbed
+getJquery = fetchStatic RepPlain jqueryEmbedded 
+getJqueryUI = fetchStatic RepPlain jqueryUiEmbedded 
+getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs 
 
 getFileParentR :: [Text] -> Handler RepJson
 getFileParentR filePathes = do

@@ -52,24 +52,24 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: Command -> AppConfig DefaultEnv () -> Logger 
+getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv () -> Logger 
                -> IO Application
 
-getApplication (DiffFile fname) conf logger = do
+getApplication devModePath (DiffFile fname) conf logger = do
     cwd <- getCurrentDirectory 
     let name = if isRelative fname
             then simplifyPath $ cwd </> fname
             else simplifyPath fname
     initRepo <- initRepository logger $ takeDirectory name
     let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) name
-        foundation = DiffTimeline conf logger initRepo (DiffFile initPath)
+        foundation = DiffTimeline conf logger devModePath initRepo (DiffFile initPath)
     liftIO . logString logger $ "Initial file : " ++ initPath
     app <- toWaiAppPlain foundation
     return $ logCallbackDev (logBS logger) app
 
-getApplication cmd conf logger = do
+getApplication devModePath cmd conf logger = do
     initRepo <- getCurrentDirectory >>= initRepository logger
-    let foundation = DiffTimeline conf logger initRepo cmd
+    let foundation = DiffTimeline conf logger devModePath initRepo cmd
     app <- toWaiAppPlain foundation
     return $ logCallbackDev (logBS logger) app
 

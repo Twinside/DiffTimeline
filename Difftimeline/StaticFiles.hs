@@ -1,37 +1,38 @@
 module Difftimeline.StaticFiles where
 
+import Prelude
 import qualified Data.ByteString as B
 import Data.FileEmbed
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8 )
 
-basePageEmbedded :: T.Text
-basePageEmbedded = decodeUtf8 $(embedFile "static-content/base_page.html")
+basePageEmbedded :: (FilePath, T.Text)
+basePageEmbedded = ("base_page.html", decodeUtf8 $(embedFile "static-content/base_page.html"))
 
-icanHazEmbedded :: B.ByteString
-icanHazEmbedded = $(embedFile "static-content/ICanHaz.min.js")
+icanHazEmbedded :: (FilePath, B.ByteString)
+icanHazEmbedded = ("ICanHaz.min.js", $(embedFile "static-content/ICanHaz.min.js"))
 
-diffTimelineCssEmbedded :: B.ByteString
-diffTimelineCssEmbedded = $(embedFile "static-content/difftimeline.css")
+diffTimelineCssEmbedded :: (FilePath, B.ByteString)
+diffTimelineCssEmbedded = ("difftimeline.css", $(embedFile "static-content/difftimeline.css"))
 
-diffTimlineJsEmbedded :: B.ByteString
-diffTimlineJsEmbedded = $(embedFile "static-content/difftimeline.js")
+diffTimlineJsEmbedded :: (FilePath, B.ByteString)
+diffTimlineJsEmbedded = ("difftimeline.js", $(embedFile "static-content/difftimeline.js"))
 
-faviconEmbed :: B.ByteString
-faviconEmbed = $(embedFile "static-content/favicon.ico")
+faviconEmbed :: (FilePath, B.ByteString)
+faviconEmbed = ("favicon.ico", $(embedFile "static-content/favicon.ico"))
 
-jqueryEmbedded :: B.ByteString
-jqueryEmbedded = $(embedFile "static-content/jquery-1.7.2.min.js")
+jqueryEmbedded :: (FilePath, B.ByteString)
+jqueryEmbedded = ("jquery-1.7.2.min.js", $(embedFile "static-content/jquery-1.7.2.min.js"))
 
-jqueryUiEmbedded :: B.ByteString
-jqueryUiEmbedded = $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js")
+jqueryUiEmbedded :: (FilePath, B.ByteString)
+jqueryUiEmbedded = ("jquery-ui-1.8.21.custom.min.js", $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js"))
 
-screenCssEmbedded :: B.ByteString
-screenCssEmbedded = $(embedFile "static-content/screen.css")
+screenCssEmbedded :: (FilePath, B.ByteString)
+screenCssEmbedded = ("screen.css", $(embedFile "static-content/screen.css"))
 
-syntaxhighlihgtCss :: B.ByteString
-syntaxhighlihgtCss = $(embedFile "static-content/syntax-highlight.css")
+syntaxhighlihgtCss :: (FilePath, B.ByteString)
+syntaxhighlihgtCss = ("syntax-highlight.css", $(embedFile "static-content/syntax-highlight.css"))
 
-tinySyntaxHighlightJs :: B.ByteString
-tinySyntaxHighlightJs = $(embedFile "static-content/tinysyntaxhighlighter.js")
+tinySyntaxHighlightJs :: (FilePath, B.ByteString)
+tinySyntaxHighlightJs = ("tinysyntaxhighlighter.js", $(embedFile "static-content/tinysyntaxhighlighter.js"))
 

@@ -28,6 +28,7 @@ data Command = DiffCompare String String
 data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv ()
     , getLogger :: Logger
+    , getDevMode :: Maybe FilePath
     , getRepository :: Git
     , initialCommand   :: Command
     }
