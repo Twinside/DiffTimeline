@@ -399,7 +399,9 @@ var TinySyntaxHighlighter = (function () {
             globNode(this.activeStack[i].kind, '');
         }
 
-        ret.unshift(this.compute_line_number());
+        var num = this.compute_line_number();
+        if (num !== undefined)
+            ret.unshift(num);
         return ret;
     };
 
@@ -408,7 +410,9 @@ var TinySyntaxHighlighter = (function () {
         pos_highlight.reset();
 
         var ret = writeSubSplittedText( line );
-        ret.unshift(this.compute_line_number());
+        var num = this.compute_line_number();
+        if (num !== undefined)
+            ret.unshift(num);
 
         return ret;
     }
@@ -423,26 +427,19 @@ var TinySyntaxHighlighter = (function () {
             pos_highlight.positional_setter(lst);
         };
 
-        if (with_line_number) {
-          this.current_line = 1;
-          this.set_current_line_number = function (i) {
+        this.current_line = 1;
+        this.set_current_line_number = function (i) {
             this.current_line = i;
-          };
+        };
 
-          this.compute_line_number = function () {
-            var ret = '';
-            if (this.with_line_number) {
-              this.current_line = this.current_line + 1;
-              return context_free_highlight('syntax_line_number', this.current_line - 1);
-            }
-            return undefined;
-          };
-        }
-        else
-        {
-          this.set_current_line_number = function (i) {};
-          this.compute_line_number = function () { return undefined; };
-        }
+        this.compute_line_number = function () {
+          this.current_line = this.current_line + 1;
+          if (this.with_line_number) {
+            return context_free_highlight('syntax_line_number', this.current_line - 1);
+          }
+          return undefined;
+        };
+
         return this;
     };
 

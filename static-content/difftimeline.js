@@ -325,7 +325,8 @@ var DiffManipulator = (function () {
      * @param {Array.<DiffRange>} diff
      * @param {Element} node
      */
-    var generate_full_html = function (filename, isLineNumberRequired, data, diff, node) {
+    var generate_full_html = function (filename, isLineNumberRequired,
+                                       data, diff, number_node, node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
 
         /** @type {Array.<string>} */
@@ -340,9 +341,18 @@ var DiffManipulator = (function () {
         /** @type {Array.<Array.<Element>>} */
         var diff_node;
 
+        var add_number = function(n) {
+            var node = document.createElement('span');
+            node.setAttribute('class', 'syntax_line_number');
+            node.appendChild(document.createTextNode(n.toString() + "\n"));
+
+            number_node.appendChild(node);
+        };
+
         remove_children(node);
         for (var i = 0; i < diff_count; i++) {
             while (current_line < diff[i].beg) {
+                add_number(highlighter.current_line);
                 append_all(node, highlighter.colorLine(lines[current_line]));
                 current_line++;
             }
@@ -351,6 +361,7 @@ var DiffManipulator = (function () {
             var diff_nodes = [];
 
             for (var j = curr_diff.beg; j < curr_diff.end && current_line < lines.length; j++) {
+                add_number(highlighter.current_line);
                 diff_nodes.push( highlighter.colorLine(lines[current_line++]) );
             }
 
@@ -360,6 +371,7 @@ var DiffManipulator = (function () {
 
         while (current_line < lines.length)
         {
+            add_number(highlighter.current_line);
             append_all(node, highlighter.colorLine(lines[current_line]));
             current_line++;
         }
@@ -373,7 +385,8 @@ var DiffManipulator = (function () {
      * @param {Array.<DiffRange>} diff diff ranges
      * @param {Element} node
      */
-    var generate_compact_html = function (filename, contextSize, isLineNumberRequired, data, diff, node) {
+    var generate_compact_html = function (filename, contextSize, isLineNumberRequired,
+                                          data, diff, number_node, node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
 
         /** @type {Array.<string>} */
@@ -384,6 +397,14 @@ var DiffManipulator = (function () {
 
         /** @type {number} */
         var last_outputted_line = -1;
+
+        var add_number = function(n) {
+            var node = document.createElement('span');
+            node.setAttribute('class', 'syntax_line_number');
+            node.appendChild(document.createTextNode(n.toString() + "\n"));
+
+            number_node.appendChild(node);
+        };
 
         remove_children(node);
         var i;
@@ -397,10 +418,12 @@ var DiffManipulator = (function () {
             // write an elipssiss if there is a deconnection
             if (context_begin > last_outputted_line + 1 && i != 0) {
                 node.appendChild(document.createTextNode('...\n'));
+                number_node.appendChild(document.createTextNode('...\n'));
             }
 
             highlighter.set_current_line_number(context_begin + 1);
             for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ ) {
+                add_number(highlighter.current_line);
                 append_all(node, highlighter.colorLine(lines[lineNum]));
             }
 
@@ -408,6 +431,7 @@ var DiffManipulator = (function () {
             if (d.end - d.beg <= 1)
             {
                 highlighter.set_current_line_number(d.beg + 1);
+                add_number(highlighter.current_line);
                 var new_node = begs[d.way]([highlighter.colorLine(lines[d.beg])]);
                 node.appendChild(new_node[0][0]);
                 new_node = undefined;
@@ -417,8 +441,10 @@ var DiffManipulator = (function () {
                 highlighter.set_current_line_number(d.beg + 1);
                 processed_lines = [];
 
-                for ( var lineNum = d.beg; lineNum < d.end; lineNum++ )
+                for ( var lineNum = d.beg; lineNum < d.end; lineNum++ ) {
+                    add_number(highlighter.current_line);
                     processed_lines.push(highlighter.colorLine(lines[lineNum]));
+                }
 
                 var new_node = (begs[d.way])(processed_lines);
                 node.appendChild(new_node[0][0]);
@@ -430,6 +456,7 @@ var DiffManipulator = (function () {
 
             highlighter.set_current_line_number(d.end + 1);
             for ( var lineNum = d.end; lineNum < context_end; lineNum++ ) {
+                add_number(highlighter.current_line);
                 append_all(node, highlighter.colorLine(lines[lineNum]));
             }
 
@@ -697,17 +724,27 @@ var Commit = function(key, data) {
     kind_formater[Project.DiffKind.KIND_MODIFICATION] = 
     	/** @param {CommitTreeDiff} e */
 				function(e) {
-        var hl = TinySyntaxHighlighter.from_filename(true, e.name);
+        var hl = TinySyntaxHighlighter.from_filename(false, e.name);
 
         /** @type {Element} */
         var rez_node = ich.commit_file_modification_detailed(e);
 
         /** @type {Element} */
-        var code_node = rez_node.find('pre')[0];
+        var code_node = rez_node.find('.syntax_highlighted')[0];
+
+        /** @type {Element} */
+        var number_node = rez_node.find('.line_number_column')[0];
 
         var curr_diff;
         var acc = ""
         var diff_node;
+
+        var create_number_node = function(n) {
+            var node = document.createElement('span');
+            node.setAttribute('class', 'syntax_line_number');
+            node.appendChild(document.createTextNode(n.toString() + "\n"));
+            return node;
+        };
 
 		/** @type {function(string) : Element} */
         var div_node = function(kind) {
@@ -752,6 +789,8 @@ var Commit = function(key, data) {
                     hl.setPositionHighlight([]);
                 }
 
+                number_node.appendChild(create_number_node(hl.current_line));
+
                 for ( var node = 0; node < lineNodes.length; node++ )
                     diff_node.appendChild(lineNodes[node]);
             }
@@ -760,7 +799,10 @@ var Commit = function(key, data) {
 
             if (i < e.diff.length - 1 &&
                 curr_diff.dest_idx + curr_diff.size < e.diff[i + 1].dest_idx )
+            {
+                number_node.appendChild(document.createTextNode("...\n"));
                 code_node.appendChild(document.createTextNode("...\n"));
+            }
 
         }
 
@@ -1154,7 +1196,7 @@ var FileBlob = function (data) {
         });
     };
 
-    this.render_file_data = function(prev_diff, node) {
+    this.render_file_data = function(prev_diff, number_node, node) {
         var filename = this.file;
         var diff     = this.diff;
         var data     = this.data;
@@ -1167,9 +1209,11 @@ var FileBlob = function (data) {
 
         if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT)
             DiffManipulator.generateCompactHtml(filename, Project.state.active_context_size(),
-                                                true, clean_cr_lf_data, ranges, node[0]);
+                                                false, clean_cr_lf_data, ranges,
+                                                number_node[0], node[0]);
         else // render full
-            DiffManipulator.generateFullHtml(filename, true, clean_cr_lf_data, ranges, node[0]);
+            DiffManipulator.generateFullHtml(filename, false, clean_cr_lf_data, ranges,
+                                             number_node[0], node[0]);
     }
 
     this.create_dom = function() {
@@ -1205,9 +1249,13 @@ var FileBlob = function (data) {
     this.render = function(prev_diff) {
         var node_query = "#" + this.key + " .file_content";
         var render_node = $(node_query + " .syntax_highlighted");
+        var number_node = $(node_query + " .line_number_column");
+
         render_node.detach();
-        this.render_file_data(prev_diff, render_node);
-        render_node.appendTo(node_query);
+        render_node.empty();
+        number_node.empty();
+        this.render_file_data(prev_diff, number_node, render_node);
+        render_node.appendTo($(node_query + " table td:last"));
     }
 
     return this;

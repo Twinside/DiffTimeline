@@ -588,3 +588,12 @@ pre
     border: 1px solid white;
 }
 
+table {
+    padding: 0px;
+    margin: 0px;
+}
+
+td {
+    padding: 0px;
+    margin: 0px;
+}

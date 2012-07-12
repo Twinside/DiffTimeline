@@ -1,8 +1,5 @@
-.syntax_line_number {
-    width: 25px;
-    display: inline-block;
-    margin-right: 5px;
-}
+.line_number_column { background: #1f2223; }
+.syntax_line_number { width: 25px; }
 
 .syntax_highlighted { color: #e0e2e4; background: #1f2223; }
 .syntax_line_number { color: #81969a;  }

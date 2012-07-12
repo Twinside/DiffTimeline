@@ -6,6 +6,9 @@ build:
 tests:
 	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf test/tester.hs
 
+ghci:
+	ghci -package-conf=cabal-dev/packages-7.4.1.conf
+
 conf:
 	cabal-dev install
 
