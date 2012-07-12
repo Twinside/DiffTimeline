@@ -849,6 +849,70 @@ var TinySyntaxHighlighter = (function () {
     };
 
     /** @type {LangDef} */
+    var phpDef = {
+        begin:null_region, end:null_region,
+
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
+                 , regions:[], parsers:[], keywords:[] }],
+        
+        parsers:[ { kind:'syntax_identifier'
+                  , recognizer:prefix_parser_kind('$', generic_parsers.c_like_identifier )}
+                , generic_parsers.double_quote_string
+                , generic_parsers.integer
+                , generic_parsers.monoline_comment('//')
+                ],
+
+        keywords:expand_keyword_groups(
+            [ { kind:'syntax_conditional'
+              , words: ['declare', 'else', 'enddeclare', 'endswitch', 'elseif'
+                       , 'endif', 'if', 'switch'] }
+
+            , { kind:'syntax_repeat'
+              , words:['as', 'do', 'endfor', 'endforeach', 'endwhile', 'for'
+                      ,'foreach', 'while'] }
+
+            , { kind:'syntax_statement'
+              , words: ['return', 'break', 'continue', 'exit', 'goto', 'die'] }
+
+            , { kind:'syntax_bool', words:["true", "false"] }
+            , { kind:'syntax_define'
+              , words: ['new', 'clone']}
+
+            , { kind:'syntax_function'
+              , words: ['function'] }
+
+            , { kind:'syntax_label', words:['case', 'default', 'switch'] }
+            , { kind:'syntax_keyword', words: ['var', 'const'] }
+
+            , { kind:'syntax_type'
+              , words: ['boolean', 'bool', 'integer', 'int', 'real', 'double'
+                       ,'float', 'string', 'array', 'object', 'NULL',] }
+
+            , { kind:'syntax_structure'
+              , words: ['namespace', 'extends', 'implements', 'instanceof'
+                       ,'parent', 'self', 'class', 'interface'] }
+
+            , { kind:'syntax_exception'
+              , words: ['catch', 'throw', 'try'] }
+
+            , { kind:'syntax_storage_class'
+              , words: ['final', 'global', 'private', 'protected', 'public', 'static'] }
+
+            , { kind:'syntax_constant'
+              , words:['PHP_VERSION',  'PHP_OS',  'DEFAULT_INCLUDE_PATH',  'PEAR_INSTALL_DIR'
+                      ,'PEAR_EXTENSION_DIR',  'PHP_EXTENSION_DIR',  'PHP_BINDIR',  'PHP_LIBDIR'
+                      ,'PHP_DATADIR',  'PHP_SYSCONFDIR',  'PHP_LOCALSTATEDIR'
+                      ,'PHP_CONFIG_FILE_PATH',  'PHP_OUTPUT_HANDLER_START',  'PHP_OUTPUT_HANDLER_CONT'
+                      ,'PHP_OUTPUT_HANDLER_END',  'E_ERROR',  'E_WARNING',  'E_PARSE',  'E_NOTICE'
+                      ,'E_CORE_ERROR',  'E_CORE_WARNING',  'E_COMPILE_ERROR',  'E_COMPILE_WARNING'
+                      ,'E_USER_ERROR',  'E_USER_WARNING',  'E_USER_NOTICE',  'E_ALL']
+              }
+            ])
+    };
+
+    /** @type {LangDef} */
     var cDef = {
         begin:null_region, end:null_region,
 
@@ -925,6 +989,8 @@ var TinySyntaxHighlighter = (function () {
         else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/) ||
                  filename.match(/\.h$/)   || filename.match(/\.hpp$/))
             return new create_highlighter(with_line_number, cppDef );
+        else if (filename.match(/\.php/) || filename.match(/\.php3/))
+            return new create_highlighter(with_line_number, phpDef);
         else if (filename.match(/\.hs$/))
             return new create_highlighter(with_line_number, haskellDef );
         else if (filename.match(/\.css$/))
@@ -933,7 +999,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter(with_line_number, pythonDef );
         else if (filename.match(/\.js$/))
             return new create_highlighter(with_line_number, javascriptDef );
-        else if (filename.match(/\.xml$/) || filename.match(/\.html$/) || filename.match(/\.htm/))
+        else if (filename.match(/\.xml$/) || filename.match(/\.html$/) ||
+                 filename.match(/\.htm/)  || filename.match(/\.vcxproj$/))
             return new create_highlighter(with_line_number, xmlDef );
 
         return new create_empty_highlighter(with_line_number);
