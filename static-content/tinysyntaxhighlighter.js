@@ -802,6 +802,11 @@ var TinySyntaxHighlighter = (function () {
             , { kind:'syntax_statement', words:['do', 'case', 'of', 'let', 'in'  ] }
             , { kind:'syntax_structure', words:['module'] }
             , { kind:'syntax_preproc', words:['import'] }
+            , { kind:'syntax_structure'
+              , words: ['data', 'family', 'class', 'where', 'instance', 'default'
+                       ,'deriving']  }
+            , { kind:'syntax_typedef', words: ['type', 'newtype'] }
+            , { kind:'syntax_bool'     , words:["True", "False"] }
             , { kind:'syntax_type'
               , words:[ 'Int', 'Integer', 'Char', 'Bool', 'Float'
                       , 'Double', 'IO', 'Void', 'Addr', 'Array'
