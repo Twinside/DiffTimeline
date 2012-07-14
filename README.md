@@ -1,34 +1,52 @@
-How to build Difftimeline
-===========================
- * Install the `hit` sub module, calling 
-   `git submodule init` and `git submodule update`
- * Install GHC 7.4 (haskell compiler), and find
-   a way to install `cabal-install`, under windows
-   you should use mingw to build it (only way to 
-   build the Network package)
 
- * Install the cabal-dev `cabal install cabal-dev`
- * In the main folder call `make prepare`
-   * require zlib & gmp static libs 
- * After that, you can build calling just make
+Difftimeline
+============
 
-And that should be it
+Let's start easy :
 
-Running
--------
-to launch `difftimeline <filename>`
+    `$ difftimeline`
 
---
-Gentoo practical example (on amd64)
-========================
-* Install GHC 7.4 and `cabal-install` (as root)
-   * `echo '=dev-lang/ghc-7.4.1 ~amd64' >> /etc/portage/package.accept_keywords`
-   * `echo '=dev-haskell/network-2.3.0.11 ~amd64' >> /etc/portage/package.accept_keywords`
-   * `emerge cabal-install`
-* Install the cabal-dev (as user)
-   * `cabal install cabal-dev`
-* Make sure you got static zlib & gmp (as root)
-   * `echo 'sys-libs/zlib static-libs' >> /etc/portage/package.use`
-   * `echo 'dev-libs/gmp static-libs' >> /etc/portage/package.use`
-   * `emerge -DuNa @world`
-* In the main folder call `make prepare` (as user)
+![First page](tutorial/first.png)
+
+You can see the diff of the working directory from the HEAD. If you
+click the huge button `<`, you can fetch previous commit from the
+current head
+
+![Fetching previous commits](tutorial/fetch_previous_commit.png)
+
+If you click the button above `<` you can switch back and forth to the
+"compact" view.
+
+![Compact commit view](tutorial/compact_commit.png)
+
+Navigating files
+----------------
+Clicking on the `Tree` panel will show you all the files contained
+in the commit and let you browse them.
+
+![Commit tree](tutorial/commit_tree.png)
+
+You can click on any to follow the history of a specific file, let's follow the `static-content/difftimeline.css`
+
+![File diff](tutorial/file_diff.png)
+
+You can see every modification of a file between two commits. In the commit description, each round represent a commit whom have not modified the file. If you click on any round, you will jump to the commit description. You can also use the compact mode
+
+![File diff](tutorial/file_diff_compact.png)
+
+To directly see modifications for a file, you can use `$ difftimeline filename` at the command line.
+
+
+Comparing branches
+------------------
+This part is still 'experimental', so expect changes in the future, and there is still rough edges. To let you compare branch, launch difftimeline the following way : `difftimeline compare`
+
+![Branch comparaison](tutorial/branch_compare.png)
+
+You can then drag'n'drop branches in the square to compare them
+
+![Branch comparaison](tutorial/branch_compare_result.png)
+
+Modification
+------------
+To modify/hack difftimeline, see the [Build.md](Build.md) file.
