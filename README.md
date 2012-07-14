@@ -49,4 +49,4 @@ You can then drag'n'drop branches in the square to compare them
 
 Modification
 ------------
-To modify/hack difftimeline, see the [Build.md](https://github.com/Twinside/DiffTimeline/raw/master/Build.md) file.
+To modify/hack difftimeline, see the [Building.md](https://github.com/Twinside/DiffTimeline/raw/master/Building.md) file.
