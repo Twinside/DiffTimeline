@@ -395,12 +395,12 @@ createCommitDiff repository contextSize deep ref prevRef = do
         diffTree :: String -> [TreeEntry] -> [TreeEntry]
                  -> ErrorT String IO [CommitTreeDiff]
         diffTree _name   []     [] = return []
-        diffTree name    [] rights = sequence
+        diffTree _name    [] rights = sequence
             [maySubTree AddElement fullName r | (_, item, r) <- rights
-                                              , let fullName = name </> BC.unpack item ]
-        diffTree name lefts     [] = sequence
+                                              , let fullName = BC.unpack item]
+        diffTree _name lefts     [] = sequence
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
-                                              , let fullName = name </> BC.unpack item ]
+                                              , let fullName = BC.unpack item ]
         diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
             | lName == rName = do
                 maySubL <- liftIO $ accessObject repository lRef

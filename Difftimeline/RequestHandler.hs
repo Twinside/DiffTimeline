@@ -8,7 +8,6 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
 import Text.Julius( julius, renderJavascript )
 
-import Control.Monad( (=<<) )
 import Yesod.Json( jsonToRepJson )
 import System.Directory( doesFileExist )
 import System.Exit( exitSuccess )
