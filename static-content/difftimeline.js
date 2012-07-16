@@ -789,7 +789,7 @@ var Commit = function(key, data) {
                     hl.setPositionHighlight([]);
                 }
 
-                number_node.appendChild(create_number_node(hl.current_line));
+                number_node.appendChild(create_number_node(hl.current_line - 1));
 
                 for ( var node = 0; node < lineNodes.length; node++ )
                     diff_node.appendChild(lineNodes[node]);
