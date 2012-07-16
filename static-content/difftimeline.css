@@ -597,3 +597,13 @@ td {
     padding: 0px;
     margin: 0px;
 }
+
+td ~ td {
+    width: 100%;
+}
+
+pre.line_number_column {
+    margin: 0px;
+    width: 27px;
+}
+
