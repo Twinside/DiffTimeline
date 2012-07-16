@@ -588,21 +588,21 @@ pre
     border: 1px solid white;
 }
 
-table {
+table.file_display {
     padding: 0px;
     margin: 0px;
 }
 
-td {
+table.file_display td {
     padding: 0px;
     margin: 0px;
 }
 
-td ~ td {
+table.file_display td ~ td {
     width: 100%;
 }
 
-pre.line_number_column {
+table.file_display pre.line_number_column {
     margin: 0px;
     width: 27px;
 }

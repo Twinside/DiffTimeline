@@ -26,12 +26,7 @@
 				<span class="filename">{{name}}</span>
                 <div>
                     {{#binary}}Binary file modification{{/binary}}
-                    <table>
-                        <tr>
-                            <td><pre class="line_number_column"></pre></td>
-                            <td><pre class="syntax_highlighted"></pre></td>
-                        </tr>
-                    </table>
+                    {{>file_table}}
                 </div>
             </div>
         </script>
@@ -112,6 +107,16 @@
                 </div>
             </div>
         </script>
+
+        <script id="file_table" type="text/html">
+            <table class="file_display">
+                <tr>
+                    <td><pre class="line_number_column"></pre></td>
+                    <td><pre class="syntax_highlighted"></pre></td>
+                </tr>
+            </table>
+        </script>
+
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
@@ -132,15 +137,11 @@
                 </div>
 
                 <div class="file_content">
-                    <table>
-                        <tr>
-                            <td><pre class="line_number_column"></pre></td>
-                            <td><pre class="syntax_highlighted"></pre></td>
-                        </tr>
-                    </table>
+                    {{>file_table}}
                 </div>
             </div>
         </script>
+
         <script id="commitfile_huge_path" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
@@ -164,12 +165,7 @@
                 </div>
 
                 <div class="file_content">
-                    <table>
-                        <tr>
-                            <td><pre class="line_number_column"></pre></td>
-                            <td><pre class="syntax_highlighted"></pre></td>
-                        </tr>
-                    </table>
+                    {{>file_table}}
                 </div>
             </div>
         </script>
