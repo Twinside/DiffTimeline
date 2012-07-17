@@ -583,9 +583,18 @@ pre
 }
 
 .branch_container > div {
+    float: left;
     width: 200px;
     height: 60px;
     border: 1px solid white;
+}
+
+.dropzone_a:before {
+    content: "From ";
+}
+
+.dropzone_b:before {
+    content: "To ";
 }
 
 table.file_display {
