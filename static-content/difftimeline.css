@@ -582,7 +582,7 @@ pre
     float: left;
 }
 
-.branch_container > div {
+.branch_container > .dropzone_a, .branch_container > .dropzone_b {
     float: left;
     width: 200px;
     height: 60px;

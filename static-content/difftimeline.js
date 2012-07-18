@@ -1452,7 +1452,9 @@ var BranchComparer = (function() {
                     }
                     var rez = new Commit(data.key, data);
 
-                    rez.create_dom();
+                    var content = $('.branch_diff_content');
+                    $('> *', content).remove();
+                    content.append(rez.create_dom());
                     rez.render();
                 }
             });
