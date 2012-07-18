@@ -867,8 +867,8 @@ var Commit = function(key, data) {
     }
 
     this.fetch_tree = function() {
-        var tree_node = $("#" + this.key + " .commit_tree");
-        var indicator = $("#" + this.key + " .btn_indicator");
+        var tree_node = $(".commit_tree", this.orig_node);
+        var indicator = $(".btn_indicator", this.orig_node);
 
         if (this.tree_fetched) {
             indicator.html(this.tree_opened ? "&#x25bc;" : "&#x25b2;");
@@ -909,12 +909,10 @@ var Commit = function(key, data) {
         var view_mode = Project.state.active_view_mode();
 
         if (view_mode == Project.ViewMode.VIEW_FULL) {
-
             this.orig_node = ich.commit_detailed(this);
-            $('.container').prepend(this.orig_node);
 
             if (this.tree_fetched) {
-                var tree_node = $("#" + this.key + " .commit_tree");
+                var tree_node = $(".commit_tree", this.orig_node);
                 this.tree_opened = false;
                 tree_node.animate({height: 'toggle'});
                 this.render_tree(tree_node[0], 0, "", this.tree);
@@ -922,7 +920,6 @@ var Commit = function(key, data) {
         }
         else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
             this.orig_node = ich.commit_compact(this);
-            $('.container').append(this.orig_node);
         }
 
         return this.orig_node;
@@ -987,9 +984,20 @@ var CommitRenderer = (function() {
         });
     }
 
+    var insert_node = function( node ) {  
+        var view_mode = Project.state.active_view_mode();
+
+        if (view_mode == Project.ViewMode.VIEW_FULL) {
+            $('.container').prepend(node);
+        }
+        else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
+            $('.container').append(node);
+        }
+    };
+
     var init = function(init_data) {
         var new_commit = new Commit(init_data.key, init_data);
-        new_commit.create_dom();
+        insert_node(new_commit.create_dom());
         new_commit.render();
         
         this.collection = [new_commit];
@@ -1019,7 +1027,7 @@ var CommitRenderer = (function() {
 
         this.create_all_dom = function() {
             for ( var i = 0; i < this.collection.length; i++ ) {
-                this.collection[i].create_dom();
+                insert_node(this.collection[i].create_dom());
             }
         };
 
@@ -1036,6 +1044,7 @@ var CommitRenderer = (function() {
                 var new_commit = new Commit(data.key, data);
 
                 var new_node = new_commit.create_dom();
+                insert_node(new_node);
                 new_node.animate({'width':'toggle'}, 0);
                 new_commit.render();
                 new_node.animate({'width':'toggle'}, Project.state.apparition_duration());
@@ -1125,8 +1134,8 @@ var FileBlob = function (data) {
     this.ellipsis_size = this.path.length - 15;
 
 
-    this.create_dom_details = function() {
-        var detail_node = $('#' + this.key + ' .commit_detail');
+    this.create_dom_details = function(node) {
+        var detail_node = $('.commit_detail', node);
 
         for ( var i = 0; i < this.details.length; i++ )
         {
@@ -1136,9 +1145,10 @@ var FileBlob = function (data) {
         }
     };
 
-    this.toggle_detail_pane = function() {
-        var detail = $('#' + this.key + ' .commit_detail');
-        var btn_node = $('#' + this.key + ' .more_info');
+    this.toggle_detail_pane = function(node) {
+
+        var detail = $('.commit_detail', node);
+        var btn_node = $('.more_info', node);
         var btn_text = btn_node.text();
 
         if (btn_text[0] == '▼')
@@ -1152,7 +1162,7 @@ var FileBlob = function (data) {
     this.fetch_details = function() {
         if (this.detail_fetched)
         {
-            this.toggle_detail_pane();
+            this.toggle_detail_pane(this.orig_node);
             return;
         }
 
@@ -1188,10 +1198,10 @@ var FileBlob = function (data) {
 
                 this_obj.details = data;
 
-                var detail_node = $('#' + this_obj.key + ' .commit_detail');
+                var detail_node = $('.commit_detail', this_obj.orig_node);
                 detail_node.animate({height: 'toggle'}, 0);
-                this_obj.create_dom_details();
-                this_obj.toggle_detail_pane()
+                this_obj.create_dom_details(this_obj.orig_node);
+                this_obj.toggle_detail_pane(this_obj.orig_node);
             }
         });
     };
@@ -1216,10 +1226,10 @@ var FileBlob = function (data) {
                                              number_node[0], node[0]);
     }
 
+
     this.create_dom = function() {
         this.short_message = this.message.split("\n")[0];
         this.splited_message = html_encodize(this.message).replace("\n", "<br/>");
-        var processed;
 
         var path_length = this.path.length;
         var maximum_path_length = 15;
@@ -1229,33 +1239,30 @@ var FileBlob = function (data) {
             this.path_beg = this.path.slice(0, maximum_path_length / 2);
             this.path_end = this.path.slice(this.path.length - maximum_path_length / 2,
                                             this.path.length - 1);
-            processed = ich.commitfile_huge_path(this);
+            this.orig_node = ich.commitfile_huge_path(this);
         }
         else
-            processed = ich.commitfile(this);
+            this.orig_node = ich.commitfile(this);
 
-        $(".container").prepend( processed );
-                
         if (this.detail_fetched)
         {
-            this.create_dom_details();
-            this.toggle_detail_pane();
-            $('#' + this.key + ' .more_info').html("&#x25bc");
+            this.create_dom_details(this.orig_node);
+            this.toggle_detail_pane(this.orig_node);
+            $('.more_info', this.orig_node).html("&#x25bc");
         }
 
-        return processed;
+        return this.orig_node;
     }
 
     this.render = function(prev_diff) {
-        var node_query = "#" + this.key + " .file_content";
-        var render_node = $(node_query + " .syntax_highlighted");
-        var number_node = $(node_query + " .line_number_column");
+        var render_node = $('.syntax_highlighted', this.orig_node);
+        var number_node = $('.line_number_column', this.orig_node);
 
         render_node.detach();
         render_node.empty();
         number_node.empty();
         this.render_file_data(prev_diff, number_node, render_node);
-        render_node.appendTo($(node_query + " table td:last"));
+        render_node.appendTo($('table td:last', this.orig_node));
     }
 
     return this;
@@ -1282,13 +1289,17 @@ var FileRenderer = (function() {
                  success: f });
     };
 
+    var insert_node = function(node) {
+        $(".container").prepend( node );
+    };
+
     var init = function(init_data) {
         var init_file = new FileBlob(init_data);
 
         this.collection = [init_file];
         this.keys[init_file.key] = init_file;
 
-        init_file.create_dom();
+        insert_node( init_file.create_dom() );
         init_file.render([]);
 
         return this;
@@ -1306,7 +1317,7 @@ var FileRenderer = (function() {
 
         this.create_all_dom = function() {
             for ( var i = this.collection.length - 1; i >= 0; i-- ) {
-                this.collection[i].create_dom();
+                inert_dom(this.collection[i].create_dom());
             }
         };
 
@@ -1349,6 +1360,7 @@ var FileRenderer = (function() {
                 var new_commit = new FileBlob(data);
 
                 var node = new_commit.create_dom();
+                insert_node(node);
 
                 this_obj.collection.unshift( new_commit );
 
