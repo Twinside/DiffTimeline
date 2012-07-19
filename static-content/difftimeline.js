@@ -683,6 +683,7 @@ var Commit = function(key, data) {
     "use strict";
 
     this.key = key === null_ref ? 'Working directory' : key;
+    this.is_key_real = key !== null_ref;
     this.commit_date = timestamp_to_string(data.timestamp);
     this.parents_sha = data.parents_sha;
     this.file_changes = data.file_changes;

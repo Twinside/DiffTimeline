@@ -80,10 +80,12 @@
                         </p>
                         Author : <span class="author">{{author}}</span>
                     </div>
-                    <span class="more_info"
-                          onclick="Project.state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
-                        <span class="btn_indicator">&#x25bc;</span> Tree
-                    </span>
+                    {{#is_key_real}}
+                        <span class="more_info"
+                            onclick="Project.state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
+                            <span class="btn_indicator">&#x25bc;</span> Tree
+                        </span>
+                    {{/is_key_real}}
                     <div class="commit_tree">
                     </div>
                     <div class="commit_detail">
