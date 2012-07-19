@@ -121,6 +121,28 @@ Project.state = (function () {
     btn_toggle_text[Project.ViewMode.VIEW_FULL] =  '&#x25bc;<br/>&#x25b2;';
     btn_toggle_text[Project.ViewMode.VIEW_COMPACT] =  '&#x25b2;<br/>&#x25bc;';
 
+    var show_hide_toolbar_elements = function(descr) {
+        if (descr.compact_view)
+            $('.btn_toggleview').show();
+        else
+            $('.btn_toggleview').hide();
+
+        if (descr.fetch_previous)
+            $('.btn_returnpast').show();
+        else
+            $('.btn_returnpast').hide();
+
+        if (descr.context_size)
+            $('.context_size').show();
+        else
+            $('.context_size').hide();
+
+        if (descr.syntax_toggle)
+            $('.syntax_highlight_toggle').show();
+        else
+            $('.syntax_highlight_toggle').hide();
+
+    };
 
     return {
         /** @type {function() : Project.ViewMode} */
@@ -141,6 +163,7 @@ Project.state = (function () {
         /** @type {function() : void} */
         create_all_dom: function() {
             var last_path = states[ states.length - 1 ];
+            show_hide_toolbar_elements(last_path.gui_descr);
             last_path.create_all_dom();
         },
 
@@ -159,20 +182,24 @@ Project.state = (function () {
          */
         switch_file: function(file, fkey, start_commit) {
             this.clear_display();
-            states.push(
-                FileRenderer.create_from_arg(file, fkey, start_commit));
+            var new_state = FileRenderer.create_from_arg(file, fkey, start_commit);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb(file);
         },
 
         /** @type {function(ref) : void} */
         switch_commit: function(id) {
             this.clear_display();
-            states.push(new CommitRenderer.create_from_arg(id));
+            var new_state = new CommitRenderer.create_from_arg(id);
+            states.push(new_state);
 
             if (id !== null_ref)
                 breadcrumb.append_breadcrumb(id);
             else
                 breadcrumb.append_breadcrumb('HEAD');
+
+            show_hide_toolbar_elements(new_state.gui_descr);
         },
 
         /** @type {function(number) : void} */
@@ -224,12 +251,16 @@ Project.state = (function () {
         },
 
         start_branch_comp: function() {
-            states.push( BranchComparer.create() );
+            var new_state = BranchComparer.create();
+            states.push( new_state );
             breadcrumb.append_breadcrumb('Branches');
+            show_hide_toolbar_elements(new_state.gui_descr);
         },
 
         start_commit: function(commit_obj) {
-            states.push( CommitRenderer.create_from_data(commit_obj) );
+            var new_state = CommitRenderer.create_from_data(commit_obj);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
 
             if (commit_obj.key !== null_ref)
                 breadcrumb.append_breadcrumb(commit_obj.key);
@@ -238,7 +269,9 @@ Project.state = (function () {
         },
 
         start_file: function(file_obj) {
-            states.push( FileRenderer.create_from_data(file_obj) );
+            var new_state = FileRenderer.create_from_data(file_obj);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb(file_obj.filename);
         }
     };
@@ -1032,6 +1065,9 @@ var CommitRenderer = (function() {
             }
         };
 
+        this.gui_descr = { compact_view: true, fetch_previous: true
+                         , context_size: false, syntax_toggle: false };
+
         this.fetch_previous = function() {
             var this_obj = this;
             var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
@@ -1315,10 +1351,12 @@ var FileRenderer = (function() {
         /** @type {Array.<FileBlob>} */
         this.collection = [];
         this.keys = {};
+        this.gui_descr = { compact_view: true, fetch_previous: true
+                         , context_size: true, syntax_toggle: false };
 
         this.create_all_dom = function() {
             for ( var i = this.collection.length - 1; i >= 0; i-- ) {
-                inert_dom(this.collection[i].create_dom());
+                insert_node(this.collection[i].create_dom());
             }
         };
 
@@ -1494,6 +1532,9 @@ var BranchComparer = (function() {
         this.send_message = function( msg ) {
             /* nothing */
         };
+
+        this.gui_descr = { compact_view: false, fetch_previous: false
+                         , context_size: false, syntax_toggle: false };
     }
 
     return {
