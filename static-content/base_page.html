@@ -176,6 +176,7 @@
                 {{#ref_list}}
                     <h4>{{name}} branches</h4>
                     {{#branches}}
+                        <span onclick="Project.state.switch_commit('{{key}}')">=&gt;</span>
                         <div class="branch_widget">
                             {{name}}
                         </div>
