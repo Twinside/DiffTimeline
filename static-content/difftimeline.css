@@ -107,6 +107,8 @@ pre
    color: #e1ffe0;
    font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif;
    vertical-align: middle;
+
+   cursor: default;
 }
 
 .btn_returnpast:hover 
@@ -138,6 +140,8 @@ pre
    font-family: 'Lucida Grande', Helvetica, Arial, Sans-Serif;
    text-decoration: none;
    vertical-align: middle;
+
+   cursor: default;
 }
 
 .btn_toggleview:hover 
