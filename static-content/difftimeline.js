@@ -980,12 +980,6 @@ var Commit = function(key, data) {
     this.render = function() {
     	var view_mode = Project.state.active_view_mode();
 
-    	if (this.last_view_mode !== view_mode) {
-            this.orig_node.remove();
-            this.create_dom();
-            this.last_view_mode = view_mode;
-        }
-
         if (view_mode == Project.ViewMode.VIEW_FULL) {
             this.render_full();
         } else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
@@ -1044,7 +1038,15 @@ var CommitRenderer = (function() {
      */
     var init_methods = function() {
         this.keys = {};
+        this.initial_view_mode = Project.state.active_view_mode();
+
         this.render_all = function() {
+            if (Project.state.active_view_mode() !== this.initial_view_mode) {
+                this.initial_view_mode = Project.state.active_view_mode();
+                $('.container *').remove();
+                this.create_all_dom();
+            }
+
             for ( var i = 0; i < this.collection.length; i++ ) {
                 this.collection[i].render();
             }
