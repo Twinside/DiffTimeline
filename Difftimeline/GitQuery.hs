@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitDetail( .. )
                             , CommitPath( .. )
@@ -32,6 +33,7 @@ import Data.List( sortBy, foldl' )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
+import qualified Control.Exception as E
 import Control.Monad( forM )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
@@ -46,7 +48,7 @@ import Data.Text.Encoding.Error( lenientDecode )
 
 import Data.Time.Clock.POSIX( getPOSIXTime )
 
-import System.Directory( getDirectoryContents, doesFileExist )
+import System.Directory( getDirectoryContents, doesFileExist  )
 import Data.Git( GitObject( .. )
                , CommitAuthor( .. )
                , CommitInfo( .. )
@@ -224,21 +226,27 @@ data RemoteBranches = RemoteBranches
 
 brancheslist :: Git -> IO [RemoteBranches]
 brancheslist repo = do
-    let fetchBranch b = BranchInfo (T.pack b) <$> readBranch repo b
+    let fetchBranch b =
+          E.catch ((:[]) . BranchInfo (T.pack b) <$> readBranch repo b)
+                  (\(_ :: IOError) -> pure [])
+
         fetchRemoteBranch _remote "HEAD" = pure[]
         fetchRemoteBranch remote b =
             sequence [BranchInfo (T.pack $ remote </> b) <$> readRemoteBranch repo remote b]
 
         fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
-    branchInfo <- getBranchNames repo >>= mapM fetchBranch 
+    branchNames <- getBranchNames repo
+    branchInfo <- concat <$> mapM fetchBranch branchNames 
     remoteList <- getRemoteNames repo
     remotes <-  forM remoteList (\remote -> do
-          branchesName <- getRemoteBranchNames repo remote 
-          branches <- concat <$> mapM (fetchRemoteBranch remote) branchesName
+          branchesName <- E.catch (getRemoteBranchNames repo remote)
+                                  (\(_ :: IOError) -> pure [])
+
+          branches <- concat <$> (E.catch (mapM (fetchRemoteBranch remote) branchesName)
+                                          (\(_ :: IOError) -> pure []))
           pure $ RemoteBranches { remoteName = T.pack remote
                                 , remoteBranches = branches 
                                 })
-
     tagInfo <- getTagNames repo >>= mapM fetchTag
     let localBranch = RemoteBranches {
         remoteName = "local",
