@@ -23,5 +23,7 @@
 
 /static-content/jquery.min.js                Jquery                  GET
 /static-content/jquery-ui.min.js             JqueryUI                GET
+/static-content/jquery-scrollTo.js           JqueryScrollTo          GET
+/static-content/jquery-hotkeys.js            JqueryHotKeys           GET
 /static-content/syntax-highlight.css         Syntax_highlight        GET
 /static-content/tinysyntaxhighlighter.js     Tinysyntaxhighlighter   GET

@@ -57,13 +57,15 @@ getScreen =  fetchStatic RepCss screenCssEmbedded
 getSyntax_highlight = fetchStatic RepCss syntaxhighlihgtCss
 
 getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, getJqueryUI,
-    getTinysyntaxhighlighter :: Handler RepPlain
+    getTinysyntaxhighlighter, getJqueryHotKeys, getJqueryScrollTo :: Handler RepPlain
 getICanHaz_min = fetchStatic RepPlain icanHazEmbedded 
 getDifftimelineJs = fetchStatic RepPlain diffTimlineJsEmbedded 
 getFavicon = fetchStatic RepPlain faviconEmbed
 getJquery = fetchStatic RepPlain jqueryEmbedded 
 getJqueryUI = fetchStatic RepPlain jqueryUiEmbedded 
 getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs 
+getJqueryHotKeys = fetchStatic RepPlain jqueryHotkeysEmbedded
+getJqueryScrollTo = fetchStatic RepPlain jqueryScrollToEmbedded
 
 getFileParentR :: [Text] -> Handler RepJson
 getFileParentR filePathes = do

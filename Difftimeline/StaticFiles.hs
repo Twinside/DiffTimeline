@@ -24,6 +24,12 @@ faviconEmbed = ("favicon.ico", $(embedFile "static-content/favicon.ico"))
 jqueryEmbedded :: (FilePath, B.ByteString)
 jqueryEmbedded = ("jquery-1.7.2.min.js", $(embedFile "static-content/jquery-1.7.2.min.js"))
 
+jqueryHotkeysEmbedded :: (FilePath, B.ByteString)
+jqueryHotkeysEmbedded = ("jquery-hotkeys.js", $(embedFile "static-content/jquery-hotkeys.js"))
+
+jqueryScrollToEmbedded :: (FilePath, B.ByteString)
+jqueryScrollToEmbedded = ("jquery-scrollTo.js", $(embedFile "static-content/jquery-scrollTo.js"))
+
 jqueryUiEmbedded :: (FilePath, B.ByteString)
 jqueryUiEmbedded = ("jquery-ui-1.8.21.custom.min.js", $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js"))
 
