@@ -573,12 +573,31 @@ pre
     color: white;
 }
 
+.branch_switcher {
+    width: 20px;
+    height: 100%;
+    border: 1px solid darkgray;
+    display: inline-block;
+    cursor: default;
+}
+
+.branch_switcher:hover {
+    background: white;
+    color: black;
+}
+
+.branch_switcher:active {
+    background: darkgray;
+}
+
 .branch_widget {
+    cursor: default;
     padding: 3px;
     border: 1px solid white;
     width: 100px;
     background: #777777;
     margin: 2px;
+    display: inline-block;
 }
 
 .branch_container {

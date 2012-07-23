@@ -1039,6 +1039,7 @@ var CommitRenderer = (function() {
     var init_methods = function() {
         this.keys = {};
         this.initial_view_mode = Project.state.active_view_mode();
+        this.focused_index = 0;
 
         this.render_all = function() {
             if (Project.state.active_view_mode() !== this.initial_view_mode) {
@@ -1090,6 +1091,7 @@ var CommitRenderer = (function() {
 
                 this_obj.collection.push(new_commit);
                 this_obj.keys[data.key] = new_commit;
+                this_obj.focused_index = 0;
             });
         }
     }
@@ -1559,4 +1561,10 @@ function leave_server()
     { $.ajax( {url:"/quit", async:false} ); }
 
 ich.grabTemplates();
+
+$(document).bind('keydown', 'h', function(){
+});
+
+$(document).bind('keydown', 'l', function(){
+});
 

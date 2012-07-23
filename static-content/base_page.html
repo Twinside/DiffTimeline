@@ -178,7 +178,8 @@
                 {{#ref_list}}
                     <h4>{{name}} branches</h4>
                     {{#branches}}
-                        <span onclick="Project.state.switch_commit('{{key}}')">=&gt;</span>
+                    <div class="branch_switcher" onclick="Project.state.switch_commit('{{key}}')"
+                         alt="switch to branch view for branch {{name}}">=&gt;</div>
                         <div class="branch_widget">
                             {{name}}
                         </div>
