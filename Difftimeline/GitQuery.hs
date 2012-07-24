@@ -323,7 +323,7 @@ diffWorkingDirectory repository contextSize ref = runErrorT $ do
 
         inner flatname name (Blob c1) r1 = do
             file2 <- liftIO $ L.readFile flatname
-            pure $ fileComparer name c1 r1 file2
+            pure $! fileComparer name c1 r1 file2
         inner _ _ _ _ = throwError "Wrong git object kind"
 
         maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
