@@ -474,6 +474,15 @@ var TinySyntaxHighlighter = (function () {
         };
     }
 
+    var exact_token_match = function(k, txt) {
+        return { kind: k, recognizer: function(line, idx) {
+                if (isTokenPrefixOf(txt, line, idx))
+                    return txt;
+                return '';
+            }
+        };
+    }
+
     /** @type {Object.<string, SyntaxParser>} */
     var generic_parsers = {
         integer:
@@ -562,6 +571,25 @@ var TinySyntaxHighlighter = (function () {
                 while (currIdx < line.length)
                 {
                     if (line[currIdx] === '"') {
+                        return line.substring(idx, currIdx + 1);
+                    }
+                    currIdx++;
+                }
+
+                return '';
+              }
+            },
+
+        back_quote_string:
+            { kind: 'syntax_special'
+            , recognizer: function( line, idx ) {
+                if (line[idx] !== '`') return '';
+
+                /** @type {number} */
+                var currIdx = idx + 1;
+                while (currIdx < line.length)
+                {
+                    if (line[currIdx] === '`') {
                         return line.substring(idx, currIdx + 1);
                     }
                     currIdx++;
@@ -747,6 +775,34 @@ var TinySyntaxHighlighter = (function () {
                        , "tt", "ul", "u", "var", "table"
                        ] }
             ])
+    };
+
+
+
+    /** @type {LangDef} */
+    var shellDef = {
+        begin:null_region, end:null_region,
+
+        parsers:[ generic_parsers.monoline_comment('#')
+                , generic_parsers.double_quote_string
+                , generic_parsers.simple_quote_string
+                , generic_parsers.back_quote_string
+                , generic_parsers.integer
+                , rexp_parser('syntax_identifier', /[a-zA-Z0-9.!@_%+,]*(?==)/)
+                , rexp_parser('syntax_operator', /<<|>>|!=|==|\||\&>/)
+                , exact_token_match('syntax_identifier', '$#')
+                , { kind: 'syntax_identifier'
+                  , recognizer:prefix_parser_kind('$', generic_parsers.c_like_identifier )}
+                , generic_parsers.c_like_identifier
+                ],
+            
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ["if", "else", "elif", "fi", "then", "case", "esac"] }
+            , { kind:'syntax_repeat'     , words: ["while", "until", "do", "for", "done", "in"] }
+            , { kind:'syntax_function'   , words: ["function"] }
+            ]),
+        
+        regions:[]
     };
 
     /** @type {LangDef} */
@@ -996,6 +1052,8 @@ var TinySyntaxHighlighter = (function () {
             return new create_highlighter(with_line_number, pythonDef );
         else if (filename.match(/\.js$/))
             return new create_highlighter(with_line_number, javascriptDef );
+        else if (filename.match(/\.sh$/))
+            return new create_highlighter(with_line_number, shellDef );
         else if (filename.match(/\.xml$/) || filename.match(/\.html$/) ||
                  filename.match(/\.htm/)  || filename.match(/\.vcxproj$/))
             return new create_highlighter(with_line_number, xmlDef );
