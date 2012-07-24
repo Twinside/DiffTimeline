@@ -82,12 +82,12 @@ import Yesod.Logger
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
-data CommitTreeDiff = AddElement T.Text Ref
-                    | DelElement T.Text Ref
-                    | NeutralElement T.Text Ref
-                    | TreeElement T.Text Ref [CommitTreeDiff]
-                    | ModifyElement T.Text Ref [(DiffCommand, V.Vector T.Text)]
-                    | ModifyBinaryElement T.Text Ref
+data CommitTreeDiff = AddElement !T.Text !Ref
+                    | DelElement !T.Text !Ref
+                    | NeutralElement !T.Text !Ref
+                    | TreeElement !T.Text !Ref ![CommitTreeDiff]
+                    | ModifyElement !T.Text !Ref ![(DiffCommand, V.Vector T.Text)]
+                    | ModifyBinaryElement !T.Text !Ref
                     deriving (Eq, Show)
 
 joinBytePath :: [BC.ByteString] -> T.Text
@@ -385,7 +385,7 @@ createCommitDiff repository contextSize deep ref prevRef = do
             | not deep  = return $ ModifyElement (T.pack name) r2 []
             | detectBinary c2  = return $ ModifyBinaryElement (T.pack name) r2
             | otherwise = return .
-                ModifyElement (T.pack name) r2 $ computeTextScript contextSize txtLeft txtRight
+                ModifyElement (T.pack name) r2 $! computeTextScript contextSize txtLeft txtRight
                     where strictify = B.concat . L.toChunks
                           txtLeft = decodeUtf8 $ strictify c1
                           txtRight = decodeUtf8 $ strictify c2
