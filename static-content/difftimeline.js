@@ -1453,6 +1453,7 @@ var FileRenderer = (function() {
         /** @type {Array.<FileBlob>} */
         this.collection = [];
         this.keys = {};
+        this.focused_index = 0;
         this.gui_descr = { compact_view: true, fetch_previous: true
                          , context_size: true, syntax_toggle: false };
 
@@ -1476,9 +1477,40 @@ var FileRenderer = (function() {
             this.keys[commit_id].fetch_details();
         };
 
+        this.move_left = function() {
+            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+
+            if (this.focused_index === 0) {
+                this.fetch_previous();
+                return;
+            }
+
+            this.focused_index--;
+
+            var new_focused_node = this.collection[this.focused_index].orig_node;
+            $(new_focused_node).addClass('focused_commit');
+            $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+        };
+
+        this.move_right = function() {
+            if (this.focused_index === this.collection.length - 1)
+                return;
+
+            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            this.focused_index++;
+
+            var new_focused_node = this.collection[this.focused_index].orig_node;
+            $(new_focused_node).addClass('focused_commit');
+            $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+        };
+
         this.send_message = function( msg ) {
             if (msg.action === Project.GuiMessage.FETCH_DETAIL)
                 return this.fetch_details(msg.key);
+            else if (msg.action === Project.GuiMessage.MOVE_LEFT)
+                return this.move_left();
+            else if (msg.action === Project.GuiMessage.MOVE_RIGHT)
+                return this.move_right();
         };
 
         this.fetch_previous = function() {
