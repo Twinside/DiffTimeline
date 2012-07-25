@@ -84,7 +84,7 @@
                     </div>
                     {{#is_key_real}}
                         <span class="more_info"
-                            onclick="Project.state.send_state_message({action:'fetch_tree', key:'{{key}}'});">
+                            onclick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_TREE, key:'{{key}}'});">
                             <span class="btn_indicator">&#x25bc;</span> Tree
                         </span>
                     {{/is_key_real}}
@@ -135,7 +135,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="Project.state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>
@@ -163,7 +163,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="Project.state.send_state_message({action:'fetch_detail', key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>

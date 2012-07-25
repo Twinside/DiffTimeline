@@ -76,11 +76,27 @@ Project.DiffChar = {
     DIFF_ADDDEL: '!'
 };
 
-/** @enum {string} */
+/**
+ * @const
+ * @enum {string}
+ */
 Project.DiffKind = {
     KIND_MODIFICATION: 'modification',
     KIND_ADDITION: 'addition',
     KIND_DELETION: 'deletion'
+}
+
+/**
+ * @const
+ * @enum {number}
+ */
+Project.GuiMessage = {
+    FETCH_TREE:   0,
+    FETCH_DETAIL: 1,
+    MOVE_LEFT:    2,
+    MOVE_RIGHT:   3,
+    MOVE_UP:      4,
+    MOVE_DOWN:    5
 }
 
 /**
@@ -1057,9 +1073,37 @@ var CommitRenderer = (function() {
             this.keys[key].fetch_tree();
         }
 
+        this.move_left = function() {
+            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+
+            if (this.focused_index === this.collection.length - 1) {
+                this.fetch_previous();
+            } else {
+                this.focused_index++;
+                var new_focused_node = this.collection[this.focused_index].orig_node;
+                $(new_focused_node).addClass('focused_commit');
+                $(document).scrollTo(new_focused_node, 200, {offset: {top:-120, left:-120}});
+            }
+        };
+
+        this.move_right = function() {
+            if (this.focused_index === 0) return;
+            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            this.focused_index--;
+            var new_focused_node = this.collection[this.focused_index].orig_node;
+            $(new_focused_node).addClass('focused_commit');
+            $(document).scrollTo(new_focused_node, 200, {offset: {top:-120, left:-120}});
+            // new_focused_node[0].scrollIntoView();
+        };
+
+
         this.send_message = function( msg ) {
-            if (msg.action === 'fetch_tree')
+            if (msg.action === Project.GuiMessage.FETCH_TREE)
                 return this.fetch_tree(msg.key);
+            else if (msg.action === Project.GuiMessage.MOVE_LEFT)
+                return this.move_left();
+            else if (msg.action === Project.GuiMessage.MOVE_RIGHT)
+                return this.move_right();
         };
 
         this.create_all_dom = function() {
@@ -1091,7 +1135,7 @@ var CommitRenderer = (function() {
 
                 this_obj.collection.push(new_commit);
                 this_obj.keys[data.key] = new_commit;
-                this_obj.focused_index = 0;
+                this_obj.move_left();
             });
         }
     }
@@ -1379,7 +1423,7 @@ var FileRenderer = (function() {
         };
 
         this.send_message = function( msg ) {
-            if (msg.action === 'fetch_detail')
+            if (msg.action === Project.GuiMessage.FETCH_DETAIL)
                 return this.fetch_details(msg.key);
         };
 
@@ -1562,9 +1606,22 @@ function leave_server()
 
 ich.grabTemplates();
 
+//////////////////////////////////////////////////////////////////////////
+////            Keyboard shortcuts
+//////////////////////////////////////////////////////////////////////////
 $(document).bind('keydown', 'h', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_LEFT});
+});
+
+$(document).bind('keydown', 'j', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_DOWN});
+});
+
+$(document).bind('keydown', 'k', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_UP});
 });
 
 $(document).bind('keydown', 'l', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_RIGHT});
 });
 
