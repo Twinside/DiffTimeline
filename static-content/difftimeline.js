@@ -96,7 +96,9 @@ Project.GuiMessage = {
     MOVE_LEFT:    2,
     MOVE_RIGHT:   3,
     MOVE_UP:      4,
-    MOVE_DOWN:    5
+    MOVE_DOWN:    5,
+    MOVE_FIRST:   6,
+    MOVE_LAST:    7
 }
 
 /**
@@ -264,6 +266,10 @@ Project.state = (function () {
 
             $('.btn_toggleview').html(btn_toggle_text[view_mode]);
             this.render_all();
+        },
+
+        chrome_scroll_offset: function() {
+            return {top:-120, left:-120};
         },
 
         start_branch_comp: function() {
@@ -757,6 +763,8 @@ var Commit = function(key, data) {
     this.tree_fetched = false;
     this.tree_opened = false;
     this.last_view_mode = Project.state.active_view_mode();
+    this.focused_diff = 0;
+    this.diff_nodes = [];
 
     if (data.hasOwnProperty('file_changes')) {
         this.fully_fetched = true;
@@ -857,6 +865,39 @@ var Commit = function(key, data) {
         }
 
         return rez_node;
+    };
+
+    this.move_up = function() {
+        if (this.focused_diff === 0) {
+            $(document).scrollTo(this.orig_node, 300, {offset: Project.state.chrome_scroll_offset()});
+            return;
+        }
+
+        $(this.diff_nodes[this.focused_diff]).removeClass('focused_diff');
+
+        this.focused_diff--;
+        var new_node = this.diff_nodes[this.focused_diff];
+        $(new_node).addClass('focused_diff');
+        $(document).scrollTo(new_node, 300, {offset: Project.state.chrome_scroll_offset()});
+    };
+
+    this.move_down = function() {
+        if ( this.focused_diff === this.diff_nodes.length - 1 )
+            return;
+
+        $(this.diff_nodes[this.focused_diff]).removeClass('focused_diff');
+
+        this.focused_diff++;
+        var new_node = this.diff_nodes[this.focused_diff];
+        $(new_node).addClass('focused_diff');
+        $(document).scrollTo(new_node, 300, {offset: Project.state.chrome_scroll_offset()});
+    };
+
+    this.send_message = function(msg) {
+        if (msg.action === Project.GuiMessage.MOVE_UP)
+            return this.move_up();
+        else if (msg.action === Project.GuiMessage.MOVE_DOWN)
+            return this.move_down();
     };
 
 	/**
@@ -976,21 +1017,25 @@ var Commit = function(key, data) {
     };
 
     this.render_full = function() {
+        this.diff_nodes = [];
+        this.focused_diff = 0;
+
         for ( var change in this.file_changes ) {
             var e = this.file_changes[change];
             var kind = e['kind'];
             e.key = this.key;
 
-            var file_diff;
-            if (kind_formater.hasOwnProperty(kind))
-                this.orig_node.append(kind_formater[kind](e));
-            else
-                this.orig_node.append(ich.commit_file(e));
+            var new_node = ( kind_formater.hasOwnProperty(kind)
+                           ? kind_formater[kind](e)
+                           : ich.commit_file(e) );
+
+            this.orig_node.append( new_node );
+            this.diff_nodes.push( new_node );
         }
     };
 
     this.render_compact = function() {
-        /* nothing */
+        this.diff_ndoes = [];
     };
 
     this.render = function() {
@@ -1082,7 +1127,7 @@ var CommitRenderer = (function() {
                 this.focused_index++;
                 var new_focused_node = this.collection[this.focused_index].orig_node;
                 $(new_focused_node).addClass('focused_commit');
-                $(document).scrollTo(new_focused_node, 200, {offset: {top:-120, left:-120}});
+                $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
             }
         };
 
@@ -1092,8 +1137,7 @@ var CommitRenderer = (function() {
             this.focused_index--;
             var new_focused_node = this.collection[this.focused_index].orig_node;
             $(new_focused_node).addClass('focused_commit');
-            $(document).scrollTo(new_focused_node, 200, {offset: {top:-120, left:-120}});
-            // new_focused_node[0].scrollIntoView();
+            $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
 
@@ -1104,6 +1148,16 @@ var CommitRenderer = (function() {
                 return this.move_left();
             else if (msg.action === Project.GuiMessage.MOVE_RIGHT)
                 return this.move_right();
+            else if (msg.action === Project.GuiMessage.MOVE_FIRST) {
+                this.focused_index = Math.max(0, this.collection.length - 2);
+                return this.move_left();
+            }
+            else if (msg.action === Project.GuiMessage.MOVE_LAST) {
+                this.focused_index = 1;
+                return this.move_right();
+            }
+            else
+                return this.collection[this.focused_index].send_message(msg);
         };
 
         this.create_all_dom = function() {
@@ -1625,3 +1679,14 @@ $(document).bind('keydown', 'l', function(){
     Project.state.send_state_message({action: Project.GuiMessage.MOVE_RIGHT});
 });
 
+$(document).bind('keydown', '0', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_FIRST});
+});
+
+$(document).bind('keydown', 'Shift+0', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_FIRST});
+});
+
+$(document).bind('keydown', 'Shift+4', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_LAST});
+});
