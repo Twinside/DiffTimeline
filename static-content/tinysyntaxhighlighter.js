@@ -435,7 +435,7 @@ var TinySyntaxHighlighter = (function () {
         this.compute_line_number = function () {
           this.current_line = this.current_line + 1;
           if (this.with_line_number) {
-            return context_free_highlight('syntax_line_number', this.current_line - 1);
+            return context_free_highlight('syntax_line_number', (this.current_line - 1).toString());
           }
           return undefined;
         };
@@ -463,7 +463,7 @@ var TinySyntaxHighlighter = (function () {
         return { kind: k, recognizer: p.recognizer };
     };
 
-    /** @type {function(string, SyntaxParser) : string} */
+    /** @type {function(string, SyntaxParser) : (function(string, number) : string)} */
     var prefix_parser_kind = function(prefix, f) {
         return function( line, idx ) {
             if (line[idx] !== prefix)
@@ -941,7 +941,7 @@ var TinySyntaxHighlighter = (function () {
 
             , { kind:'syntax_type'
               , words: ['boolean', 'bool', 'integer', 'int', 'real', 'double'
-                       ,'float', 'string', 'array', 'object', 'NULL',] }
+                       ,'float', 'string', 'array', 'object', 'NULL'] }
 
             , { kind:'syntax_structure'
               , words: ['namespace', 'extends', 'implements', 'instanceof'

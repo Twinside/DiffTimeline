@@ -62,4 +62,16 @@ ich.prototype.tree_folder = function(arg) {};
  */
 ich.prototype.tree_elem = function(arg) {};
 
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.commit_compact = function(arg) {};
+
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.branch_comparer = function(arg) {};
+
 ich.prototype.grabTemplates = function () {};

@@ -33,9 +33,9 @@ check:
 		 --warning_level VERBOSE \
 		 --js_output_file composed.js \
 		 --jscomp_warning=checkTypes \
-		 --externs jquery-1.6.js \
-		 --externs icanhaz.extern.js \
-		 --externs difftimeline.extern.js \
+		 --externs test/externs/jquery-1.7.js \
+		 --externs test/externs/icanhaz.extern.js \
+		 --externs test/externs/difftimeline.extern.js \
 		 --summary_detail_level 3 \
 		 --js static-content/difftimeline.js \
 		 --js static-content/tinysyntaxhighlighter.js

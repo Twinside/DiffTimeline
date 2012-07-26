@@ -6,7 +6,7 @@ var ref;
 
 /**
  * @const
- * @type {String}
+ * @type {Ref}
  */
 var null_ref = "0000000000000000000000000000000000000000";
 
@@ -98,7 +98,9 @@ Project.GuiMessage = {
     MOVE_UP:      4,
     MOVE_DOWN:    5,
     MOVE_FIRST:   6,
-    MOVE_LAST:    7
+    MOVE_LAST:    7,
+
+    MOVE_INNER:   8
 }
 
 /**
@@ -339,7 +341,7 @@ var DiffManipulator = (function () {
     }
 
     /**
-     * @param {Array.<string>} kind
+     * @param {Array.<string>} kinds
      * @param {Array.<Array.<Element>>} nodeList
      * @return {Array.<Array.<Element>>}
      */
@@ -775,16 +777,14 @@ var Commit = function(key, data) {
     }
 
 
-    /** @type {Object.<Project.DiffKind, function(json) : jQuery>} */
+    /** @type {!Object.<Project.DiffKind, function(json) : !jQuery>} */
     var kind_formater = {};
     kind_formater[Project.DiffKind.KIND_DELETION] = ich.commit_file;
     kind_formater[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
-    kind_formater[Project.DiffKind.KIND_MODIFICATION] = 
-    	/** @param {CommitTreeDiff} e */
-				function(e) {
+    kind_formater[Project.DiffKind.KIND_MODIFICATION] = function(e) {
         var hl = TinySyntaxHighlighter.from_filename(false, e.name);
 
-        /** @type {Element} */
+        /** @type {jQuery} */
         var rez_node = ich.commit_file_modification_detailed(e);
 
         /** @type {Element} */
@@ -898,18 +898,22 @@ var Commit = function(key, data) {
             return this.move_up();
         else if (msg.action === Project.GuiMessage.MOVE_DOWN)
             return this.move_down();
+        else if (msg.action === Project.GuiMessage.MOVE_INNER) {
+            var file = this.file_changes[this.focused_diff];
+            return Project.state.switch_file(file.name, file.hash, file.key);
+        }
     };
 
 	/**
-	 * @param {jquer} node
+	 * @param {Element} node
 	 * @param {number} depth
 	 * @param {string} tree_path
 	 * @param {CommitTreeDiff} elem
-	 * @return {jquery}
+	 * @return {Element}
 	 */
     this.render_tree = function(node, depth, tree_path, elem) {
 
-		/** @type {jquery} */
+		/** @type {jQuery} */
         var new_node;
         var opened = false;
 
@@ -1057,7 +1061,7 @@ var CommitRenderer = (function() {
     var fetch_commit =
 		/**
 		 * @param {Ref} id
-		 * @param {function(CommitDetail | ErrorReturn)} f
+		 * @param {function((CommitDetail|ErrorReturn))} f
 		 */
 				function( id, f ) {
         var this_obj = this;
@@ -1221,7 +1225,6 @@ var CommitRenderer = (function() {
 })();
 
 /**
- * @param {string} filename
  * @param {ParentFile} data
  * @constructor
  */
@@ -1728,3 +1731,8 @@ $(document).bind('keydown', 'Shift+0', function(){
 $(document).bind('keydown', 'Shift+4', function(){
     Project.state.send_state_message({action: Project.GuiMessage.MOVE_LAST});
 });
+
+$(document).bind('keydown', 'return', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_INNER});
+});
+
