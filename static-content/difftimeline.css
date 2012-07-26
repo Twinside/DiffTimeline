@@ -568,7 +568,7 @@ pre
     border: 2px solid red;
 }
 
-.focused_diff {
+.focused_commit .focused_diff {
     border: 2px solid green;
 }
 

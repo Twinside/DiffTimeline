@@ -1086,7 +1086,10 @@ var CommitRenderer = (function() {
 
     var init = function(init_data) {
         var new_commit = new Commit(init_data.key, init_data);
-        insert_node(new_commit.create_dom());
+
+        var new_node = new_commit.create_dom();
+        insert_node(new_node);
+        $(new_node).addClass('focused_commit');
         new_commit.render();
         
         this.collection = [new_commit];
@@ -1438,7 +1441,9 @@ var FileRenderer = (function() {
         this.collection = [init_file];
         this.keys[init_file.key] = init_file;
 
-        insert_node( init_file.create_dom() );
+        var new_node = init_file.create_dom();
+        insert_node( new_node );
+        $(new_node).addClass('focused_commit');
         init_file.render([]);
 
         return this;
@@ -1534,6 +1539,7 @@ var FileRenderer = (function() {
 
                 var node = new_commit.create_dom();
                 insert_node(node);
+                $(node).addClass('focused_commit');
 
                 this_obj.collection.unshift( new_commit );
 
