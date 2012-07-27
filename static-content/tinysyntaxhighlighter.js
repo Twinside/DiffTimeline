@@ -1032,31 +1032,39 @@ var TinySyntaxHighlighter = (function () {
 
         return cppOnlyDef;
     })();
-    
+
+    var assoc = function(expr, lang) {
+        return {pattern: expr, def: lang};
+    };
+
+    var langAssoc = [
+        assoc(/\.rb$/      , rubyDef),
+        assoc(/\.c$/       , cDef),
+        assoc(/\.cpp$/     , cppDef),
+        assoc(/\.cc$/      , cppDef),
+        assoc(/\.h$/       , cppDef),
+        assoc(/\.hpp$/     , cppDef),
+        assoc(/\.php$/     , phpDef),
+        assoc(/\.php3$/    , phpDef),
+        assoc(/\.hs$/      , haskellDef),
+        assoc(/\.css$/     , cssDef),
+        assoc(/\.py$/      , pythonDef),
+        assoc(/\.js$/      , javascriptDef),
+        assoc(/\.sh$/      , shellDef),
+        assoc(/\.xml$/     , xmlDef),
+        assoc(/\.html?$/   , xmlDef),
+        assoc(/\.vcxproj$/ , xmlDef),
+    ];
+
     function instantiate_from_filename(with_line_number, filename)
     {
-        if (filename.match(/\.rb$/))
-            return new create_highlighter(with_line_number, rubyDef );
-        else if (filename.match(/\.c$/))
-            return new create_highlighter(with_line_number, cDef );
-        else if (filename.match(/\.cpp$/) || filename.match(/\.cc$/) ||
-                 filename.match(/\.h$/)   || filename.match(/\.hpp$/))
-            return new create_highlighter(with_line_number, cppDef );
-        else if (filename.match(/\.php/) || filename.match(/\.php3/))
-            return new create_highlighter(with_line_number, phpDef);
-        else if (filename.match(/\.hs$/))
-            return new create_highlighter(with_line_number, haskellDef );
-        else if (filename.match(/\.css$/))
-            return new create_highlighter(with_line_number, cssDef );
-        else if (filename.match(/\.py$/))
-            return new create_highlighter(with_line_number, pythonDef );
-        else if (filename.match(/\.js$/))
-            return new create_highlighter(with_line_number, javascriptDef );
-        else if (filename.match(/\.sh$/))
-            return new create_highlighter(with_line_number, shellDef );
-        else if (filename.match(/\.xml$/) || filename.match(/\.html$/) ||
-                 filename.match(/\.htm/)  || filename.match(/\.vcxproj$/))
-            return new create_highlighter(with_line_number, xmlDef );
+        var i;
+
+        for (i = 0; i < langAssoc.length; i++)
+        {
+            if (filename.match(langAssoc[i].pattern))
+                return new create_highlighter(with_line_number, langAssoc[i].def);
+        }
 
         return new create_empty_highlighter(with_line_number);
     }
