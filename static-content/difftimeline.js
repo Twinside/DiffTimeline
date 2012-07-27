@@ -41,6 +41,22 @@ var breadcrumb = (function() {
             current_index = count++;
         },
 
+        go_forward: function() {
+            if (current_index === count - 1)
+                return;
+
+            current_index++;
+            Project.state.jump_context(current_index);
+        },
+
+        go_backward: function() {
+            if (current_index === 0)
+                return;
+
+            current_index--;
+            Project.state.jump_context(current_index);
+        },
+
         click_index: 
         /** @type {function(number) : void} */
 					function( idx ) {
@@ -1750,5 +1766,13 @@ $(document).bind('keydown', 'Shift+4', function(){
 
 $(document).bind('keydown', 'return', function(){
     Project.state.send_state_message({action: Project.GuiMessage.MOVE_INNER});
+});
+
+$(document).bind('keydown', 'ctrl+left', function() {
+    breadcrumb.go_backward();
+});
+
+$(document).bind('keydown', 'ctrl+right', function() {
+    breadcrumb.go_forward();
 });
 
