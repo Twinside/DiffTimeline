@@ -1108,6 +1108,7 @@ var CommitRenderer = (function() {
         this.keys = {};
         this.initial_view_mode = Project.state.active_view_mode();
         this.focused_index = 0;
+        this.fetching = false;
 
         this.render_all = function() {
             if (Project.state.active_view_mode() !== this.initial_view_mode) {
@@ -1180,6 +1181,11 @@ var CommitRenderer = (function() {
             var this_obj = this;
             var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
 
+            if (this_obj.fetching)
+                return;
+
+            this_obj.fetching = true;
+
             fetch_commit(prev_id, function(data) {
                 if (data['error']) {
                     show_error( data );
@@ -1197,6 +1203,8 @@ var CommitRenderer = (function() {
                 this_obj.collection.push(new_commit);
                 this_obj.keys[data.key] = new_commit;
                 this_obj.move_left();
+
+                this_obj.fetching = false;
             });
         }
     }
@@ -1462,6 +1470,7 @@ var FileRenderer = (function() {
         this.collection = [];
         this.keys = {};
         this.focused_index = 0;
+        this.fetching = false;
         this.gui_descr = { compact_view: true, fetch_previous: true
                          , context_size: true, syntax_toggle: false };
 
@@ -1470,6 +1479,7 @@ var FileRenderer = (function() {
                 insert_node(this.collection[i].create_dom());
             }
         };
+
 
         this.render_all = function() {
             var i;
@@ -1525,6 +1535,10 @@ var FileRenderer = (function() {
             var last_commit = this.collection[0];
             var this_obj = this;
 
+            if (this.fetching) return;
+
+            this_obj.fetching = true;
+
             fetch_file(last_commit.file, last_commit.parent_commit,
                        last_commit.filekey, function(data) {
                                 
@@ -1551,6 +1565,8 @@ var FileRenderer = (function() {
                 this_obj.collection[0].render([]);
                 this_obj.collection[1].render(new_commit.diff);
                 node.animate({'width': 'toggle'}, Project.state.apparition_duration() * 2);
+
+                this_obj.fetching = false;
             });
         };
         return this;
