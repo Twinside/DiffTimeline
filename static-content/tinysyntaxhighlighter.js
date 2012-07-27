@@ -827,7 +827,32 @@ var TinySyntaxHighlighter = (function () {
             , { kind:'syntax_repeat'     , words: ["while", "for"] }
             , { kind:'syntax_exception', words:["except", "finally", "raise", "try"] }
             ]),
-        
+
+        regions:[]
+    };
+
+    /** @type {LangDef} */
+    var makefileDef = {
+        begin:null_region, end:null_region,
+
+        parsers:[ generic_parsers.monoline_comment('#')
+                 // target
+                , rexp_parser('syntax_function', /^[A-Za-z0-9_./$()%-][A-Za-z0-9_./\t $()%-]*::?/)
+                , generic_parsers.c_like_identifier
+                ],
+
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_preproc'  , words:["from", "import"] }
+            , { kind:'syntax_statement'
+              , words: [ 'subst', 'abspath', 'addprefix', 'addsuffix', 'and',
+                         'basename', 'call', 'dir', 'error', 'eval',
+                         'filter-out', 'filter', 'findstring', 'firstword', 'flavor',
+                         'foreach', 'if', 'info', 'join', 'lastword',
+                         'notdir', 'or', 'origin', 'patsubst', 'realpath',
+                         'shell', 'sort', 'strip', 'suffix', 'value',
+                         'warning', 'wildcard', 'word', 'wordlist', 'words' ]}
+            ]),
+
         regions:[]
     };
 
@@ -1054,6 +1079,7 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.xml$/     , xmlDef),
         assoc(/\.html?$/   , xmlDef),
         assoc(/\.vcxproj$/ , xmlDef),
+        assoc(/[mM]akefile$/, makefileDef)
     ];
 
     function instantiate_from_filename(with_line_number, filename)
