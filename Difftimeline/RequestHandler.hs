@@ -67,18 +67,12 @@ getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs
 getJqueryHotKeys = fetchStatic RepPlain jqueryHotkeysEmbedded
 getJqueryScrollTo = fetchStatic RepPlain jqueryScrollToEmbedded
 
-getFileParentR :: [Text] -> Handler RepJson
-getFileParentR filePathes = do
+getFileParentR :: String -> [Text] -> Handler RepJson
+getFileParentR initialCommit filePathes = do
     let file = T.unpack $ T.intercalate (T.pack "/") filePathes
     app <- getYesod
-    params <- reqGetParams <$> getRequest
-    let commitRefs = map snd $ filter (\(n, _) -> n == T.pack "commit") params
-        Just fRef = lookup (T.pack "last_file") params
-        repository = getRepository app
-
-    rez <- liftIO $ findParentFile repository
-                                    (T.unpack fRef)
-                                    (T.unpack $ head commitRefs) file
+    let repository = getRepository app
+    rez <- liftIO $ findParentFile repository initialCommit file
     case rez of
        Left err -> jsonToRepJson $ object ["error" .= err]
        Right info -> jsonToRepJson $ toJSON info

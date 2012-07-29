@@ -3,7 +3,7 @@
 
 / RootR GET
 
-/ask_parent/*Texts                  FileParentR       GET
+/ask_parent/#String/*Texts          FileParentR       GET
 /ask_commit/#String                 CommitOverviewR   GET
 /ask_commit_tree/#String            CommitTreeR       GET
 /compare_branches/#String/#String   BranchComparisonR GET

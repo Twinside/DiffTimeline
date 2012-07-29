@@ -436,6 +436,8 @@ createCommitDiff repository contextSize deep ref prevRef = do
             | otherwise = (:) <$> maySubTree AddElement (BC.unpack rName) rRef
                               <*> diffTree name lefts rs
 
+-- | Given a modification list, keep only the meaningful ones (the
+-- one which contain real information about the diff).
 filterCommitModifications :: [CommitTreeDiff] -> [CommitTreeDiff]
 filterCommitModifications = filter isModification
     where isModification (AddElement _ _) = True
@@ -445,9 +447,10 @@ filterCommitModifications = filter isModification
           isModification (ModifyBinaryElement _ _)= True
           isModification (TreeElement _ _ _) = False
 
+-- | For a given commit, compute the diff with it's first parent.
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository contextSize deep ref = runErrorT $ do
-   (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+   (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = head $ commitParents thisCommit
    detailer <$> createCommitDiff  repository contextSize deep ref prevRef
     where detailer (thisCommit, diff) = 
@@ -462,6 +465,9 @@ diffCommit repository contextSize deep ref = runErrorT $ do
                 , commitDetailChanges = filterCommitModifications $ flattenTreeDiff diff
                 }
 
+
+-- | Given a file and a reference commit, compute the difference with
+-- the previous file occurence for the file.
 findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
                 -> Ref              -- ^ Ref of the element in the path
@@ -469,7 +475,7 @@ findFirstCommit :: Git              -- ^ Repository
                 -> ErrorT String IO (CommitInfo, Ref, [CommitPath])
 findFirstCommit repository path currentFileRef firstCommit = inner undefined undefined firstCommit
     where inner prevCommit prevRef currentCommit = do
-            (Commit info) <- accessCommit "Can't file commit in commit path" repository currentCommit
+            (Commit info) <- accessCommit "Can't find commit in commit path" repository currentCommit
             t@(Tree _)    <- accessTree "Can't find tree in commit path" repository $ commitTree info
             catchError (do
                 commitFileRef <- errorIO "Can't find children in commit path"
@@ -507,36 +513,39 @@ findInTree git pathes = inner pathes . Just
 
           extractRef (_, _, ref) = ref
           findVal v lst = extractRef <$> find (\(_, n, _) -> v == n) lst
-findParentFile :: Git -> String -> String -> FilePath -> IO (Either String ParentFile)
-findParentFile repository lastFileStrSha commitStrSha path = runErrorT $ inner
-  where prevFileSha = fromHexString lastFileStrSha
-        prevCommit = fromHexString commitStrSha
-
+          
+findParentFile :: Git -> String -> FilePath -> IO (Either String ParentFile)
+findParentFile repository commitStrSha path = runErrorT $ inner
+  where currentCommit = fromHexString commitStrSha
         bytePath = map BC.pack $ splitDirectories path
 
         inner = do
-            Commit commit <- accessCommit "Can't find parent commit" repository prevCommit
+            Commit commit <- accessCommit "Can't find current commit" repository currentCommit
             t@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree commit
-            Blob prevFile <- accessBlob "Can't find file content" repository prevFileSha
             currentFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath t
-            Blob file <- accessBlob "Can't find file content" repository $ currentFileRef
             (firstNfo, firstRef, betweenCommits) <-
-                    findFirstCommit repository bytePath currentFileRef prevCommit
+                    findFirstCommit repository bytePath currentFileRef currentCommit
+
+            Commit prevCommit <- accessCommit "Can't access previous commit" repository . head $ commitParents firstNfo 
+            prevTree@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree prevCommit
+            prevFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath prevTree
+            Blob thisFile <- accessBlob "Can't find file content" repository prevFileRef
+            Blob nextFile <- accessBlob "can't find fule content" repository currentFileRef
 
             let toStrict = B.concat . L.toChunks
-                prevData = decodeUtf8 $ toStrict prevFile
-                thisData = decodeUtf8 $ toStrict file
+                nextData = decodeUtf8 $ toStrict nextFile
+                thisData = decodeUtf8 $ toStrict thisFile
                 author = commitAuthor firstNfo
 
             return $ ParentFile
-                { fileData = T.filter (/= '\r') thisData
+                { fileData = T.filter (/= '\r') nextData
                 , fileName = T.pack path
                 , fileRef = currentFileRef
                 , parentRef = commitParents firstNfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
                 , commitRef = firstRef
                 , commitPath = reverse betweenCommits
-                , fileDiff = computeTextDiff thisData prevData
+                , fileDiff = computeTextDiff thisData nextData
                 , parentCommitAuthor = decodeUtf8 $ authorName author
                 , parentCommitTimestamp = authorTimestamp author
                 , parentCommmitTimezone = authorTimezone author
@@ -589,8 +598,15 @@ basePage _logger repository path = runErrorT $ do
     foundFileRef   <- errorIO "Error can't find file in tree" $ findInTree repository path tree
     (Blob content) <- getObj "Error can't find file content" foundFileRef
 
+    (Commit prevCommit) <- accessCommit "Can't access parent commit" repository . head $ commitParents cInfo
+    prevTree       <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
+    prevFileRef    <- errorIO "Error can't find file in tree" $ findInTree repository path prevTree
+    (Blob prevContent) <- getObj "Error can't find file content" prevFileRef
+
     let toStrict = B.concat . L.toChunks
         author = commitAuthor cInfo
+        prevData = decodeUtf8 $ toStrict prevContent
+        thisData = decodeUtf8 $ toStrict content
 
     return $ ParentFile {
         commitRef = headRef,
@@ -603,8 +619,8 @@ basePage _logger repository path = runErrorT $ do
                                  , pathTimezone = authorTimezone author
                                  , pathAuthor = decodeUtf8 $ authorName author
                                  }],
-        fileDiff = [],
-        fileData = decodeUtf8 $ toStrict content,
+        fileDiff = computeTextDiff prevData thisData,
+        fileData = thisData,
         parentRef = commitParents cInfo,
         fileMessage = decodeUtf8 $ commitMessage cInfo,
         parentCommitAuthor = decodeUtf8 $ authorName author,

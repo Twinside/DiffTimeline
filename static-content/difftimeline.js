@@ -1375,13 +1375,13 @@ var FileBlob = function (data) {
         });
     };
 
-    this.render_file_data = function(prev_diff, number_node, node) {
+    this.render_file_data = function(next_diff, number_node, node) {
         var filename = this.file;
         var diff     = this.diff;
         var data     = this.data;
 
-        var rems = DiffManipulator.filterRems(diff);
-        var adds = DiffManipulator.filterAdds(prev_diff);
+        var rems = DiffManipulator.filterRems(next_diff);
+        var adds = DiffManipulator.filterAdds(diff);
         var ranges = DiffManipulator.calculateFoldSet(rems, adds);
 
         var clean_cr_lf_data = data.replace(/\r/g, '');
@@ -1423,14 +1423,14 @@ var FileBlob = function (data) {
         return this.orig_node;
     }
 
-    this.render = function(prev_diff) {
+    this.render = function(next_diff) {
         var render_node = $('.syntax_highlighted', this.orig_node);
         var number_node = $('.line_number_column', this.orig_node);
 
         render_node.detach();
         render_node.empty();
         number_node.empty();
-        this.render_file_data(prev_diff, number_node, render_node);
+        this.render_file_data(next_diff, number_node, render_node);
         render_node.appendTo($('table td:last', this.orig_node));
     }
 
@@ -1445,13 +1445,12 @@ var FileRenderer = (function() {
     "use strict";
 
     var fetch_file = function(file, commit, filekey, f) {
-        var params = { commit: commit, last_file: filekey };
-        var request = '/ask_parent';
+        var request = '/ask_parent/' + commit;
 
         if (file[0] == '/') request += file;
         else request += '/' + file;
 
-        $.ajax({ url: request, dataType: 'json', data: params,
+        $.ajax({ url: request, dataType: 'json',
                  error: function() {
                      show_error({error: 'Communication error with the server while fetching file'});
                  },
@@ -1499,12 +1498,12 @@ var FileRenderer = (function() {
 
         this.render_all = function() {
             var i;
-            var prev_diff = [];
 
-            for ( i = 0; i < this.collection.length; i++ ) {
-                this.collection[i].render(prev_diff);
-                prev_diff = this.collection[i].diff;
+            for ( i = 0; i < this.collection.length - 1; i++ ) {
+                this.collection[i].render(this.collection[i + 1].diff);
             }
+
+            this.collection[i].render([]);
         };
 
         this.fetch_details = function(commit_id) {
@@ -1578,8 +1577,7 @@ var FileRenderer = (function() {
 
                 this_obj.keys[new_commit.key] = new_commit;
                 node.animate({'width': 'toggle'}, 0);
-                this_obj.collection[0].render([]);
-                this_obj.collection[1].render(new_commit.diff);
+                this_obj.collection[0].render(this_obj.collection[1].diff);
                 node.animate({'width': 'toggle'}, Project.state.apparition_duration() * 2);
 
                 this_obj.fetching = false;
