@@ -2,7 +2,7 @@
 module Difftimeline.Application( getApplication, Command( .. ) ) where
 
 import Difftimeline.Import
-import System.Directory( getCurrentDirectory )
+import System.Directory( getCurrentDirectory, doesDirectoryExist )
 import Network.Wai( Application )
 import Yesod.Default.Config
 import Yesod.Default.Handlers (getFaviconR)
@@ -57,13 +57,25 @@ getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv () -> Logger
 
 getApplication devModePath (DiffFile fname) conf logger = do
     cwd <- getCurrentDirectory 
-    let name = if isRelative fname
-            then simplifyPath $ cwd </> fname
-            else simplifyPath fname
+    isDir <- doesDirectoryExist fname
+    let absName
+          | isRelative fname = simplifyPath $ cwd </> fname
+          | otherwise = simplifyPath fname
+
+        name | isDir = absName ++ "/"
+             | otherwise = absName
+
     initRepo <- initRepository logger $ takeDirectory name
-    let initPath = simplifyPath $ makeRelative (takeDirectory $ gitRepoPath initRepo) name
-        foundation = DiffTimeline conf logger devModePath initRepo (DiffFile initPath)
-    liftIO . logString logger $ "Initial file : " ++ initPath
+    initPath <- if isDir 
+        then pure DiffWorking
+        else do
+          let absPath = takeDirectory $ gitRepoPath initRepo
+              relPath = simplifyPath $ makeRelative absPath name
+          liftIO . logString logger $ "Initial file : " ++ relPath
+          pure $ DiffFile relPath
+
+
+    let foundation = DiffTimeline conf logger devModePath initRepo initPath
     app <- toWaiAppPlain foundation
     return $ logCallbackDev (logBS logger) app
 

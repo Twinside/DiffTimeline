@@ -102,6 +102,7 @@ helpText :: String
 helpText =
     "Difftimeline v" ++ version ++ "\n" ++
     "usage: difftimeline [options] [file]\n" ++
+    "       difftimeline [options] [folder]\n" ++
     "       difftimeline [options] compare branch1 branch2\n" ++
     "\n" ++
     "Without argument, difftimeline will start diff from the current\n" ++
