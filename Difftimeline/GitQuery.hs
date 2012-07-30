@@ -269,7 +269,7 @@ diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = runErrorT $ do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let prevRef = head $ commitParents thisCommit
-    snd <$> createCommitDiff repository 0 False ref prevRef
+    snd <$> createCommitDiff repository 0 False prevRef ref
 
 data SubKind = KindFile | KindDirectory
 
@@ -366,9 +366,14 @@ diffWorkingDirectory repository contextSize ref = runErrorT $ do
             | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> 
                               diffTree flatname name lefts rs
 
-createCommitDiff :: Git -> Int -> Bool -> Ref -> Ref
+-- | Compare two commits
+createCommitDiff :: Git
+                 -> Int  -- ^ Context size to embed
+                 -> Bool -- ^ If we compute file diff
+                 -> Ref  -- ^ Base commit
+                 -> Ref  -- ^ Final commit (destination)
                  -> ErrorT String IO (CommitInfo, CommitTreeDiff)
-createCommitDiff repository contextSize deep ref prevRef = do
+createCommitDiff repository contextSize deep prevRef ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
@@ -452,7 +457,7 @@ diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository contextSize deep ref = runErrorT $ do
    (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = head $ commitParents thisCommit
-   detailer <$> createCommitDiff  repository contextSize deep ref prevRef
+   detailer <$> createCommitDiff  repository contextSize deep prevRef ref 
     where detailer (thisCommit, diff) = 
             let author = commitAuthor thisCommit
             in CommitDetail {
