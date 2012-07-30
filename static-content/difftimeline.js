@@ -10,6 +10,18 @@ var ref;
  */
 var null_ref = "0000000000000000000000000000000000000000";
 
+/**
+ * @const
+ * @type {string}
+ */
+var sub_focus = 'focused_diff';
+
+/**
+ * @const
+ * @type {string}
+ */
+var global_focus = 'focused_commit';
+
 /////////////////////////////////////////////////////////////////////
 //              Initial state
 /////////////////////////////////////////////////////////////////////
@@ -889,11 +901,11 @@ var Commit = function(key, data) {
             return;
         }
 
-        $(this.diff_nodes[this.focused_diff]).removeClass('focused_diff');
+        $(this.diff_nodes[this.focused_diff]).removeClass(sub_focus);
 
         this.focused_diff--;
         var new_node = this.diff_nodes[this.focused_diff];
-        $(new_node).addClass('focused_diff');
+        $(new_node).addClass(sub_focus);
         $(document).scrollTo(new_node, 300, {offset: Project.state.chrome_scroll_offset()});
     };
 
@@ -901,11 +913,11 @@ var Commit = function(key, data) {
         if ( this.focused_diff === this.diff_nodes.length - 1 )
             return;
 
-        $(this.diff_nodes[this.focused_diff]).removeClass('focused_diff');
+        $(this.diff_nodes[this.focused_diff]).removeClass(sub_focus);
 
         this.focused_diff++;
         var new_node = this.diff_nodes[this.focused_diff];
-        $(new_node).addClass('focused_diff');
+        $(new_node).addClass(sub_focus);
         $(document).scrollTo(new_node, 300, {offset: Project.state.chrome_scroll_offset()});
     };
 
@@ -1109,7 +1121,7 @@ var CommitRenderer = (function() {
 
         var new_node = new_commit.create_dom();
         insert_node(new_node);
-        $(new_node).addClass('focused_commit');
+        $(new_node).addClass(global_focus);
         new_commit.render();
         
         this.collection = [new_commit];
@@ -1143,24 +1155,24 @@ var CommitRenderer = (function() {
         }
 
         this.move_left = function() {
-            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === this.collection.length - 1) {
                 this.fetch_previous();
             } else {
                 this.focused_index++;
                 var new_focused_node = this.collection[this.focused_index].orig_node;
-                $(new_focused_node).addClass('focused_commit');
+                $(new_focused_node).addClass(global_focus);
                 $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
             }
         };
 
         this.move_right = function() {
             if (this.focused_index === 0) return;
-            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
             this.focused_index--;
             var new_focused_node = this.collection[this.focused_index].orig_node;
-            $(new_focused_node).addClass('focused_commit');
+            $(new_focused_node).addClass(global_focus);
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
@@ -1469,7 +1481,7 @@ var FileRenderer = (function() {
 
         var new_node = init_file.create_dom();
         insert_node( new_node );
-        $(new_node).addClass('focused_commit');
+        $(new_node).addClass(global_focus);
         init_file.render([]);
 
         return this;
@@ -1511,7 +1523,7 @@ var FileRenderer = (function() {
         };
 
         this.move_left = function() {
-            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === 0) {
                 this.fetch_previous();
@@ -1521,7 +1533,7 @@ var FileRenderer = (function() {
             this.focused_index--;
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
-            $(new_focused_node).addClass('focused_commit');
+            $(new_focused_node).addClass(global_focus);
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
@@ -1529,11 +1541,11 @@ var FileRenderer = (function() {
             if (this.focused_index === this.collection.length - 1)
                 return;
 
-            $(this.collection[this.focused_index].orig_node).removeClass('focused_commit');
+            $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
             this.focused_index++;
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
-            $(new_focused_node).addClass('focused_commit');
+            $(new_focused_node).addClass(global_focus);
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
@@ -1571,7 +1583,7 @@ var FileRenderer = (function() {
 
                 var node = new_commit.create_dom();
                 insert_node(node);
-                $(node).addClass('focused_commit');
+                $(node).addClass(global_focus);
 
                 this_obj.collection.unshift( new_commit );
 
@@ -1662,12 +1674,15 @@ var BranchComparer = (function() {
                         show_error( data );
                         return;
                     }
-                    var rez = new Commit(data.key, data);
+
+                    this_obj.last_comparison = new Commit(data.key, data);
 
                     var content = $('.branch_diff_content');
                     $('> *', content).remove();
-                    content.append(rez.create_dom());
-                    rez.render();
+                    var new_node = this_obj.last_comparison.create_dom();
+                    new_node.addClass(global_focus);
+                    content.append(new_node);
+                    this_obj.last_comparison.render();
                 }
             });
         }
@@ -1703,7 +1718,8 @@ var BranchComparer = (function() {
         };
 
         this.send_message = function( msg ) {
-            /* nothing */
+            if (this.last_comparison)
+                this.last_comparison.send_message(msg);
         };
 
         this.gui_descr = { compact_view: false, fetch_previous: false
