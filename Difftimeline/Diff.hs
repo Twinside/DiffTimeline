@@ -23,6 +23,8 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
 
+import Difftimeline.Blame
+
 type Index = Int
 
 -- | Represent the action to be taken for the diff
@@ -56,6 +58,9 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                ![[SubModification]]       -- ^ Refined diff
                  deriving (Eq, Show)
 
+--------------------------------------------------
+----            Diff
+--------------------------------------------------
 -- | Merge diff commands which are contiguous of the same direction.
 compactCommands :: [RawDiffCommand] -> [RawDiffCommand]
 compactCommands    [] = []
