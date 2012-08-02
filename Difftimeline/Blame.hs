@@ -34,19 +34,26 @@ cutAddedLines :: ( Monoid (container (Int, Int, a))
               -> [BlameRange]
               -> [(Int, Int)] -- ^ Add begin, add size
               -> Writer (container (Int, Int, a)) [BlameRange]
-cutAddedLines tag = aux
-  where aux []    _ = pure []
-        aux rest [] = pure rest
-        aux ranges@(blameElem@(BlameRange bStart bSize bOffset):rangeRest) adds@((addBeg, addSize) : addRest)
+cutAddedLines tag = aux 0
+  where offsetBy (BlameRange bStart bSize bOffset) shift = 
+            BlameRange (bStart - shift) bSize (bOffset + shift) 
+
+        shiftListBy shift lst = map (flip offsetBy shift) lst
+
+        aux     _   []  _ = pure []
+        aux shift rest [] = pure $ shiftListBy shift rest
+
+        aux shift ranges@(blameElem@(BlameRange bStart bSize bOffset):rangeRest) adds@((addBeg, addSize) : addRest)
           -- range before add
           -- #######
           --            #######
-          | bStart + bSize < addBeg = (blameElem :) <$> aux rangeRest adds
+          | bStart + bSize < addBeg =
+              (blameElem `offsetBy` shift :) <$> aux shift rangeRest adds
 
           -- add before range
           --            #######
           -- #######
-          | addBeg + addSize < bStart = aux ranges addRest
+          | addBeg + addSize < bStart = aux (shift + addSize) ranges addRest
 
           -- intersection starting with add
           -- ??????######???????
@@ -58,14 +65,14 @@ cutAddedLines tag = aux
                     | toldSize < bSize = BlameRange addEnd (bSize - toldSize) bOffset : rangeRest
                     | otherwise = rangeRest
               tell $ pure (bStart + bOffset, toldSize, tag)
-              aux nextRange addRest
+              aux shift nextRange addRest
 
           -- intersection starting with add
           -- ??????####
           -- ###############
           | addBeg <= bStart && addBeg + addSize > bStart + bSize = do
               tell $ pure (bStart + bOffset, bSize, tag)
-              aux rangeRest $ (bStart + bSize, addSize - bSize) : addRest
+              aux shift rangeRest $ (bStart + bSize, addSize - bSize) : addRest
 
           -- ###########????
           --    ############
@@ -75,7 +82,8 @@ cutAddedLines tag = aux
                     | toldSize >= addSize = addRest
                     | otherwise = (bStart + bSize, addSize - (bStart + bSize)) : addRest
               tell $ pure (addBeg + bOffset, toldSize, tag)
-              aux (BlameRange bStart (addBeg - bStart) bOffset : rangeRest) addNextRange
+              aux shift (BlameRange bStart (addBeg - bStart) bOffset : rangeRest) 
+                  addNextRange
 
           -- #######################
           --    ############
@@ -83,16 +91,5 @@ cutAddedLines tag = aux
               tell $ pure (addBeg + bOffset, addSize, tag)
               let restBefore = BlameRange bStart (addBeg - bStart) bOffset
                   restAfter = BlameRange (addBeg + addSize) (bSize - (addBeg + addSize)) bOffset
-              aux (restBefore : restAfter : rangeRest) addRest
-{-
-rangeTest =
-    [ ("     ############            "
-      ,"                    #########"
-      ,"     ############            ")
-
-    , ("                    #########"
-      ,"     ############            "
-      ,"                    #########")
-    ]
--- -}
+              aux shift (restBefore : restAfter : rangeRest) addRest
 
