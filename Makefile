@@ -1,7 +1,10 @@
-all: build
+all: blame_tests
 
 build:
 	runhaskell Setup.hs build
+
+blame_tests:
+	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf test/blame_test.hs
 
 tests:
 	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf test/tester.hs

@@ -90,6 +90,6 @@ cutAddedLines tag = aux 0
           | otherwise = do
               tell $ pure (addBeg + bOffset, addSize, tag)
               let restBefore = BlameRange bStart (addBeg - bStart) bOffset
-                  restAfter = BlameRange (addBeg + addSize) (bSize - (addBeg + addSize)) bOffset
-              aux shift (restBefore : restAfter : rangeRest) addRest
+                  restAfter = BlameRange addBeg (bSize - (addBeg - bStart) - addSize) (bOffset + addSize)
+              (restBefore :) <$> aux shift (restAfter : rangeRest) addRest
 
