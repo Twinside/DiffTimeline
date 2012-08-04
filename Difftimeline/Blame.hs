@@ -21,6 +21,15 @@ data BlameRange = BlameRange
      -- }
         deriving (Eq, Show)
 
+offsetBy :: BlameRange -> Int -> BlameRange
+offsetBy (BlameRange bStart bSize bOffset) shift =
+    BlameRange (bStart - shift) bSize (bOffset + shift)
+
+cutBy :: BlameRange -> Int -> BlameRange
+cutBy (BlameRange bStart bSize bOffset) size =
+    BlameRange (bStart + size) (bSize - size) bOffset
+
+
 shiftDeletions :: [BlameRange] -> [(Int, Int)] -> [BlameRange]
 shiftDeletions = aux 0
   where aux     _   []  _ = []
@@ -35,10 +44,7 @@ cutAddedLines :: ( Monoid (container (Int, Int, a))
               -> [(Int, Int)] -- ^ Add begin, add size
               -> Writer (container (Int, Int, a)) [BlameRange]
 cutAddedLines tag = aux 0
-  where offsetBy (BlameRange bStart bSize bOffset) shift = 
-            BlameRange (bStart - shift) bSize (bOffset + shift) 
-
-        shiftListBy shift lst = map (flip offsetBy shift) lst
+  where shiftListBy shift lst = map (flip offsetBy shift) lst
 
         aux     _   []  _ = pure []
         aux shift rest [] = pure $ shiftListBy shift rest
@@ -47,13 +53,13 @@ cutAddedLines tag = aux 0
           -- range before add
           -- #######
           --            #######
-          | bStart + bSize < addBeg =
+          | bStart + bSize <= addBeg =
               (blameElem `offsetBy` shift :) <$> aux shift rangeRest adds
 
           -- add before range
           --            #######
           -- #######
-          | addBeg + addSize < bStart = aux (shift + addSize) ranges addRest
+          | addBeg + addSize <= bStart = aux (shift + addSize) ranges addRest
 
           -- intersection starting with add
           -- ??????######???????
@@ -62,28 +68,35 @@ cutAddedLines tag = aux 0
               let addEnd = addBeg + addSize
                   toldSize = addEnd - bStart
                   nextRange
-                    | toldSize < bSize = BlameRange addEnd (bSize - toldSize) bOffset : rangeRest
+                    | toldSize < bSize = blameElem `cutBy` toldSize `offsetBy` shift : rangeRest
                     | otherwise = rangeRest
+                  shiftSize = bStart - addBeg
               tell $ pure (bStart + bOffset, toldSize, tag)
-              aux shift nextRange addRest
+              aux (shift + toldSize + shiftSize) nextRange addRest
 
           -- intersection starting with add
           -- ??????####
           -- ###############
           | addBeg <= bStart && addBeg + addSize > bStart + bSize = do
+              let beforeLeftSize = bStart - addBeg
+                  remainingAddSize = addSize - bSize - beforeLeftSize
               tell $ pure (bStart + bOffset, bSize, tag)
-              aux shift rangeRest $ (bStart + bSize, addSize - bSize) : addRest
+
+              aux (shift + beforeLeftSize) rangeRest
+                  $ (bStart + bSize, remainingAddSize) : addRest
 
           -- ###########????
           --    ############
           | bStart < addBeg && bStart + bSize <= addBeg + addSize = do
-              let toldSize = bStart + bSize - addBeg
+              let beforeRemainingSize = addBeg - bStart
+                  cutedAddSize = min (addBeg + addSize) (bStart + bSize) - addBeg
                   addNextRange
-                    | toldSize >= addSize = addRest
-                    | otherwise = (bStart + bSize, addSize - (bStart + bSize)) : addRest
-              tell $ pure (addBeg + bOffset, toldSize, tag)
-              aux shift (BlameRange bStart (addBeg - bStart) bOffset : rangeRest) 
-                  addNextRange
+                    | cutedAddSize == addSize = addRest
+                    | otherwise = (addBeg + cutedAddSize, addSize - cutedAddSize) : addRest
+
+              tell $ pure (addBeg + bOffset, cutedAddSize , tag)
+              (BlameRange bStart beforeRemainingSize bOffset :) <$>
+                        aux (shift + cutedAddSize) rangeRest addNextRange
 
           -- #######################
           --    ############
@@ -91,5 +104,5 @@ cutAddedLines tag = aux 0
               tell $ pure (addBeg + bOffset, addSize, tag)
               let restBefore = BlameRange bStart (addBeg - bStart) bOffset
                   restAfter = BlameRange addBeg (bSize - (addBeg - bStart) - addSize) (bOffset + addSize)
-              (restBefore :) <$> aux shift (restAfter : rangeRest) addRest
+              (restBefore `offsetBy` shift:) <$> aux shift (restAfter : rangeRest) addRest
 

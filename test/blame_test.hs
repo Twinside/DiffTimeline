@@ -30,35 +30,107 @@ resultTest blames adds = (parsedRanges, parsedAdds)
 
 splitTest :: [Test]
 splitTest =
-    [   resultTest "##!####2  "
+    [ "Basic middle split" ~:
+        resultTest "##!####2  "
                    "   ##     "
      ~=? rangeTest "##########"
-                   "   ##     "
+                   "   ++     "
 
-    ,   resultTest "          "
+    , "Same range" ~:
+        resultTest "          "
                    "##########"
      ~=? rangeTest "##########"
-                   "##########"
+                   "++++++++++"
 
-    ,   resultTest "          "
+    ,   "At the end" ~:
+        resultTest "          "
                    "  ########"
      ~=? rangeTest "  ########"
-                   "##########"
+                   "++++++++++"
 
-    ,   resultTest "          "
+    ,  "Two part split" ~:
+        resultTest "          "
+                   "  ## #####"
+     ~=? rangeTest "  ## #####"
+                   "++++++++++"
+
+    ,  "Two part split with add rest" ~:
+        resultTest "          "
+                   "  ## ###  "
+     ~=? rangeTest "  ## ###  "
+                   "++++++++++"
+
+    ,  "Two part split with rest" ~:
+        resultTest "##7       "
+                   "  ## ##   "
+     ~=? rangeTest "  ## #####"
+                   "+++++++   "
+
+    ,  "Two part split with rest shifted" ~:
+        resultTest " ##7       "
+                   "   ## ##   "
+     ~=? rangeTest "   ## #####"
+                   " +++++++   "
+
+    , "Cut add in middle" ~:
+        resultTest "          "
                    "  ######  "
      ~=? rangeTest "  ######  "
-                   "##########"
+                   "++++++++++"
 
-    ,   resultTest "####      "
+    , "Range starting before" ~:
+        resultTest "###    "
+                   "   ####"
+     ~=? rangeTest "#######"
+                   "   ++++"
+
+    , "Range starting before with overflow" ~:
+        resultTest "###    "
+                   "   ####"
+     ~=? rangeTest "#######"
+                   "   ++++++"
+
+    , "Range starting before with follow" ~:
+        resultTest "### #4 "
+                   "   ####   "
+     ~=? rangeTest "####### ##"
+                   "   ++++   "
+
+    , "Range starting before with overflow and follow" ~:
+        resultTest "##!#5     "
+                   "   ####   "
+     ~=? rangeTest "####### ##"
+                   "   +++++  "
+
+    , "Range before" ~:
+        resultTest "####      "
                    "          "
      ~=? rangeTest "####      "
-                   "      ####"
+                   "      ++++"
 
-    ,   resultTest "  ###4    "
+    , "Range before just" ~:
+        resultTest "####    "
+                   "        "
+     ~=? rangeTest "####    "
+                   "    ++++"
+
+    , "Range before follow" ~:
+        resultTest "####   #4    "
+                   "             "
+     ~=? rangeTest "####       ##"
+                   "      ++++   "
+
+    , "Range after" ~:
+        resultTest "  ###4    "
                    "          "
      ~=? rangeTest "      ####"
-                   "####      "
+                   "++++      "
+
+    , "Range after just" ~:
+        resultTest "###4    "
+                   "          "
+     ~=? rangeTest "    ####"
+                   "++++      "
     ]
 
 parseTest :: [Test]
