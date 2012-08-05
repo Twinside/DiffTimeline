@@ -1,5 +1,5 @@
 
-import Data.Monoid
+-- import Data.Monoid
 import Difftimeline.Blame
 import Test.HUnit
 import Control.Monad.Trans.Writer.Strict
@@ -28,8 +28,53 @@ resultTest blames adds = (parsedRanges, parsedAdds)
     where parsedRanges = [BlameRange b s offset | (b, s, offset) <- parseRanges blames] 
           parsedAdds = [(b, s, ()) | (b, s, _) <- parseRanges adds]
 
-splitTest :: [Test]
-splitTest =
+remTest :: String -> String -> [BlameRange]
+remTest blames rems = shiftDeletions parsedRanges parsedAdds
+  where parsedRanges = [BlameRange b s offset | (b, s, offset) <- parseRanges blames]
+        parsedAdds = [(a,b) | (a, b, _) <- parseRanges rems]
+
+remResult :: String -> [BlameRange]
+remResult blames = [BlameRange b s (-offset) | (b, s, offset) <- parseRanges blames]
+
+remTests :: [Test]
+remTests =
+    [ "Simple range before rem" ~:
+       remResult "####          "
+     ~=? remTest "####          "
+                 "    ---       "
+
+    ,  "Simple range before rem and spacing" ~:
+       remResult "####          "
+     ~=? remTest "####          "
+                 "       ---    "
+
+    ,  "Simple rem before range" ~:
+       remResult "        ##4   "
+     ~=? remTest "    ###       "
+                 "----          "
+
+    ,  "Simple rem before range and spacing" ~:
+       remResult "           ##4"
+     ~=? remTest "       ###    "
+                 "----          "
+    ,  "Simple rem before range and spacing" ~:
+       remResult "         ##4    5"
+     ~=? remTest "     ###   #     "
+                 "----     -       "
+
+    ,  "Intersection starting with rem" ~:
+       remResult "      #4"
+     ~=? remTest "  ##    "
+                 "----    "
+
+    ,  "Intersection starting with rem moved" ~:
+       remResult "        #5  "
+     ~=? remTest "   ##    "
+                 "-----    "
+    ]
+
+addTests :: [Test]
+addTests =
     [ "Basic middle split" ~:
         resultTest "##!####2  "
                    "   ##     "
@@ -72,10 +117,22 @@ splitTest =
      ~=? rangeTest "   ## #####"
                    " +++++++   "
 
+    ,  "Two part split with rest full shifted" ~:
+        resultTest "##8        "
+                   "   ## ##   "
+     ~=? rangeTest "   ## #####"
+                   "++++++++   "
+
     , "Cut add in middle" ~:
         resultTest "          "
                    "  ######  "
      ~=? rangeTest "  ######  "
+                   "++++++++++"
+
+    , "Cut add in middleshifted" ~:
+        resultTest "          "
+                   "   ###### "
+     ~=? rangeTest "   ###### "
                    "++++++++++"
 
     , "Range starting before" ~:
@@ -126,11 +183,28 @@ splitTest =
      ~=? rangeTest "      ####"
                    "++++      "
 
+    , "Range after shifted" ~:
+        resultTest "   ###4    "
+                   "           "
+     ~=? rangeTest "       ####"
+                   " ++++      "
+
     , "Range after just" ~:
         resultTest "###4    "
                    "          "
      ~=? rangeTest "    ####"
                    "++++      "
+
+    , "Range after just shifted" ~:
+        resultTest " ###4    "
+                   "           "
+     ~=? rangeTest "     ####"
+                   " ++++      "
+    , "Multi mini" ~:
+        resultTest "    #5     "
+                   "           "
+     ~=? rangeTest "         ##"
+                   " ++ +  ++  "
     ]
 
 parseTest :: [Test]
@@ -151,5 +225,5 @@ parseTest =
     ]
 
 main :: IO ()
-main =  runTestTT (test $ parseTest ++ splitTest) >>= (putStrLn . show)
+main =  runTestTT (test $ remTests ++ parseTest ++ addTests) >>= (putStrLn . show)
 
