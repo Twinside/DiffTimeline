@@ -1075,6 +1075,8 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.css$/     , cssDef),
         assoc(/\.py$/      , pythonDef),
         assoc(/\.js$/      , javascriptDef),
+        assoc(/\.as$/      , javascriptDef),
+        assoc(/\.mxml$/    , xmlDef),
         assoc(/\.sh$/      , shellDef),
         assoc(/\.xml$/     , xmlDef),
         assoc(/\.html?$/   , xmlDef),
