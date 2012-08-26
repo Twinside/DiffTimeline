@@ -2,6 +2,8 @@
 import Difftimeline.Externs
 import Difftimeline.GitQuery
 
+import qualified Data.Vector as V
+import Control.Monad( forM_ )
 import Data.Text.Encoding as E
 import qualified Data.Text as T
 import qualified Data.ByteString as B
@@ -9,6 +11,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Aeson( ToJSON(..), encode )
 import Data.Git
 
+import Text.Printf
 import Difftimeline.Diff
 
 serializeTest :: ToJSON a => a -> IO ()
@@ -36,7 +39,19 @@ main = do
                                    {-(T.pack "Hello: Hello\r\n")-}
 
     repo <- openRepo "./.git"
-    branches <- brancheslist repo
-    {-Just headRef <- getHead repo-}
+    {-branches <- brancheslist repo-}
+    Just headRef <- getHead repo
     {-diffRez <- workingDirectoryChanges repo 3 headRef -}
-    putStrLn $ show branches
+    {-putStrLn $ show branches-}
+    Right rez <- blameFile repo (show headRef) "test/blame_test.hs"
+
+    let fileLines = V.fromList . T.lines $ blameData rez
+    forM_ (V.toList $ blameRanges rez) $ \blameRange -> do
+
+        let beg = blameBegin blameRange
+            size = blameSize blameRange
+            ref = blameRef blameRange
+
+        forM_ [beg .. beg + size - 1] $ \idx ->
+            putStrLn $ printf "%s) %3d %s" (show ref) (idx + 1) (show $ fileLines V.! idx)
+

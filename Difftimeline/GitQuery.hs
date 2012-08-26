@@ -21,6 +21,11 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , decodeUtf8
                             , commitList
 
+                            -- * Blame Management
+                            , blameFile
+                            , BlameRangeInfo( .. )
+                            , BlameInfo( .. )
+
 
                             -- * Manipulation functions
                             , flattenTreeDiff
@@ -34,7 +39,7 @@ import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
 import qualified Control.Exception as E
-import Control.Monad( forM )
+import Control.Monad( forM, when )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -73,10 +78,17 @@ import Data.Git( GitObject( .. )
                , resolveRevision
                )
 
+import Control.Monad.Trans.Class( lift )
+import Control.Monad.Trans.Writer.Strict( WriterT
+                                        , runWriterT
+                                        )
+
 import qualified Data.Vector as V
+import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
 
+import Debug.Trace
 import Yesod.Logger
 
 decodeUtf8 :: B.ByteString -> T.Text
@@ -577,6 +589,91 @@ data CommitOverview = CommitOverview
     , commitOverviewAuthor    :: T.Text
     , commitOverviewTimestamp :: Int
     }
+
+data BlameRangeInfo = BlameRangeInfo
+    { blameBegin :: {-# UNPACK #-} !Int
+    , blameSize  :: {-# UNPACK #-} !Int
+    , blameRef   :: !Ref
+    }
+    deriving (Eq, Show)
+
+simplifyRange :: (Eq a) => [(Int, Int, a)] -> [(Int, Int, a)]
+simplifyRange [] = []
+simplifyRange [a] = [a]
+simplifyRange ((b1, s1, t1) : (b2, s2, t2) : xs)
+    | b1 + s1 == b2 && t1 == t2 = simplifyRange $ (b1, s1 + s2, t1) : xs
+simplifyRange (x : xs) = x : simplifyRange xs
+
+data BlameInfo = BlameInfo
+    { blameData   :: T.Text
+    , blameRanges :: V.Vector BlameRangeInfo
+    }
+    deriving (Eq, Show)
+
+-- | Perform a "blame", find the origin of every line of a commited file.
+blameFile :: Git -> String -> FilePath -> IO (Either String BlameInfo)
+blameFile repository commitStrSha path = runErrorT finalData
+  where currentCommit = fromHexString commitStrSha
+        bytePath = map BC.pack $ splitDirectories path
+        toStrict = decodeUtf8 . B.concat . L.toChunks
+
+        finalData = do
+            (file, ranges) <- runWriterT initiator
+            unfrozen <- liftIO $ V.unsafeThaw ranges
+            liftIO $ sort unfrozen
+            immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
+            let toBlameRange (begin, size, tag) = BlameRangeInfo
+                    { blameBegin = begin
+                    , blameSize = size
+                    , blameRef = tag
+                    }
+                blameRange = V.fromList . map toBlameRange . simplifyRange $ V.toList immutableSorted
+            return BlameInfo { blameData = T.unlines $ V.toList file
+                             , blameRanges = blameRange }
+
+        fetchCommit = lift . accessCommit "Can't find current commit" repository
+        fetchTree = lift . accessTree "Can't find tree commit" repository
+        fetchBlob = lift . accessBlob "Can't find file content" repository
+        fetchFileRef =
+            lift . errorIO "Can't find current content" . findInTree repository bytePath
+
+        initiator = do
+            Commit commit <- fetchCommit currentCommit
+            t@(Tree _)    <- fetchTree $ commitTree commit
+            currentFileRef <-  fetchFileRef t
+            (firstNfo, firstRef, _betweenCommits) <- lift $
+                    findFirstCommit repository bytePath currentFileRef currentCommit
+            Blob initialFile <- fetchBlob currentFileRef
+            let backLines = V.fromList . T.lines $ toStrict initialFile
+                initialRange = createBlameRangeForSize $ V.length backLines
+            aux 0 initialRange backLines firstRef $ commitParents firstNfo
+            return backLines
+
+        aux _ []            _       _ _ = return ()
+        aux _ ranges backData backRef [] = do
+            left <- blameInitialStep backRef (V.length backData) ranges
+            when (not $ null left)
+                 (trace ("Error, lines left during blame " ++
+                        unlines [show r | r <- left ])
+                        $ return ())
+            return ()
+
+        aux n ranges backData backRef (firstParentRef:_) = do
+            Commit commit <- fetchCommit firstParentRef
+            t@(Tree _)    <- fetchTree  $ commitTree commit
+            (parents, ref, fileData) <- catchError (do
+                            currentFileRef <- fetchFileRef t
+                            (firstNfo, firstRef, _betweenCommits) <- lift $
+                                    findFirstCommit repository bytePath currentFileRef firstParentRef
+                            Blob nextFile <- fetchBlob currentFileRef
+                            return (commitParents firstNfo, firstRef, nextFile))
+
+                            (\_ -> return ([], nullRef, L.empty))
+
+            let nextData = V.fromList . T.lines $ toStrict fileData
+            leftRanges <- blameStep n backRef nextData backData ranges
+            trace (">>>\n" ++ unlines (map show leftRanges)) $ aux (n+1) leftRanges nextData ref parents
+
 
 commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
 commitList repository count = runErrorT . inner count

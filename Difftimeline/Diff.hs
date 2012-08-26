@@ -8,6 +8,12 @@ module Difftimeline.Diff( -- * Types
                         , SubModification( .. )
                         , Index
 
+                        -- * Blaming
+                        , BlameRange
+                        , createBlameRangeForSize
+                        , blameStep
+                        , blameInitialStep
+
                           -- * Diff functions
                         , computeDiff
                         , computeTextDiff
@@ -19,12 +25,14 @@ import Prelude
 import Data.Monoid( mappend )
 import Control.Applicative( (<$>), (<*>), pure )
 import Control.Monad.ST( ST, runST )
+import Control.Applicative( Applicative )
+import Control.Monad.Trans.Writer.Strict( WriterT )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
 
 import Difftimeline.Blame
-
+import Debug.Trace
 type Index = Int
 
 -- | Represent the action to be taken for the diff
@@ -222,6 +230,27 @@ computeTextScript contextSize orig dest = map extract
 textRefiner :: V.Vector T.Text -> V.Vector T.Text -> [DiffCommand]
             -> [DiffCommand]
 textRefiner = refineMonolineDiff (V.fromList . T.unpack)
+
+-- | Perform a blame step, take two vectors, a list of searched
+-- range, a tag, and calculate the matched ranges and what's left
+-- to find.
+blameStep :: (Monad m, Applicative m, Eq a)
+          => Int -> tag -> V.Vector a -> V.Vector a -> [BlameRange]
+          -> WriterT (V.Vector (Int, Int, tag)) m [BlameRange]
+blameStep n tag orig dest blames = trace ("================= BLAME step (" ++ show n ++ ")\n" ++ addString ++ remString)$! shiftDiffs n tag blames rems adds
+    where diff = computeDiffRaw orig dest
+          adds = [(di, s) | DiffAdd _ di s <- diff]
+          rems = [(di, s) | DiffDel _ di s <- diff]
+
+          addString = unlines $ map (("+ " ++) . show) adds
+          remString = unlines $ map (("- " ++) . show) rems
+
+-- | Perform the blame step for the initial file
+-- (the first) commited in the repository.
+blameInitialStep :: (Monad m, Applicative m)
+                 => tag -> Int -> [BlameRange]
+                 -> WriterT (V.Vector (Int, Int, tag)) m [BlameRange]
+blameInitialStep tag size blames = shiftDiffs (-1) tag blames [] [(0, size)]
 
 -- | Compute the script to pass from one vector to another using the
 -- Longuest common substring algorithm (implemented in the diff command)
