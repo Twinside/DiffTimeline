@@ -543,11 +543,16 @@ findParentFile repository commitStrSha path = runErrorT $ inner
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef currentCommit
 
-            Commit prevCommit <- accessCommit "Can't access previous commit" repository . head $ commitParents firstNfo 
-            prevTree@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree prevCommit
-            prevFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath prevTree
-            Blob thisFile <- accessBlob "Can't find file content" repository prevFileRef
             Blob nextFile <- accessBlob "can't find fule content" repository currentFileRef
+            thisFile <- catchError (do
+                Commit prevCommit <- accessCommit "Can't access previous commit" repository 
+                                   . head $ commitParents firstNfo 
+                prevTree@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree prevCommit
+                prevFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath prevTree
+                Blob blobContent <- accessBlob "Can't find file content" repository prevFileRef
+                return blobContent)
+
+                (\_ -> return L.empty)
 
             let toStrict = B.concat . L.toChunks
                 nextData = decodeUtf8 $ toStrict nextFile
