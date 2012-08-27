@@ -10,6 +10,7 @@ module Difftimeline.Diff( -- * Types
 
                         -- * Blaming
                         , BlameRange
+                        , BlameRangeSource( .. )
                         , createBlameRangeForSize
                         , blameStep
                         , blameInitialStep
@@ -236,11 +237,11 @@ textRefiner = refineMonolineDiff (V.fromList . T.unpack)
 -- to find.
 blameStep :: (Monad m, Applicative m, Eq a)
           => Int -> tag -> V.Vector a -> V.Vector a -> [BlameRange]
-          -> WriterT (V.Vector (Int, Int, tag)) m [BlameRange]
+          -> WriterT (V.Vector (BlameRangeSource tag)) m [BlameRange]
 blameStep n tag orig dest blames = trace ("================= BLAME step (" ++ show n ++ ")\n" ++ addString ++ remString)$! shiftDiffs n tag blames rems adds
     where diff = computeDiffRaw orig dest
           adds = [(di, s) | DiffAdd _ di s <- diff]
-          rems = [(di, s) | DiffDel _ di s <- diff]
+          rems = [(oi, s) | DiffDel oi _ s <- diff]
 
           addString = unlines $ map (("+ " ++) . show) adds
           remString = unlines $ map (("- " ++) . show) rems
@@ -249,7 +250,7 @@ blameStep n tag orig dest blames = trace ("================= BLAME step (" ++ sh
 -- (the first) commited in the repository.
 blameInitialStep :: (Monad m, Applicative m)
                  => tag -> Int -> [BlameRange]
-                 -> WriterT (V.Vector (Int, Int, tag)) m [BlameRange]
+                 -> WriterT (V.Vector (BlameRangeSource tag)) m [BlameRange]
 blameInitialStep tag size blames = shiftDiffs (-1) tag blames [] [(0, size)]
 
 -- | Compute the script to pass from one vector to another using the

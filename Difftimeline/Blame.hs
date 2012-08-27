@@ -2,6 +2,7 @@
 -- algorithm.
 module Difftimeline.Blame ( -- * Manipulated types
                             BlameRange
+                          , BlameRangeSource( .. )
 
                             -- * Most usable function
                           , shiftDiffs
@@ -17,7 +18,6 @@ import Prelude
 import Data.Monoid( Monoid )
 import Control.Applicative( Applicative, (<$>), pure )
 import Control.Monad.Trans.Writer.Strict( tell, WriterT )
-import qualified Data.Vector as V
 
 import Debug.Trace
 import Text.Printf
@@ -69,52 +69,62 @@ takeBy :: BlameRange -> Int -> BlameRange
 takeBy (BlameRange bStart _ bOffset) size =
     BlameRange bStart size bOffset
 
-shiftDiffs :: ( Monoid (container (Int, Int, a))
+shiftDiffs :: ( Monoid (container (BlameRangeSource a))
               , Applicative container
               , Applicative m
               , Monad       m)
            => Int -> a -> [BlameRange] -> [(Int, Int)] -> [(Int, Int)]
-           -> WriterT (container (Int, Int, a)) m [BlameRange]
+           -> WriterT (container (BlameRangeSource a)) m [BlameRange]
 shiftDiffs n tag blame rems adds = do
     addRanges <- cutAddedLines n tag adds blame
     trace ("++++\n" ++ unlines (map show addRanges)) $ return $ shiftDeletions n rems addRanges
 
 shiftDeletions :: Int -> [(Int, Int)] -> [BlameRange] -> [BlameRange]
 shiftDeletions n remRanges blames = aux 0 blames remRanges
-  where 
-        aux     _   []  _ = []
+  where aux     _   []  _ = []
         aux shift rest [] = offsetListBy n shift rest
         -- rem before range
         --            #######
         -- #######
         aux shift ranges@((BlameRange bStart _ _):_) ((remBeg, remSize) : remRest)
-          | remBeg <= bStart = aux (shift - remSize) ranges remRest
+          | remBeg <= bStart - shift = aux (shift - remSize) ranges remRest
 
         aux shift (blameElem@(BlameRange bStart bSize _):blameRest) rems@((remBeg, _) : _)
-          |  bStart + bSize > remBeg =
+          | bStart + bSize - shift > remBeg = trace (printf "(%2d) - cut by %d" n cutLength) $
               offsetBy n preDelRange shift : aux shift ( blameElem `dropBy` cutLength : blameRest) rems
-              {-preDelRange `offsetBy` shift : aux shift ( blameElem `dropBy` cutLength : blameRest) rems-}
-                where cutLength = remBeg - bStart
+                where cutLength = remBeg - (bStart - shift)
                       preDelRange = blameElem `takeBy` cutLength 
 
         aux shift (blameElem:rangeRest) rems =
               offsetBy n blameElem shift : aux shift rangeRest rems
-              {-blameElem `offsetBy` shift : aux shift rangeRest rems-}
 
 
+data BlameRangeSource taginfo = BlameRangeSource
+    { sourceLineIndex     :: !Int
+    , sourceSize          :: !Int
+    , sourceOriginalIndex :: !Int
+    , sourceTag           :: taginfo
+    }
+    deriving (Eq, Show)
 
-cutAddedLines :: ( Monoid (container (Int, Int, a))
+instance (Eq a) => Ord (BlameRangeSource a) where
+    compare (BlameRangeSource { sourceLineIndex = i1 })
+            (BlameRangeSource { sourceLineIndex = i2 }) = compare i1 i2
+
+cutAddedLines :: ( Monoid (container (BlameRangeSource tag))
                  , Applicative container
                  , Applicative m
-                 , Monad       m)
+                 , Monad       m )
               => Int
-              -> a
+              -> tag
               -> [(Int, Int)] -- ^ Add begin, add size
               -> [BlameRange]
-              -> WriterT (container (Int, Int, a)) m [BlameRange]
+              -> WriterT (container (BlameRangeSource tag)) m [BlameRange]
 cutAddedLines n tag addRanges blameRanges = aux 0 blameRanges addRanges
   where aux     _   []  _ = pure []
         aux shift rest [] = pure $ offsetListBy' n shift rest
+        aux shift ((BlameRange _ 0 _):rangeRest) adds = aux shift rangeRest adds
+        aux shift           ranges ((_, 0) : addRest) = aux shift ranges addRest
         aux shift
             ranges@(blameElem@(BlameRange bStart bSize bOffset):rangeRest)
               adds@((addBeg, addSize) : addRest)
@@ -123,7 +133,6 @@ cutAddedLines n tag addRanges blameRanges = aux 0 blameRanges addRanges
           --            #######
           | bStart + bSize <= addBeg = trace (printf "(%2d) + RANGE before ADD (%s)" n (show blameElem)) $
               (offsetBy' n blameElem shift :) <$> aux shift rangeRest adds
-              {-(blameElem `offsetBy` shift :) <$> aux shift rangeRest adds-}
 
           -- add before range
           --            #######
@@ -132,59 +141,31 @@ cutAddedLines n tag addRanges blameRanges = aux 0 blameRanges addRanges
                 aux (shift + addSize) ranges addRest
 
           -- intersection starting with add
-          -- ??????######???????
-          -- ############
-          | addBeg <= bStart && addBeg + addSize <= bStart + bSize = 
-            trace (printf "(%2d) + Inter start ADD >=" n) $
-                                                    do
-              let addEnd = addBeg + addSize
-                  toldSize = addEnd - bStart
-                  nextRange
-                    | toldSize < bSize = blameElem `dropBy` toldSize : rangeRest
-                    | otherwise = rangeRest
-                  shiftSize = bStart - addBeg
-              tell $ pure (bStart + bOffset, toldSize, tag)
-              aux (shift + toldSize + shiftSize) 
-                        nextRange addRest
+          --    #####...
+          -- ########...
+          | addBeg < bStart = trace (printf "(%2d) + starting add" n) $
+              let addBeforeSize = bStart - addBeg
+              in aux (shift + addBeforeSize) ranges
+                     ((addBeg + addBeforeSize, addSize - addBeforeSize):addRest)
 
-          -- intersection starting with add
-          -- ??????####
-          -- ###############
-          | addBeg <= bStart && addBeg + addSize > bStart + bSize = 
-
-            trace (printf "(%2d) + Inter start ADD >" n) $
-                                                        do
-              let beforeLeftSize = bStart - addBeg
-                  remainingAddSize = addSize - bSize - beforeLeftSize
-              tell $ pure (bStart + bOffset, bSize, tag)
-              aux (shift + beforeLeftSize + bSize) rangeRest
-                  $ (bStart + bSize, remainingAddSize) : addRest
-
-          -- ###########????
-          --    ############
-          | bStart < addBeg && bStart + bSize <= addBeg + addSize = 
-            trace (printf "(%2d) + Inter start RANGE" n) $
-                                    do
+          -- ########...
+          --    #####...
+          | bStart < addBeg = trace (printf "(%2d) + starting range" n) $
               let beforeRemainingSize = addBeg - bStart
-                  cutedAddSize = min (addBeg + addSize) (bStart + bSize) - addBeg
-                  addNextRange
-                    | cutedAddSize == addSize = addRest
-                    | otherwise = (addBeg + cutedAddSize, addSize - cutedAddSize) : addRest
-              tell $ pure (addBeg + bOffset, cutedAddSize , tag)
-              (offsetBy' n (BlameRange bStart beforeRemainingSize bOffset) shift:) <$>
-                        aux (shift + cutedAddSize) rangeRest addNextRange
-              {-(BlameRange bStart beforeRemainingSize bOffset `offsetBy` shift:) <$>-}
-                        {-aux (shift + cutedAddSize) rangeRest addNextRange-}
+              in (offsetBy' n (blameElem `takeBy` beforeRemainingSize) shift:) <$>
+                        aux shift (blameElem `dropBy` beforeRemainingSize : rangeRest) adds
 
-          -- #######################
-          --    ############
-          | otherwise = do
-              tell $ pure (addBeg + bOffset, addSize, tag)
-              let beforeSize = addBeg - bStart
-                  restBefore = blameElem `takeBy` beforeSize
-                  restAfter = blameElem `dropBy` (beforeSize + addSize)
+          -- ######
+          -- ########...
+          | addBeg == bStart && bStart + bSize <= addBeg + addSize = trace (printf "(%2d) + == nominal" n) $ do
+              tell . pure $ BlameRangeSource (bStart + bOffset) bSize bStart tag
+              aux (shift + bSize)  rangeRest $ (addBeg + bSize, addSize - bSize) : addRest
 
-              trace (printf "(%2d) + otherwise range:%s add:%d,%d before:%s after:%s" n (show blameElem) addBeg addSize (show restBefore) (show restAfter)) $
-                (offsetBy' n restBefore shift:) <$> aux (shift + addSize) (restAfter : rangeRest) addRest
-              {-(restBefore `offsetBy` shift:) <$> aux shift (restAfter : rangeRest) addRest-}
+          -- ######
+          -- ########...
+          | addBeg == bStart && bStart + bSize > addBeg + addSize = trace (printf "(%2d) + == range overflow" n) $
+              aux shift ( blameElem `takeBy` addSize
+                        : blameElem `dropBy` addSize : rangeRest) adds
+
+        aux _ _ _ = error "Hmm... no"
 

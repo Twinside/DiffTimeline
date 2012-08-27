@@ -23,7 +23,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
 
                             -- * Blame Management
                             , blameFile
-                            , BlameRangeInfo( .. )
+                            , BlameRangeSource( .. )
                             , BlameInfo( .. )
 
 
@@ -595,23 +595,20 @@ data CommitOverview = CommitOverview
     , commitOverviewTimestamp :: Int
     }
 
-data BlameRangeInfo = BlameRangeInfo
-    { blameBegin :: {-# UNPACK #-} !Int
-    , blameSize  :: {-# UNPACK #-} !Int
-    , blameRef   :: !Ref
-    }
-    deriving (Eq, Show)
-
-simplifyRange :: (Eq a) => [(Int, Int, a)] -> [(Int, Int, a)]
+simplifyRange :: (Eq a) => [BlameRangeSource a] -> [BlameRangeSource a]
 simplifyRange [] = []
 simplifyRange [a] = [a]
-simplifyRange ((b1, s1, t1) : (b2, s2, t2) : xs)
-    | b1 + s1 == b2 && t1 == t2 = simplifyRange $ (b1, s1 + s2, t1) : xs
+simplifyRange ( BlameRangeSource { sourceLineIndex = b1, sourceSize = s1
+                                 , sourceOriginalIndex = o1, sourceTag = t1 }
+              : BlameRangeSource { sourceLineIndex = b2, sourceSize = s2
+                                 , sourceOriginalIndex = o2, sourceTag = t2 }
+              : xs )
+    | b1 + s1 == b2 && t1 == t2 = simplifyRange $ BlameRangeSource b1 (s1 + s2) o1 t1 : xs
 simplifyRange (x : xs) = x : simplifyRange xs
 
 data BlameInfo = BlameInfo
     { blameData   :: T.Text
-    , blameRanges :: V.Vector BlameRangeInfo
+    , blameRanges :: V.Vector (BlameRangeSource Ref)
     }
     deriving (Eq, Show)
 
@@ -624,15 +621,14 @@ blameFile repository commitStrSha path = runErrorT finalData
 
         finalData = do
             (file, ranges) <- runWriterT initiator
+            liftIO $ putStrLn ">>>> FINAL RANGES <<<<<"
+            V.forM_ ranges $ \r ->
+                liftIO . putStrLn $ show r
+
             unfrozen <- liftIO $ V.unsafeThaw ranges
             liftIO $ sort unfrozen
             immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
-            let toBlameRange (begin, size, tag) = BlameRangeInfo
-                    { blameBegin = begin
-                    , blameSize = size
-                    , blameRef = tag
-                    }
-                blameRange = V.fromList . map toBlameRange . simplifyRange $ V.toList immutableSorted
+            let blameRange = V.fromList . simplifyRange $ V.toList immutableSorted
             return BlameInfo { blameData = T.unlines $ V.toList file
                              , blameRanges = blameRange }
 

@@ -46,12 +46,9 @@ main = do
     Right rez <- blameFile repo (show headRef) "test/blame_test.hs"
 
     let fileLines = V.fromList . T.lines $ blameData rez
-    forM_ (V.toList $ blameRanges rez) $ \blameRange -> do
-
-        let beg = blameBegin blameRange
-            size = blameSize blameRange
-            ref = blameRef blameRange
-
+    forM_ (V.toList $ blameRanges rez) 
+        $ \(BlameRangeSource beg size oline ref) -> do
         forM_ [beg .. beg + size - 1] $ \idx ->
-            putStrLn $ printf "%s) %3d %s" (show ref) (idx + 1) (show $ fileLines V.! idx)
+            putStrLn $ printf "%s) %3d %3d %s" (take 6 $ show ref) (oline + idx - beg + 1)
+                                        (idx + 1) (show $ fileLines V.! idx)
 
