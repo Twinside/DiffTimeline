@@ -18,6 +18,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
 
 data Command = DiffCompare String String
+             | DiffBlame String
              | DiffFile String
              | DiffWorking
 

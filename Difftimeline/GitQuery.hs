@@ -593,6 +593,7 @@ data CommitOverview = CommitOverview
     , commitOverviewAuthor    :: T.Text
     , commitOverviewTimestamp :: Int
     }
+    deriving (Eq)
 
 simplifyRange :: (Eq a) => [BlameRangeSource a] -> [BlameRangeSource a]
 simplifyRange [] = []
@@ -607,9 +608,8 @@ simplifyRange (x : xs) = x : simplifyRange xs
 
 data BlameInfo = BlameInfo
     { blameData   :: T.Text
-    , blameRanges :: V.Vector (BlameRangeSource Ref)
+    , blameRanges :: V.Vector (BlameRangeSource CommitOverview)
     }
-    deriving (Eq, Show)
 
 -- | Perform a "blame", find the origin of every line of a commited file.
 blameFile :: Git -> String -> FilePath -> IO (Either String BlameInfo)
@@ -642,7 +642,8 @@ blameFile repository commitStrSha path = runErrorT finalData
             Blob initialFile <- fetchBlob currentFileRef
             let backLines = V.fromList . T.lines $ toStrict initialFile
                 initialRange = createBlameRangeForSize $ V.length backLines
-            aux initialRange backLines firstRef $ commitParents firstNfo
+                overview = makeOverview firstRef firstNfo
+            aux initialRange backLines overview $ commitParents firstNfo
             return backLines
 
         aux []            _       _ _ = return ()
@@ -652,19 +653,28 @@ blameFile repository commitStrSha path = runErrorT finalData
         aux ranges backData backRef (firstParentRef:_) = do
             Commit commit <- fetchCommit firstParentRef
             t@(Tree _)    <- fetchTree  $ commitTree commit
-            (parents, ref, thisCommitData) <- catchError (do
+            (parents, overview, thisCommitData) <- catchError (do
                             currentFileRef <- fetchFileRef t
                             (firstNfo, firstRef, _betweenCommits) <- lift $
                                     findFirstCommit repository bytePath currentFileRef firstParentRef
                             Blob nextFile <- fetchBlob currentFileRef
-                            return (commitParents firstNfo, firstRef, nextFile))
+                            let overview = makeOverview firstRef firstNfo
+                            return (commitParents firstNfo, overview, nextFile))
 
-                            (\_ -> return ([], nullRef, L.empty))
+                            (\_ -> return ([], undefined, L.empty))
 
             let nextData = V.fromList . T.lines $ toStrict thisCommitData
             leftRanges <- blameStep backRef nextData backData ranges
-            aux leftRanges nextData ref parents
+            aux leftRanges nextData overview parents
 
+makeOverview :: Ref -> CommitInfo -> CommitOverview
+makeOverview r c = CommitOverview
+   { commitOverviewParent = commitParents c
+   , commitOverviewMessage = decodeUtf8 $ commitMessage c
+   , commitOverviewRef = r
+   , commitOverviewAuthor = decodeUtf8 . authorName $ commitAuthor c
+   , commitOverviewTimestamp = authorTimestamp $ commitAuthor c
+   }
 
 commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
 commitList repository count = runErrorT . inner count
@@ -672,15 +682,7 @@ commitList repository count = runErrorT . inner count
           inner n _ | n < 0 = return []
           inner n r = do
               Commit commit <- accessCommit "" repository r
-              (prepare r commit :) <$> inner (n - 1) (head $ commitParents commit)
-
-          prepare r c = CommitOverview
-              { commitOverviewParent = commitParents c
-              , commitOverviewMessage = decodeUtf8 $ commitMessage c
-              , commitOverviewRef = r
-              , commitOverviewAuthor = decodeUtf8 . authorName $ commitAuthor c
-              , commitOverviewTimestamp = authorTimestamp $ commitAuthor c
-              }
+              (makeOverview r commit :) <$> inner (n - 1) (head $ commitParents commit)
 
 basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
 basePage _logger repository path = runErrorT $ do

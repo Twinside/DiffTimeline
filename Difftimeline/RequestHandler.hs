@@ -67,6 +67,18 @@ getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs
 getJqueryHotKeys = fetchStatic RepPlain jqueryHotkeysEmbedded
 getJqueryScrollTo = fetchStatic RepPlain jqueryScrollToEmbedded
 
+getBlameFromRoot :: String -> [Text] -> Handler RepJson
+getBlameFromRoot rootCommit filePathes = withRepository extractor
+    where file = T.unpack $ T.intercalate (T.pack "/") filePathes
+          extractor repository = blameFile repository rootCommit file
+
+getBlameR :: [Text] -> Handler RepJson
+getBlameR filePathes = withRepository extractor
+    where file = T.unpack $ T.intercalate (T.pack "/") filePathes
+          extractor repository = do
+              Just rootCommit <- getHead repository
+              blameFile repository (show rootCommit) file
+
 getFileParentR :: String -> [Text] -> Handler RepJson
 getFileParentR initialCommit filePathes = do
     let file = T.unpack $ T.intercalate (T.pack "/") filePathes
@@ -186,6 +198,20 @@ getInitialBranch b1 b2 = do
             var first_state = #{renderJson rez};
             Project.state.start_commit( first_state ); |] ("" :: Text)
 
+getInitialBlame :: String -> Handler RepPlain
+getInitialBlame file = do
+  app <- getYesod
+  let repository = getRepository app
+  Just headRef <- liftIO $ getHead repository
+  blameRez <- liftIO $ blameFile repository (show headRef) file
+  return . RepPlain . toContent $ case blameRez of
+    Left err ->
+        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+
+    Right rez ->
+        renderJavascript $ [julius|
+            var first_state = #{renderJson rez};
+            Project.state.start_blame( first_state ); |] ("" :: Text)
 
 getInitialInfoR :: Handler RepPlain
 getInitialInfoR = do
@@ -193,6 +219,7 @@ getInitialInfoR = do
     case initialCommand app of
         DiffWorking -> getInitialCommit
         DiffFile fname -> getInitialFile fname
+        DiffBlame fname -> getInitialBlame fname
         DiffCompare "" "" -> getBranchComparer
         DiffCompare b1 b2 -> getInitialBranch b1 b2
 

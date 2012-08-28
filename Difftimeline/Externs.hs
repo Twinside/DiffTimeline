@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Difftimeline.Externs( ErrorReturn( .. ), difftimelineEnv ) where
 
@@ -186,6 +187,23 @@ instance ClosureDescriptable RemoteBranches Serializable where
                ,"branches" .: remoteBranches
                ]
 
+instance (ClosureDescriptable tag Serializable)
+       => ClosureDescriptable (BlameRangeSource tag) Serializable where
+    typename _ = "BlameRangeSource"
+    toClosureDesc _ =
+        record [ "idx"      .: sourceLineIndex
+               , "size"     .: sourceSize
+               , "orig_idx" .: sourceOriginalIndex
+               , "tag"      .: sourceTag
+               ]
+
+instance ClosureDescriptable BlameInfo Serializable where
+    typename _ = "BlameInfo"
+    toClosureDesc _ =
+        record ["data" .: blameData
+               ,"ranges" .: blameRanges
+               ]
+
 instance ClosureDescriptable ParentFile Serializable where
     typename _ = "ParentFile"
     toClosureDesc _ =
@@ -217,4 +235,6 @@ difftimelineEnv = do
     declare (undefined :: CommitOverview)
     declare (undefined :: BranchInfo)
     declare (undefined :: RemoteBranches)
+    declare (undefined :: BlameRangeSource CommitOverview)
+    declare (undefined :: BlameInfo)
 

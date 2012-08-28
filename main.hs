@@ -72,6 +72,7 @@ commandOfRest :: [String] -> Command
 commandOfRest [] = DiffWorking
 commandOfRest ("compare":c1:c2:_) = DiffCompare c1 c2
 commandOfRest ("compare":_) = DiffCompare "" ""
+commandOfRest ("blame":f:_) = DiffBlame f
 commandOfRest (a:_) = DiffFile a
 
 parseArgs :: IO (Conf, [String])
