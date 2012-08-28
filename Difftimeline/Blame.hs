@@ -19,9 +19,6 @@ import Data.Monoid( Monoid )
 import Control.Applicative( Applicative, (<$>), pure )
 import Control.Monad.Trans.Writer.Strict( tell, WriterT )
 
-import Debug.Trace
-import Text.Printf
-
 --------------------------------------------------
 ----            Blaming
 --------------------------------------------------
@@ -34,31 +31,11 @@ data BlameRange = BlameRange {-# UNPACK #-} !Int
 createBlameRangeForSize :: Int -> [BlameRange]
 createBlameRangeForSize size = [BlameRange 0 size 0]
 
-offsetListBy :: Int -> Int -> [BlameRange] -> [BlameRange]
-offsetListBy n shift lst = map (flip (offsetBy n) shift) lst
+offsetListBy :: Int -> [BlameRange] -> [BlameRange]
+offsetListBy shift lst = map (flip offsetBy shift) lst
 
-offsetListBy' :: Int -> Int -> [BlameRange] -> [BlameRange]
-offsetListBy' n shift lst = map (flip (offsetBy'' n) shift) lst
-
-offsetBy :: Int -> BlameRange -> Int -> BlameRange
-offsetBy n (BlameRange bStart bSize bOffset) shift =
-    (if (bStart - shift) < 0
-       then trace $ printf "- n:%d bStart:%d bSize:%d bOffset:%d shift:%d" n bStart bSize bOffset shift
-       else id)
-    BlameRange (bStart - shift) bSize (bOffset + shift)
-
-offsetBy'' :: Int -> BlameRange -> Int -> BlameRange
-offsetBy'' n (BlameRange bStart bSize bOffset) shift =
-    (if (bStart - shift) < 0
-       then trace $ printf "=+ n:%d bStart:%d bSize:%d bOffset:%d shift:%d" n bStart bSize bOffset shift
-       else id)
-    BlameRange (bStart - shift) bSize (bOffset + shift)
-
-offsetBy' :: Int -> BlameRange -> Int -> BlameRange
-offsetBy' n (BlameRange bStart bSize bOffset) shift =
-    (if (bStart - shift) < 0
-       then trace $ printf "+ n:%d bStart:%d bSize:%d bOffset:%d shift:%d" n bStart bSize bOffset shift
-       else id)
+offsetBy :: BlameRange -> Int -> BlameRange
+offsetBy (BlameRange bStart bSize bOffset) shift =
     BlameRange (bStart - shift) bSize (bOffset + shift)
 
 dropBy :: BlameRange -> Int -> BlameRange
@@ -73,16 +50,15 @@ shiftDiffs :: ( Monoid (container (BlameRangeSource a))
               , Applicative container
               , Applicative m
               , Monad       m)
-           => Int -> a -> [BlameRange] -> [(Int, Int)] -> [(Int, Int)]
+           => a -> [BlameRange] -> [(Int, Int)] -> [(Int, Int)]
            -> WriterT (container (BlameRangeSource a)) m [BlameRange]
-shiftDiffs n tag blame rems adds = do
-    addRanges <- cutAddedLines n tag adds blame
-    trace ("++++\n" ++ unlines (map show addRanges)) $ return $ shiftDeletions n rems addRanges
+shiftDiffs tag blame rems adds =
+    shiftDeletions rems <$> cutAddedLines tag adds blame
 
-shiftDeletions :: Int -> [(Int, Int)] -> [BlameRange] -> [BlameRange]
-shiftDeletions n remRanges blames = aux 0 blames remRanges
+shiftDeletions :: [(Int, Int)] -> [BlameRange] -> [BlameRange]
+shiftDeletions remRanges blames = aux 0 blames remRanges
   where aux     _   []  _ = []
-        aux shift rest [] = offsetListBy n shift rest
+        aux shift rest [] = shift `offsetListBy` rest
         -- rem before range
         --            #######
         -- #######
@@ -90,13 +66,13 @@ shiftDeletions n remRanges blames = aux 0 blames remRanges
           | remBeg <= bStart - shift = aux (shift - remSize) ranges remRest
 
         aux shift (blameElem@(BlameRange bStart bSize _):blameRest) rems@((remBeg, _) : _)
-          | bStart + bSize - shift > remBeg = trace (printf "(%2d) - cut by %d" n cutLength) $
-              offsetBy n preDelRange shift : aux shift ( blameElem `dropBy` cutLength : blameRest) rems
+          | bStart + bSize - shift > remBeg =
+              preDelRange `offsetBy` shift : aux shift ( blameElem `dropBy` cutLength : blameRest) rems
                 where cutLength = remBeg - (bStart - shift)
                       preDelRange = blameElem `takeBy` cutLength 
 
         aux shift (blameElem:rangeRest) rems =
-              offsetBy n blameElem shift : aux shift rangeRest rems
+              blameElem `offsetBy` shift : aux shift rangeRest rems
 
 
 data BlameRangeSource taginfo = BlameRangeSource
@@ -115,14 +91,13 @@ cutAddedLines :: ( Monoid (container (BlameRangeSource tag))
                  , Applicative container
                  , Applicative m
                  , Monad       m )
-              => Int
-              -> tag
+              => tag
               -> [(Int, Int)] -- ^ Add begin, add size
               -> [BlameRange]
               -> WriterT (container (BlameRangeSource tag)) m [BlameRange]
-cutAddedLines n tag addRanges blameRanges = aux 0 blameRanges addRanges
+cutAddedLines tag addRanges blameRanges = aux 0 blameRanges addRanges
   where aux     _   []  _ = pure []
-        aux shift rest [] = pure $ offsetListBy' n shift rest
+        aux shift rest [] = pure $ shift `offsetListBy` rest
         aux shift ((BlameRange _ 0 _):rangeRest) adds = aux shift rangeRest adds
         aux shift           ranges ((_, 0) : addRest) = aux shift ranges addRest
         aux shift
@@ -131,39 +106,39 @@ cutAddedLines n tag addRanges blameRanges = aux 0 blameRanges addRanges
           -- range before add
           -- #######
           --            #######
-          | bStart + bSize <= addBeg = trace (printf "(%2d) + RANGE before ADD (%s)" n (show blameElem)) $
-              (offsetBy' n blameElem shift :) <$> aux shift rangeRest adds
+          | bStart + bSize <= addBeg =
+              (blameElem `offsetBy` shift :) <$> aux shift rangeRest adds
 
           -- add before range
           --            #######
           -- #######
-          | addBeg + addSize <= bStart = trace (printf "(%2d) + ADD before RANGE" n) $
+          | addBeg + addSize <= bStart =
                 aux (shift + addSize) ranges addRest
 
           -- intersection starting with add
           --    #####...
           -- ########...
-          | addBeg < bStart = trace (printf "(%2d) + starting add" n) $
+          | addBeg < bStart =
               let addBeforeSize = bStart - addBeg
               in aux (shift + addBeforeSize) ranges
                      ((addBeg + addBeforeSize, addSize - addBeforeSize):addRest)
 
           -- ########...
           --    #####...
-          | bStart < addBeg = trace (printf "(%2d) + starting range" n) $
+          | bStart < addBeg =
               let beforeRemainingSize = addBeg - bStart
-              in (offsetBy' n (blameElem `takeBy` beforeRemainingSize) shift:) <$>
+              in ((blameElem `takeBy` beforeRemainingSize) `offsetBy` shift:) <$>
                         aux shift (blameElem `dropBy` beforeRemainingSize : rangeRest) adds
 
           -- ######
           -- ########...
-          | addBeg == bStart && bStart + bSize <= addBeg + addSize = trace (printf "(%2d) + == nominal" n) $ do
+          | addBeg == bStart && bStart + bSize <= addBeg + addSize = do
               tell . pure $ BlameRangeSource (bStart + bOffset) bSize bStart tag
               aux (shift + bSize)  rangeRest $ (addBeg + bSize, addSize - bSize) : addRest
 
           -- ######
           -- ########...
-          | addBeg == bStart && bStart + bSize > addBeg + addSize = trace (printf "(%2d) + == range overflow" n) $
+          | addBeg == bStart && bStart + bSize > addBeg + addSize =
               aux shift ( blameElem `takeBy` addSize
                         : blameElem `dropBy` addSize : rangeRest) adds
 

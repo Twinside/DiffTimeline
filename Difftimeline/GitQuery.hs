@@ -39,7 +39,7 @@ import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
 import qualified Control.Exception as E
-import Control.Monad( forM, when )
+import Control.Monad( forM )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -88,7 +88,6 @@ import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
 
-import Debug.Trace
 import Yesod.Logger
 
 decodeUtf8 :: B.ByteString -> T.Text
@@ -601,7 +600,7 @@ simplifyRange [a] = [a]
 simplifyRange ( BlameRangeSource { sourceLineIndex = b1, sourceSize = s1
                                  , sourceOriginalIndex = o1, sourceTag = t1 }
               : BlameRangeSource { sourceLineIndex = b2, sourceSize = s2
-                                 , sourceOriginalIndex = o2, sourceTag = t2 }
+                                 , sourceTag = t2 }
               : xs )
     | b1 + s1 == b2 && t1 == t2 = simplifyRange $ BlameRangeSource b1 (s1 + s2) o1 t1 : xs
 simplifyRange (x : xs) = x : simplifyRange xs
@@ -621,10 +620,6 @@ blameFile repository commitStrSha path = runErrorT finalData
 
         finalData = do
             (file, ranges) <- runWriterT initiator
-            liftIO $ putStrLn ">>>> FINAL RANGES <<<<<"
-            V.forM_ ranges $ \r ->
-                liftIO . putStrLn $ show r
-
             unfrozen <- liftIO $ V.unsafeThaw ranges
             liftIO $ sort unfrozen
             immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
@@ -647,22 +642,17 @@ blameFile repository commitStrSha path = runErrorT finalData
             Blob initialFile <- fetchBlob currentFileRef
             let backLines = V.fromList . T.lines $ toStrict initialFile
                 initialRange = createBlameRangeForSize $ V.length backLines
-            aux 0 initialRange backLines firstRef $ commitParents firstNfo
+            aux initialRange backLines firstRef $ commitParents firstNfo
             return backLines
 
-        aux _ []            _       _ _ = return ()
-        aux _ ranges backData backRef [] = do
-            left <- blameInitialStep backRef (V.length backData) ranges
-            when (not $ null left)
-                 (trace ("Error, lines left during blame " ++
-                        unlines [show r | r <- left ])
-                        $ return ())
-            return ()
+        aux []            _       _ _ = return ()
+        aux ranges backData backRef [] =
+            blameInitialStep backRef (V.length backData) ranges >> return ()
 
-        aux n ranges backData backRef (firstParentRef:_) = do
+        aux ranges backData backRef (firstParentRef:_) = do
             Commit commit <- fetchCommit firstParentRef
             t@(Tree _)    <- fetchTree  $ commitTree commit
-            (parents, ref, fileData) <- catchError (do
+            (parents, ref, thisCommitData) <- catchError (do
                             currentFileRef <- fetchFileRef t
                             (firstNfo, firstRef, _betweenCommits) <- lift $
                                     findFirstCommit repository bytePath currentFileRef firstParentRef
@@ -671,9 +661,9 @@ blameFile repository commitStrSha path = runErrorT finalData
 
                             (\_ -> return ([], nullRef, L.empty))
 
-            let nextData = V.fromList . T.lines $ toStrict fileData
-            leftRanges <- blameStep n backRef nextData backData ranges
-            trace (">>>\n" ++ unlines (map show leftRanges)) $ aux (n+1) leftRanges nextData ref parents
+            let nextData = V.fromList . T.lines $ toStrict thisCommitData
+            leftRanges <- blameStep backRef nextData backData ranges
+            aux leftRanges nextData ref parents
 
 
 commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
