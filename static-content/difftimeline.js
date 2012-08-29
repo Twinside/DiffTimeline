@@ -309,6 +309,13 @@ Project.state = (function () {
             show_hide_toolbar_elements(new_state.gui_descr);
         },
 
+        start_blame: function(blame_obj) {
+            var new_state = BlameShower.create_from_data(blame_obj);
+            states.push( new_state );
+            breadcrumb.append_breadcrumb('Blame');
+            show_hide_toolbar_elements(new_state.gui_descr);
+        },
+
         start_commit: function(commit_obj) {
             var new_state = CommitRenderer.create_from_data(commit_obj);
             states.push( new_state );
@@ -408,6 +415,7 @@ var DiffManipulator = (function () {
      * @param {boolean} isLineNumberRequired
      * @param {string} data
      * @param {Array.<DiffRange>} diff
+     * @param {Element} number_node
      * @param {Element} node
      */
     var generate_full_html = function (filename, isLineNumberRequired,
@@ -1731,6 +1739,66 @@ var BranchComparer = (function() {
 
             var created = new init_methods();
             init.call(created);
+            return created;
+        }
+    };
+})();
+
+var BlameShower = (function() {
+    "use strict";
+
+    var returnGenerator = function(n) {
+        var ret = '';
+        for (var i = 0; i < n; i++) ret += '\n&nbsp;';
+        return ret;
+    }
+
+    var init = function(data) {
+        this.data = data;
+
+        var ranges = this.data.ranges;
+
+        for (var i = 0; i < ranges.length; i++) {
+            ranges[i].padd_string = returnGenerator(ranges[i].size - 1);
+        }
+
+        this.create_all_dom();
+        this.render_all();
+    };
+
+    var init_methods = function() {
+
+        this.fetch_previous = function() {
+            show_error({error: 'Does not exists in this mode'});
+        };
+
+        this.render_all = function() {
+            /* nothing */
+
+            var render_node = $('.syntax_highlighted', this.orig_node);
+            var number_node = $('.line_number_column', this.orig_node);
+            var clean_cr_lf_data = this.data.data.replace(/\r/g, '');
+
+            DiffManipulator.generateFullHtml("FILE.hs", false, clean_cr_lf_data, [],
+                                             number_node[0], render_node[0]);
+        };
+
+        this.create_all_dom = function() {
+            this.orig_node = ich.blamefile(this.data);
+            $('.container').append(this.orig_node);
+        };
+
+        this.send_message = function( msg ) {
+        };
+
+        this.gui_descr = { compact_view: false, fetch_previous: false
+                         , context_size: false, syntax_toggle: false };
+    }
+
+    return {
+        create_from_data: function(data) {
+            var created = new init_methods();
+            init.call(created, data);
             return created;
         }
     };

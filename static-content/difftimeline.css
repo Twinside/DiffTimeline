@@ -650,3 +650,27 @@ table.file_display pre.line_number_column {
     width: 27px;
 }
 
+/* Blame information */
+.blame_ranges {
+    vertical-align: top;
+}
+
+.blame_range {
+    margin: 0px;
+    display: block;
+    cursor: pointer;
+}
+
+.blame_range:hover {
+    margin: 0px;
+    display: block;
+    background-color: #777777;
+}
+
+.blame_range pre {
+    margin: 0px;
+    display: block;
+    padding: 0px;
+    outline: 1px solid #777777;
+    margin-right: 5px;
+}

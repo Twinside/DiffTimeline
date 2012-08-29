@@ -121,6 +121,24 @@
             </table>
         </script>
 
+        <script id="blame_range" type="text/html">
+            <div class="blame_range" alt="{{tag.message}}" onclick="Project.state.switch_commit('{{tag.key}}')"><pre>{{tag.key}} ({{tag.author}}){{{padd_string}}}</pre></div>
+        </script>
+
+        <script id="blamefile" type="text/html">
+            <div class="commit" id="{{key}}">
+                <div class="file_content">
+                    <table class="file_display">
+                        <tr>
+                            <td class="blame_ranges">{{#ranges}}{{>blame_range}}{{/ranges}}</td>
+                            <td><pre class="line_number_column"></pre></td>
+                            <td><pre class="syntax_highlighted"></pre></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </script>
+
         <script id="commitfile" type="text/html">
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
