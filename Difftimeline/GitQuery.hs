@@ -607,8 +607,11 @@ simplifyRange ( BlameRangeSource { sourceLineIndex = b1, sourceSize = s1
 simplifyRange (x : xs) = x : simplifyRange xs
 
 data BlameInfo = BlameInfo
-    { blameData   :: T.Text
-    , blameRanges :: V.Vector (BlameRangeSource CommitOverview)
+    { blameData     :: T.Text
+    , blameFilename :: T.Text
+    , blameRanges   :: V.Vector (BlameRangeSource CommitOverview)
+    , blameEarlyStamp  :: !Int
+    , blameLatestStamp :: !Int
     }
 
 -- | Perform a "blame", find the origin of every line of a commited file.
@@ -618,14 +621,23 @@ blameFile repository commitStrSha path = runErrorT finalData
         bytePath = map BC.pack $ splitDirectories path
         toStrict = decodeUtf8 . B.concat . L.toChunks
 
+        dateRange = V.foldl minMax (maxBound, minBound)
+                  . V.map (commitOverviewTimestamp . sourceTag)
+            where minMax (mini, maxi) v = (min mini v, max maxi v)
+
         finalData = do
             (file, ranges) <- runWriterT initiator
             unfrozen <- liftIO $ V.unsafeThaw ranges
             liftIO $ sort unfrozen
             immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
             let blameRange = V.fromList . simplifyRange $ V.toList immutableSorted
+                (earliest, latest) = dateRange blameRange
             return BlameInfo { blameData = T.unlines $ V.toList file
-                             , blameRanges = blameRange }
+                             , blameRanges = blameRange
+                             , blameFilename = T.pack path
+                             , blameEarlyStamp = earliest
+                             , blameLatestStamp = latest
+                             }
 
         fetchCommit = lift . accessCommit "Can't find current commit" repository
         fetchTree = lift . accessTree "Can't find tree commit" repository

@@ -200,8 +200,11 @@ instance (ClosureDescriptable tag Serializable)
 instance ClosureDescriptable BlameInfo Serializable where
     typename _ = "BlameInfo"
     toClosureDesc _ =
-        record ["data" .: blameData
-               ,"ranges" .: blameRanges
+        record ["data"     .: blameData
+               ,"ranges"   .: blameRanges
+               ,"filename" .: blameFilename
+               ,"earliest" .: blameEarlyStamp
+               ,"latest"   .: blameLatestStamp
                ]
 
 instance ClosureDescriptable ParentFile Serializable where

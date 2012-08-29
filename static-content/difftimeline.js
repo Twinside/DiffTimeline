@@ -131,6 +131,22 @@ Project.GuiMessage = {
     MOVE_INNER:   8
 }
 
+var blame_gradient = {
+    beg: { r: 0x0, g:0x0, b:0x0},
+    end: { r: 0x80, g:0x80, b:0x80},
+};
+
+var color_lerp = function ( c1, c2, v ) {
+    var lerp = function( v1, v2 ) {
+        return v2 * v + v1 * (1 - v);
+    };
+
+    return ('rgb(' + lerp(c1.r, c2.r) + ', '
+                   + lerp(c1.g, c2.g) + ', '
+                   + lerp(c1.b, c2.b) + ')');
+};
+
+
 /**
  * @type {Object}
  */
@@ -1763,6 +1779,17 @@ var BlameShower = (function() {
         }
 
         this.create_all_dom();
+
+        var nodes = $('.blame_range', this.orig_node);
+        var date_interval = data.latest - data.earliest;
+        for (var i = 0; i < ranges.length; i++) {
+            var range = ranges[i];
+            var zeroToOne = (range.tag.timestamp - data.earliest) / date_interval;
+
+            $(nodes[i]).css('background-color',
+                            color_lerp(blame_gradient.beg, blame_gradient.end, zeroToOne));
+        }
+
         this.render_all();
     };
 
