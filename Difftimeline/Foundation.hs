@@ -21,6 +21,7 @@ data Command = DiffCompare String String
              | DiffBlame String
              | DiffFile String
              | DiffWorking
+             deriving Show
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application

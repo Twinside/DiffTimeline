@@ -31,7 +31,7 @@ import Yesod.Default.Config( AppConfig(..)
                            , DefaultEnv( Development )
                            )
 
-import Yesod.Logger( defaultDevelopmentLogger )
+import Yesod.Logger( logString, defaultDevelopmentLogger )
 
 version :: String
 version = "1.0"
@@ -137,6 +137,7 @@ main = do
       }
 
     logger <- defaultDevelopmentLogger
+    logString logger . show $ confCommand conf
     app <- getApplication (confDevMode conf) (confCommand conf) config logger
     runUrlPort usePort "" app
 
