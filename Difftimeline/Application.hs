@@ -55,6 +55,29 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv () -> Logger 
                -> IO Application
 
+getApplication devModePath (DiffBlame fname) conf logger = do
+    cwd <- getCurrentDirectory 
+    isDir <- doesDirectoryExist fname
+    let absName
+          | isRelative fname = simplifyPath $ cwd </> fname
+          | otherwise = simplifyPath fname
+
+        name | isDir = absName ++ "/"
+             | otherwise = absName
+
+    initRepo <- initRepository logger $ takeDirectory name
+    initPath <- if isDir 
+        then pure DiffWorking
+        else do
+          let absPath = takeDirectory $ gitRepoPath initRepo
+              relPath = simplifyPath $ makeRelative absPath name
+          liftIO . logString logger $ "Initial file : " ++ relPath
+          pure $ DiffBlame relPath
+
+    let foundation = DiffTimeline conf logger devModePath initRepo initPath
+    app <- toWaiAppPlain foundation
+    return $ logCallbackDev (logBS logger) app
+
 getApplication devModePath (DiffFile fname) conf logger = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
