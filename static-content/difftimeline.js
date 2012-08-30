@@ -1763,9 +1763,34 @@ var BranchComparer = (function() {
 var BlameShower = (function() {
     "use strict";
 
-    var returnGenerator = function(n) {
+    var returnGenerator = function(range) {
+        var n = range.size - 1;
         var ret = '';
-        for (var i = 0; i < n; i++) ret += '\n&nbsp;';
+        var messageLines = range.tag.message.split('\n');
+        var i = 0;
+
+        var splitedMessageLines = [];
+        for (var i = 0; i < messageLines.length; i++) {
+            var sub = messageLines[i].match(/.{1,30}/g);
+
+            if (!sub) continue;
+            if (sub.length > 1) {
+                for (var j = 0; j < sub.length; j++) {
+                    splitedMessageLines.push(sub[j] + " ...");
+                }
+            }
+            else splitedMessageLines.push(sub[0]);
+        }
+
+        if (n > 0) {
+            ret += '\n(' + range.tag.author + ')';
+        }
+
+        for (i = 1; i - 1 < splitedMessageLines.length && i < n; i++) {
+            ret += '\n' + splitedMessageLines[i - 1];
+        }
+
+        for (i = i; i < n; i++) ret += '\n&nbsp;';
         return ret;
     }
 
@@ -1775,7 +1800,7 @@ var BlameShower = (function() {
         var ranges = this.data.ranges;
 
         for (var i = 0; i < ranges.length; i++) {
-            ranges[i].padd_string = returnGenerator(ranges[i].size - 1);
+            ranges[i].padd_string = returnGenerator(ranges[i]);
         }
 
         this.create_all_dom();
