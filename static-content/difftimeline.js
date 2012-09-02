@@ -328,7 +328,7 @@ Project.state = (function () {
         start_blame: function(blame_obj) {
             var new_state = BlameShower.create_from_data(blame_obj);
             states.push( new_state );
-            breadcrumb.append_breadcrumb('Blame');
+            breadcrumb.append_breadcrumb('Blame (' + blame_obj.filename + ')');
             show_hide_toolbar_elements(new_state.gui_descr);
         },
 
