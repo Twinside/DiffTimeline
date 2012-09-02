@@ -1835,7 +1835,8 @@ var BlameShower = (function() {
             var number_node = $('.line_number_column', this.orig_node);
             var clean_cr_lf_data = this.data.data.replace(/\r/g, '');
 
-            DiffManipulator.generateFullHtml("FILE.hs", false, clean_cr_lf_data, [],
+            DiffManipulator.generateFullHtml(this.data.filename, false,
+                                             clean_cr_lf_data, [],
                                              number_node[0], render_node[0]);
             this.set_backgrounds_colors();
         };
