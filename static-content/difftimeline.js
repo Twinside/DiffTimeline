@@ -1805,20 +1805,24 @@ var BlameShower = (function() {
 
         this.create_all_dom();
 
-        var nodes = $('.blame_range', this.orig_node);
-        var date_interval = data.latest - data.earliest;
-        for (var i = 0; i < ranges.length; i++) {
-            var range = ranges[i];
-            var zeroToOne = (range.tag.timestamp - data.earliest) / date_interval;
-
-            $(nodes[i]).css('background-color',
-                            color_lerp(blame_gradient.beg, blame_gradient.end, zeroToOne));
-        }
-
         this.render_all();
     };
 
     var init_methods = function() {
+        this.set_backgrounds_colors = function() {
+            var ranges = this.data.ranges;
+
+            var nodes = $('.blame_range', this.orig_node);
+            var date_interval = this.data.latest - this.data.earliest;
+
+            for (var i = 0; i < ranges.length; i++) {
+                var range = ranges[i];
+                var zeroToOne = (range.tag.timestamp - this.data.earliest) / date_interval;
+
+                $(nodes[i]).css('background-color',
+                                color_lerp(blame_gradient.beg, blame_gradient.end, zeroToOne));
+            }
+        }
 
         this.fetch_previous = function() {
             show_error({error: 'Does not exists in this mode'});
@@ -1833,6 +1837,7 @@ var BlameShower = (function() {
 
             DiffManipulator.generateFullHtml("FILE.hs", false, clean_cr_lf_data, [],
                                              number_node[0], render_node[0]);
+            this.set_backgrounds_colors();
         };
 
         this.create_all_dom = function() {
