@@ -1313,6 +1313,7 @@ var FileBlob = function (data) {
     /** @type {string} */
     this.file = data.filename;
 
+    this.binary = data.binary;
     this.diff = data.diff;
     this.data = data.data;
 
@@ -1422,13 +1423,18 @@ var FileBlob = function (data) {
 
         var clean_cr_lf_data = data.replace(/\r/g, '');
 
-        if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT)
-            DiffManipulator.generateCompactHtml(filename, Project.state.active_context_size(),
-                                                false, clean_cr_lf_data, ranges,
-                                                number_node[0], node[0]);
-        else // render full
-            DiffManipulator.generateFullHtml(filename, false, clean_cr_lf_data, ranges,
-                                             number_node[0], node[0]);
+        if (!this.binary) {
+            if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT)
+                DiffManipulator.generateCompactHtml(filename, Project.state.active_context_size(),
+                                                    false, clean_cr_lf_data, ranges,
+                                                    number_node[0], node[0]);
+            else // render full
+                DiffManipulator.generateFullHtml(filename, false, clean_cr_lf_data, ranges,
+                                                 number_node[0], node[0]);
+        } else {
+            node[0].appendChild(document.createTextNode("Binary element"));
+        }
+
     }
 
 

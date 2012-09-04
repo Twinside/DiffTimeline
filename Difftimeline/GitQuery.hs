@@ -39,7 +39,7 @@ import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
 import qualified Control.Exception as E
-import Control.Monad( forM )
+import Control.Monad( forM, when )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
@@ -557,9 +557,11 @@ findParentFile repository commitStrSha path = runErrorT $ inner
                 nextData = decodeUtf8 $ toStrict nextFile
                 thisData = decodeUtf8 $ toStrict thisFile
                 author = commitAuthor firstNfo
+                isBinary = detectBinary nextFile
 
             return $ ParentFile
-                { fileData = T.filter (/= '\r') nextData
+                { fileData = if isBinary then "" else T.filter (/= '\r') nextData
+                , fileDataIsBinary = isBinary
                 , fileName = T.pack path
                 , fileRef = currentFileRef
                 , parentRef = commitParents firstNfo
@@ -573,7 +575,8 @@ findParentFile repository commitStrSha path = runErrorT $ inner
                 }
 
 data ParentFile = ParentFile
-    { fileData    :: T.Text
+    { fileData         :: T.Text
+    , fileDataIsBinary :: Bool
     , fileName    :: T.Text
     , fileRef     :: Ref
     , parentRef   :: [Ref]
@@ -632,6 +635,7 @@ blameFile repository commitStrSha path = runErrorT finalData
             immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
             let blameRange = V.fromList . simplifyRange $ V.toList immutableSorted
                 (earliest, latest) = dateRange blameRange
+
             return BlameInfo { blameData = T.unlines $ V.toList file
                              , blameRanges = blameRange
                              , blameFilename = T.pack path
@@ -652,6 +656,10 @@ blameFile repository commitStrSha path = runErrorT finalData
             (firstNfo, firstRef, _betweenCommits) <- lift $
                     findFirstCommit repository bytePath currentFileRef currentCommit
             Blob initialFile <- fetchBlob currentFileRef
+
+            when (detectBinary initialFile)
+                 (throwError "Can't perform blame on a binary file")
+
             let backLines = V.fromList . T.lines $ toStrict initialFile
                 initialRange = createBlameRangeForSize $ V.length backLines
                 overview = makeOverview firstRef firstNfo
@@ -714,6 +722,7 @@ basePage _logger repository path = runErrorT $ do
         author = commitAuthor cInfo
         prevData = decodeUtf8 $ toStrict prevContent
         thisData = decodeUtf8 $ toStrict content
+        isBinary = detectBinary content
 
     return $ ParentFile {
         commitRef = headRef,
@@ -727,7 +736,8 @@ basePage _logger repository path = runErrorT $ do
                                  , pathAuthor = decodeUtf8 $ authorName author
                                  }],
         fileDiff = computeTextDiff prevData thisData,
-        fileData = thisData,
+        fileData = if isBinary then "" else thisData,
+        fileDataIsBinary = isBinary,
         parentRef = commitParents cInfo,
         fileMessage = decodeUtf8 $ commitMessage cInfo,
         parentCommitAuthor = decodeUtf8 $ authorName author,

@@ -211,6 +211,7 @@ instance ClosureDescriptable ParentFile Serializable where
     typename _ = "ParentFile"
     toClosureDesc _ =
       record ["data"          .: fileData
+             ,"binary"        .: fileDataIsBinary
              ,"filekey"       .: fileRef
              ,"filename"      .: fileName
              ,"parent_commit" .: (last . parentRef)
