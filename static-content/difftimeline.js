@@ -150,7 +150,7 @@ var color_lerp = function ( c1, c2, v ) {
 /**
  * @type {Object}
  */
-Project.state = (function () {  
+Project.state = (function () {
     "use strict";
 
     /** @type {Project.ViewMode} */
@@ -263,6 +263,14 @@ Project.state = (function () {
             breadcrumb.append_breadcrumb(file);
         },
 
+        switch_branch_comp: function( b1, b2 ) {
+            this.clear_display();
+            var new_state = BranchComparer.create_from_args(b1, b2);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
+            breadcrumb.append_breadcrumb('Compare');
+        },
+
         /** @type {function(ref) : void} */
         switch_commit: function(id) {
             this.clear_display();
@@ -359,6 +367,35 @@ Project.state = (function () {
             states.push( new_state );
             show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb(file_obj.filename);
+        },
+
+        check_comparison: function(node_a, node_b) {
+            var commit_a = $("[class*='branch_widget']", node_a);
+            var commit_b = $("[class*='branch_widget']", node_b);
+            var commit_count = (commit_a.length > 0 ? 1 : 0) +
+                               (commit_b.length > 0 ? 1 : 0);
+
+            if (commit_count == 2) {
+                var b1 = commit_a.text().replace(/^\s+|\s+$/g, '');
+                var b2 = commit_b.text().replace(/^\s+|\s+$/g, '');
+                this.switch_branch_comp(b1, b2);
+                return;
+            }
+
+            var file_a = $(zone_a, '> .file_widget');
+            var file_b = $(zone_b, '> .file_widget');
+            var file_count = (file_a.length > 0 ? 1 : 0) +
+                             (file_b.length > 0 ? 1 : 0);
+
+            if (commit_count > 0 && file_count > 0) {
+                show_error({error: "Can't compare file and commit" });
+                return;
+            }
+
+            if (file_count == 2) {
+                show_error({error: "Sadly unimplemented yet :(" });
+                return;
+            }
         }
     };
 })();
@@ -1080,6 +1117,17 @@ var Commit = function(key, data) {
             this.orig_node = ich.commit_compact(this);
         }
 
+        var this_obj = this;
+        var widgets = $("[class*='branch_widget']", this.orig_node)
+        widgets.draggable({
+            appendTo: 'body',
+            zIndex: 300,
+            start: function(event, ui) { $(this).css("z-index", 15); },
+            helper: function() {
+                return ich.branch_widget(this_obj);
+            }
+        });
+
         return this.orig_node;
     };
 
@@ -1745,7 +1793,7 @@ var BranchComparer = (function() {
                     this_obj.branch_a = $('.dropzone_a > .branch_widget').text().replace(/^\s+|\s+$/g, '');
                     this_obj.refresh_diff();
                 }
-            })
+            });
 
             $('.container .dropzone_b').droppable( {
                 drop: function(evt, ui) {
@@ -1755,7 +1803,7 @@ var BranchComparer = (function() {
                     this_obj.branch_b = $('.dropzone_b > .branch_widget').text().replace(/^\s+|\s+$/g, '');
                     this_obj.refresh_diff();
                 }
-            })
+            });
         };
 
         this.send_message = function( msg ) {
@@ -1769,9 +1817,20 @@ var BranchComparer = (function() {
 
     return {
         create: function() {
-
             var created = new init_methods();
             init.call(created);
+            return created;
+        },
+
+        create_from_args: function(b1, b2) {
+            var created = new init_methods();
+            init.call(created);
+            created.is_a_filled = true;
+            created.is_b_filled = true;
+            created.branch_a = b1;
+            created.branch_b = b2;
+            created.refresh_diff();
+
             return created;
         }
     };
@@ -1913,7 +1972,36 @@ function show_error( data )
 function leave_server()
     { $.ajax( {url:"/quit", async:false} ); }
 
+function setup_global_drop()
+{
+    var zone_a = $('.global_compare_recipient_a');
+    var zone_b = $('.global_compare_recipient_b');
+
+    zone_a.droppable({
+        drop: function(evt, ui) {
+            zone_a.children().remove();
+            zone_a.append($(ui.draggable).clone());
+            $(ui.helper).remove();
+            Project.state.check_comparison(zone_a, zone_b);
+        }
+    });
+
+    zone_b.droppable({
+        drop: function(evt, ui) {
+            zone_b.children().remove();
+            zone_b.append($(ui.draggable).clone());
+            $(ui.helper).remove();
+            Project.state.check_comparison(zone_a, zone_b);
+        }
+    });
+
+}
+
 ich.grabTemplates();
+
+$(document).ready(function() {
+    setup_global_drop();
+});
 
 //////////////////////////////////////////////////////////////////////////
 ////            Keyboard shortcuts

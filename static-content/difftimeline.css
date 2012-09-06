@@ -26,6 +26,7 @@ body
 
 .commit
 {
+    display: inline-block;
     position: relative;
     float:    left;
     margin:   10px;
@@ -316,6 +317,14 @@ pre
     border: 1px solid gray;
 }
 
+.global_compare_recipient_a,
+.global_compare_recipient_b {
+    display: inline-block;
+    width: 200px;
+    height: 25px;
+    border: 1px solid white;
+}
+
 /* ================================================ */
 /* Tooltip rules                                    */
 /* ================================================ */
@@ -328,7 +337,8 @@ pre
     background: #6C6F7D;
 }
 
-.ellipsis:hover > div, .delta_commit_circle:hover > div {
+.ellipsis:hover > div,
+.delta_commit_circle:hover > div {
     font-style: normal;
     display:    block;
     position:   absolute;
@@ -632,7 +642,8 @@ pre
     float: left;
 }
 
-.branch_container > .dropzone_a, .branch_container > .dropzone_b {
+.branch_container > .dropzone_a,
+.branch_container > .dropzone_b {
     float: left;
     width: 200px;
     height: 60px;

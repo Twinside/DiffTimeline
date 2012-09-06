@@ -64,7 +64,7 @@
         <script id="commit_compact" type="text/html">
             <div class="commit_compact" id="{{key}}">
                 <div class="commitmsg">
-                    <span class="id">{{key}}</span>
+                    <span class="id .branch_widget">{{key}}</span>
                     <span class="time">{{commit_date}}</span>
                     <h4 title="{{message}}">{{{split_message}}}</h4>
                 </div>
@@ -75,7 +75,7 @@
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
                     <div class="commitmsg">
-                        <span class="id">{{key}}</span>
+                        <span class="id .branch_widget">{{key}}</span>
                         <span class="time">{{commit_date}}</span>
                         <hr />
                         <h4 title="{{message}}">{{{head_message}}}</h4>
@@ -145,7 +145,7 @@
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
                     <div class="commitmsg">
-                        <span class="id">{{key}}</span>
+                        <span class="id .branch_widget">{{key}}</span>
                         <span class="time">{{commit_date}}</span><hr />
                         <h4 title="{{message}}">{{short_message}}</h4>
                     </div>
@@ -170,7 +170,7 @@
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
                     <div class="commitmsg">
-                        <span class="id">{{key}}</span>
+                        <span class="id .branch_widget">{{key}}</span>
                         <span class="time">{{commit_date}}</span>
                         <hr />
                         <h4 title="{{message}}">{{short_message}}</h4>
@@ -191,6 +191,11 @@
                 <div class="file_content">
                     {{>file_table}}
                 </div>
+            </div>
+        </script>
+        <script id="branch_widget" type="text/html">
+            <div class="branch_widget">
+                {{key}}
             </div>
         </script>
         <script id="branch_comparer" type="text/html">
@@ -232,6 +237,11 @@
 
                     </tr>
                 </table>
+                <div>
+                    Compare
+                    <div class="global_compare_recipient_a">&nbsp;</div> with
+                    <div class="global_compare_recipient_b">&nbsp;</div>
+                </div>
             </div>
             <div id="breadcrumb">
             </div>
