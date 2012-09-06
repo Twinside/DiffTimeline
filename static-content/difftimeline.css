@@ -415,6 +415,22 @@ pre
     content: "●";
 }
 
+.blame_button {
+    float: right;
+}
+
+.tree_neutral .blame_button,
+.tree_modification .blame_button,
+.tree_addition .blame_button,
+.tree_deletion .blame_button {
+    visibility: hidden;
+}
+
+.tree_neutral:hover .blame_button,
+.tree_modification:hover .blame_button {
+    visibility: visible;
+}
+
 .tree_modification {
     position:        relative;
     margin-left:     15px;

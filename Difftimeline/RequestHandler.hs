@@ -72,12 +72,11 @@ getBlameFromRoot rootCommit filePathes = withRepository extractor
     where file = T.unpack $ T.intercalate (T.pack "/") filePathes
           extractor repository = blameFile repository rootCommit file
 
-getBlameR :: [Text] -> Handler RepJson
-getBlameR filePathes = withRepository extractor
+getBlameR :: String -> [Text] -> Handler RepJson
+getBlameR rootCommit filePathes = withRepository extractor
     where file = T.unpack $ T.intercalate (T.pack "/") filePathes
-          extractor repository = do
-              Just rootCommit <- getHead repository
-              blameFile repository (show rootCommit) file
+          extractor repository =
+              blameFile repository rootCommit file
 
 getFileParentR :: String -> [Text] -> Handler RepJson
 getFileParentR initialCommit filePathes = do

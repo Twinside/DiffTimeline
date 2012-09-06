@@ -1,4 +1,4 @@
-all: blame_tests
+all: build
 
 build:
 	runhaskell Setup.hs build

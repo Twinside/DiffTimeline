@@ -242,6 +242,17 @@ Project.state = (function () {
         },
 
         /**
+         * @type {function(ref, string) : void}
+         */
+        switch_blame: function(start_commit, file) {
+            this.clear_display();
+            var new_state = BlameShower.create_from_arg(start_commit, file);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
+            breadcrumb.append_breadcrumb("Blame (" + file + ")");
+        },
+
+        /**
          * @type {function(string, ref, ref) : void}
          */
         switch_file: function(file, fkey, start_commit) {
@@ -1814,6 +1825,27 @@ var BlameShower = (function() {
         this.render_all();
     };
 
+    var fetch = function( obj, key, file ) {
+        var this_obj = obj;
+        if (file[0] != '/') file = '/' + file;
+
+        $.ajax({ url: '/blame/' + encodeURIComponent(key) + file,
+            dataType: 'json',
+            data: {},
+            error: function() {
+                show_error({error: 'Communication error with the server while fetching blame'});
+            },
+            success: function(data) {
+                if (data['error']) { 
+                    show_error( data );
+                    return;
+                }
+
+                init.call(this_obj, data);
+            }
+        });
+    }
+
     var init_methods = function() {
         this.set_backgrounds_colors = function() {
             var ranges = this.data.ranges;
@@ -1835,8 +1867,6 @@ var BlameShower = (function() {
         };
 
         this.render_all = function() {
-            /* nothing */
-
             var render_node = $('.syntax_highlighted', this.orig_node);
             var number_node = $('.line_number_column', this.orig_node);
             var clean_cr_lf_data = this.data.data.replace(/\r/g, '');
@@ -1863,6 +1893,12 @@ var BlameShower = (function() {
         create_from_data: function(data) {
             var created = new init_methods();
             init.call(created, data);
+            return created;
+        },
+
+        create_from_arg: function(key, file) {
+            var created = new init_methods();
+            fetch( created, key, file );
             return created;
         }
     };
