@@ -1613,14 +1613,14 @@ var FileRenderer = (function() {
 
                 var node = new_commit.create_dom();
                 insert_node(node);
-                $(node).addClass(global_focus);
 
                 this_obj.collection.unshift( new_commit );
-
+                this_obj.focused_index++;
                 this_obj.keys[new_commit.key] = new_commit;
                 node.animate({'width': 'toggle'}, 0);
                 this_obj.collection[0].render(this_obj.collection[1].diff);
                 node.animate({'width': 'toggle'}, Project.state.apparition_duration() * 2);
+                this_obj.move_left();
 
                 this_obj.fetching = false;
             });
