@@ -40,15 +40,18 @@ main = do
 
     repo <- openRepo "./.git"
     {-branches <- brancheslist repo-}
-    Just headRef <- getHead repo
+    {-Just headRef <- getHead repo-}
     {-diffRez <- workingDirectoryChanges repo 3 headRef -}
     {-putStrLn $ show branches-}
-    Right rez <- blameFile repo (show headRef) "test/blame_test.hs"
+    nfo <- compareBranches repo 3 "1896b4e2601c0c857ac19b07673029bbb6c69f93" "f467ceb8b3a0bf85427636e63903ac81e3dc3de5"
+    putStrLn $ show nfo
 
-    let fileLines = V.fromList . T.lines $ blameData rez
-    forM_ (V.toList $ blameRanges rez) 
-        $ \(BlameRangeSource beg size oline ref) -> do
-        forM_ [beg .. beg + size - 1] $ \idx ->
-            putStrLn $ printf "%s) %3d %3d %s" (take 6 $ show ref) (oline + idx - beg + 1)
-                                        (idx + 1) (show $ fileLines V.! idx)
+    {-Right rez <- blameFile repo (show headRef) "test/blame_test.hs"-}
+
+    {-let fileLines = V.fromList . T.lines $ blameData rez-}
+    {-forM_ (V.toList $ blameRanges rez) -}
+        {-$ \(BlameRangeSource beg size oline ref) -> do-}
+        {-forM_ [beg .. beg + size - 1] $ \idx ->-}
+            {-putStrLn $ printf "%s) %3d %3d %s" (take 6 $ show ref) (oline + idx - beg + 1)-}
+                                        {-(idx + 1) (show $ fileLines V.! idx)-}
 
