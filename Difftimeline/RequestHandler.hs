@@ -154,10 +154,9 @@ renderJson = decodeUtf8 . BC.concat . LC.toChunks . encode . toJSON
 getInitialFile :: FilePath -> Handler RepPlain
 getInitialFile filename = do
     app <- getYesod
-    let logger = getLogger app
-        repository = getRepository app
+    let repository = getRepository app
         splitedFilename = map BC.pack $ splitDirectories filename
-    answer <- liftIO $ basePage logger repository splitedFilename
+    answer <- liftIO $ basePage repository splitedFilename
     let rendered = case answer of
             Left err ->
                 renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)

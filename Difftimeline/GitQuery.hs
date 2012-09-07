@@ -88,8 +88,6 @@ import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
 
-import Yesod.Logger
-
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
@@ -267,13 +265,16 @@ brancheslist repo = do
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
-    let fetchRef = liftIO . resolveRevision repo . revFromString
+    let fetchRef = liftIO . either (return . Left)
+                                   (\a -> Right <$> resolveRevision repo a) . revFromString
     ref1 <- fetchRef branch1
     ref2 <- fetchRef branch2
     case (ref1, ref2) of
-      (Nothing,       _) -> throwError ("Error branch " ++ branch1 ++ " doesnt exist")
-      (      _, Nothing) -> throwError ("Error branch " ++ branch2 ++ " doesnt exist")
-      (Just b1Ref, Just b2Ref) ->
+      (Right Nothing,       _) -> throwError ("Error branch " ++ branch1 ++ " doesnt exist")
+      (Left txt,            _) -> throwError ("Error : " ++ txt)
+      (      _, Right Nothing) -> throwError ("Error branch " ++ branch2 ++ " doesnt exist")
+      (      _, Left      txt) -> throwError ("Error : " ++ txt)
+      (Right (Just b1Ref), Right (Just b2Ref)) ->
             snd <$> createCommitDiff  repo contextSize True b1Ref b2Ref
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
@@ -704,8 +705,8 @@ commitList repository count = runErrorT . inner count
               Commit commit <- accessCommit "" repository r
               (makeOverview r commit :) <$> inner (n - 1) (head $ commitParents commit)
 
-basePage :: Logger -> Git -> [B.ByteString] -> IO (Either String ParentFile)
-basePage _logger repository path = runErrorT $ do
+basePage :: Git -> [B.ByteString] -> IO (Either String ParentFile)
+basePage repository path = runErrorT $ do
     let getObj errorReason = errorIO errorReason . accessObject repository
     headRef        <- errorIO "Can't read HEAD" $ getHead repository
     (Commit cInfo) <- accessCommit "Error can't access commit" repository headRef

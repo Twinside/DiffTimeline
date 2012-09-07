@@ -13,7 +13,6 @@ module Difftimeline.Foundation
 import Prelude
 import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
-import Yesod.Logger (Logger, logMsg, formatLogText)
 import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
 
@@ -29,7 +28,6 @@ data Command = DiffCompare String String
 -- access to the data present here.
 data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv ()
-    , getLogger :: Logger
     , getDevMode :: Maybe FilePath
     , getRepository :: Git
     , initialCommand   :: Command
@@ -69,9 +67,6 @@ instance Yesod DiffTimeline where
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticroot setting in Settings.hs
     urlRenderOverride _ _ = Nothing
-
-    messageLogger y loc level msg =
-      formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody

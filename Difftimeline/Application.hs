@@ -4,10 +4,9 @@ module Difftimeline.Application( getApplication, Command( .. ) ) where
 import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist )
 import Network.Wai( Application )
+{-import System.Log.FastLogger( Logger, toLogStr, loggerPutStr )-}
 import Yesod.Default.Config
 import Yesod.Default.Handlers (getFaviconR)
-import Yesod.Logger (Logger, logBS, logString)
-import Network.Wai.Middleware.RequestLogger (logCallbackDev)
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
@@ -22,18 +21,14 @@ import System.Exit( exitFailure )
 -- the comments there for more details.
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
-initRepository :: Logger -> FilePath -> IO Git
-initRepository logger startDir = do
+initRepository :: FilePath -> IO Git
+initRepository startDir = do
     maybeRepo <- findRepository startDir
     case maybeRepo of
+       Just dir -> openRepo $ dir </> ".git"
        Nothing -> do
            putStrLn "Error : no git repository found"
            exitFailure
-
-       Just dir -> do
-            let repoPath = dir </> ".git"
-            logString logger $ "Trying to open git: " ++ repoPath
-            openRepo repoPath
 
 simplifyPath :: FilePath -> FilePath
 simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise 
@@ -52,10 +47,9 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv () -> Logger 
+getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv ()
                -> IO Application
-
-getApplication devModePath (DiffBlame fname) conf logger = do
+getApplication devModePath (DiffBlame fname) conf = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
     let absName
@@ -65,20 +59,17 @@ getApplication devModePath (DiffBlame fname) conf logger = do
         name | isDir = absName ++ "/"
              | otherwise = absName
 
-    initRepo <- initRepository logger $ takeDirectory name
+    initRepo <- initRepository $ takeDirectory name
     initPath <- if isDir 
         then pure DiffWorking
         else do
           let absPath = takeDirectory $ gitRepoPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
-          liftIO . logString logger $ "Initial file : " ++ relPath
           pure $ DiffBlame relPath
 
-    let foundation = DiffTimeline conf logger devModePath initRepo initPath
-    app <- toWaiAppPlain foundation
-    return $ logCallbackDev (logBS logger) app
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath
 
-getApplication devModePath (DiffFile fname) conf logger = do
+getApplication devModePath (DiffFile fname) conf = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
     let absName
@@ -88,23 +79,17 @@ getApplication devModePath (DiffFile fname) conf logger = do
         name | isDir = absName ++ "/"
              | otherwise = absName
 
-    initRepo <- initRepository logger $ takeDirectory name
+    initRepo <- initRepository $ takeDirectory name
     initPath <- if isDir 
         then pure DiffWorking
         else do
           let absPath = takeDirectory $ gitRepoPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
-          liftIO . logString logger $ "Initial file : " ++ relPath
           pure $ DiffFile relPath
 
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath
 
-    let foundation = DiffTimeline conf logger devModePath initRepo initPath
-    app <- toWaiAppPlain foundation
-    return $ logCallbackDev (logBS logger) app
-
-getApplication devModePath cmd conf logger = do
-    initRepo <- getCurrentDirectory >>= initRepository logger
-    let foundation = DiffTimeline conf logger devModePath initRepo cmd
-    app <- toWaiAppPlain foundation
-    return $ logCallbackDev (logBS logger) app
+getApplication devModePath cmd conf = do
+    initRepo <- getCurrentDirectory >>= initRepository
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd
 
