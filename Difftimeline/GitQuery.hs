@@ -492,12 +492,8 @@ findFirstCommit :: Git              -- ^ Repository
                 -> ErrorT String IO (CommitInfo, Ref, [CommitPath])
 findFirstCommit repository path currentFileRef firstCommit = inner undefined undefined firstCommit
     where inner prevCommit prevRef currentCommit = do
-            (Commit info) <- accessCommit "Can't find commit in commit path" repository currentCommit
-            t@(Tree _)    <- accessTree "Can't find tree in commit path" repository $ commitTree info
             catchError (do
-                commitFileRef <- errorIO "Can't find children in commit path"
-                                        $ findInTree repository path t
-
+                (info, commitFileRef) <- fetchFileRefInCommit repository currentCommit path
                 if commitFileRef /= currentFileRef
                     then return (prevCommit, prevRef, [])
                     else do
@@ -530,29 +526,44 @@ findInTree git pathes = inner pathes . Just
 
           extractRef (_, _, ref) = ref
           findVal v lst = extractRef <$> find (\(_, n, _) -> v == n) lst
-          
+
+bytePathToString :: [B.ByteString] -> FilePath
+bytePathToString = BC.unpack . BC.concat . map (BC.append (BC.pack "/"))
+
+fetchFileRefInCommit :: Git -> Ref -> [B.ByteString] -> ErrorT String IO (CommitInfo, Ref)
+fetchFileRefInCommit repo ref bytePath = do
+    let path = bytePathToString bytePath
+    Commit commit <- accessCommit ("Can't find commit (" ++ show ref ++ ")") repo ref
+    t@(Tree _) <- accessTree ("Can't find tree for commit (" ++ show ref ++ ")") repo
+                $ commitTree commit
+
+    thisFileRef <- errorIO ("Can't find file (" ++ path ++ ") in commit(" ++ show ref ++ ")")
+                 $ findInTree repo bytePath t
+
+    return (commit, thisFileRef)
+
+fetchBlobInCommit :: Git -> Ref -> [B.ByteString] -> ErrorT String IO (CommitInfo, L.ByteString)
+fetchBlobInCommit repo ref bytePath = do
+    let path = bytePathToString bytePath
+    (commit, thisFileRef) <- fetchFileRefInCommit repo ref bytePath
+    Blob blobContent <- accessBlob ("Can't read file (" ++ path ++ ") content in commit (" ++ show ref ++ ")" )
+                                repo thisFileRef
+    return (commit, blobContent)
+
 findParentFile :: Git -> String -> FilePath -> IO (Either String ParentFile)
 findParentFile repository commitStrSha path = runErrorT $ inner
   where currentCommit = fromHexString commitStrSha
         bytePath = map BC.pack $ splitDirectories path
 
         inner = do
-            Commit commit <- accessCommit "Can't find current commit" repository currentCommit
-            t@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree commit
-            currentFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath t
+            (_, currentFileRef) <- fetchFileRefInCommit repository currentCommit bytePath
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef currentCommit
 
-            Blob nextFile <- accessBlob "can't find fule content" repository currentFileRef
-            thisFile <- catchError (do
-                Commit prevCommit <- accessCommit "Can't access previous commit" repository 
-                                   . head $ commitParents firstNfo 
-                prevTree@(Tree _)    <- accessTree "Can't find tree commit" repository $ commitTree prevCommit
-                prevFileRef <- errorIO "Can't find current content" $ findInTree repository bytePath prevTree
-                Blob blobContent <- accessBlob "Can't find file content" repository prevFileRef
-                return blobContent)
-
-                (\_ -> return L.empty)
+            Blob nextFile <- accessBlob "can't find file content" repository currentFileRef
+            thisFile <-
+                catchError (snd <$> fetchBlobInCommit repository (head $ commitParents firstNfo) bytePath)
+                           (\_ -> return L.empty)
 
             let toStrict = B.concat . L.toChunks
                 nextData = decodeUtf8 $ toStrict nextFile
@@ -651,9 +662,9 @@ blameFile repository commitStrSha path = runErrorT finalData
             lift . errorIO "Can't find current content" . findInTree repository bytePath
 
         initiator = do
-            Commit commit <- fetchCommit currentCommit
-            t@(Tree _)    <- fetchTree $ commitTree commit
-            currentFileRef <-  fetchFileRef t
+            (_, currentFileRef) <- lift $
+                fetchFileRefInCommit repository currentCommit bytePath
+
             (firstNfo, firstRef, _betweenCommits) <- lift $
                     findFirstCommit repository bytePath currentFileRef currentCommit
             Blob initialFile <- fetchBlob currentFileRef
@@ -709,15 +720,10 @@ basePage :: Git -> [B.ByteString] -> IO (Either String ParentFile)
 basePage repository path = runErrorT $ do
     let getObj errorReason = errorIO errorReason . accessObject repository
     headRef        <- errorIO "Can't read HEAD" $ getHead repository
-    (Commit cInfo) <- accessCommit "Error can't access commit" repository headRef
-    tree           <- getObj "Error can't access commit tree" $ commitTree cInfo
-    foundFileRef   <- errorIO "Error can't find file in tree" $ findInTree repository path tree
-    (Blob content) <- getObj "Error can't find file content" foundFileRef
-
-    (Commit prevCommit) <- accessCommit "Can't access parent commit" repository . head $ commitParents cInfo
-    prevTree       <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
-    prevFileRef    <- errorIO "Error can't find file in tree" $ findInTree repository path prevTree
-    (Blob prevContent) <- getObj "Error can't find file content" prevFileRef
+    (cInfo, foundFileRef) <- fetchFileRefInCommit repository headRef path
+    (Blob content) <-
+        getObj ("Error can't find file (" ++ bytePathToString path ++ ") content in HEAD") foundFileRef
+    (_, prevContent) <- fetchBlobInCommit repository (head $ commitParents cInfo) path
 
     let toStrict = B.concat . L.toChunks
         author = commitAuthor cInfo
