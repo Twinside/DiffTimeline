@@ -271,6 +271,14 @@ Project.state = (function () {
             breadcrumb.append_breadcrumb('Compare');
         },
 
+        switch_commit_comp: function( b1, b2 ) {
+            this.clear_display();
+            var new_state = CommitComparer.create_from_args(b1, b2);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
+            breadcrumb.append_breadcrumb('Compare');
+        },
+
         /** @type {function(ref) : void} */
         switch_commit: function(id) {
             this.clear_display();
@@ -378,7 +386,7 @@ Project.state = (function () {
             if (commit_count == 2) {
                 var b1 = commit_a.text().replace(/^\s+|\s+$/g, '');
                 var b2 = commit_b.text().replace(/^\s+|\s+$/g, '');
-                this.switch_branch_comp(b1, b2);
+                this.switch_commit_comp(b1, b2);
                 return;
             }
 
@@ -1705,6 +1713,77 @@ var FileRenderer = (function() {
         }
     };
 })();
+
+var CommitComparer = (function() {
+    var init_methods = function() {
+
+        this.fetch_previous = function() {
+            show_error({error: 'Does not exists in this mode'});
+        };
+
+        this.render_all = function() {
+            /* nothing */
+            if (this_obj.last_comparison)
+                this_obj.last_comparison.render();
+        };
+
+        this.refresh_diff = function() {
+            if (!this.is_a_filled || !this.is_b_filled)
+                return;
+
+            var this_obj = this;
+
+            $.ajax({  
+                url:'/compare_branches/' + encodeURIComponent(this.branch_a)
+                                   + '/' + encodeURIComponent(this.branch_b),
+                dataType: 'json',
+                data: {},
+                error: function() {
+                    show_error({error: 'Communication error with server while comparing branches'}); },
+                success: function(data) {
+                    if (data['error']) { 
+                        show_error( data );
+                        return;
+                    }
+
+                    this_obj.last_comparison = new Commit(data.key, data);
+
+                    var content = $('.branch_diff_content');
+                    $('> *', content).remove();
+                    var new_node = this_obj.last_comparison.create_dom();
+                    new_node.addClass(global_focus);
+                    content.append(new_node);
+                    this_obj.render_all();
+                }
+            });
+        }
+
+        this.create_all_dom = function() {
+            var this_obj = this;
+
+            $('.container').append(ich.commit_comparer(this));
+        };
+
+        this.send_message = function( msg ) {
+            if (this.last_comparison)
+                this.last_comparison.send_message(msg);
+        };
+
+        this.gui_descr = { compact_view: false, fetch_previous: false
+                         , context_size: false, syntax_toggle: false };
+    }
+
+    return {
+        create_from_args: function(b1, b2) {
+            var created = new init_methods();
+            created.branch_a = b1;
+            created.branch_b = b2;
+            created.refresh_diff();
+
+            return created;
+        }
+    };
+});
 
 var BranchComparer = (function() {
     "use strict";
