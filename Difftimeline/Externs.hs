@@ -207,6 +207,16 @@ instance ClosureDescriptable BlameInfo Serializable where
                ,"latest"   .: blameLatestStamp
                ]
 
+instance ClosureDescriptable FileComparison Serializable where
+    typename _ = "FileComparison"
+    toClosureDesc _ =
+      record [ "data_orig" .: comparisonFile1
+             , "ref_orig"  .: comparisonRef1
+             , "data_dest" .: comparisonFile2
+             , "ref_dest"  .: comparisonRef2
+             , "diff" .: comparisonDiff
+             ]
+
 instance ClosureDescriptable ParentFile Serializable where
     typename _ = "ParentFile"
     toClosureDesc _ =
@@ -239,6 +249,7 @@ difftimelineEnv = do
     declare (undefined :: CommitOverview)
     declare (undefined :: BranchInfo)
     declare (undefined :: RemoteBranches)
+    declare (undefined :: FileComparison)
     declare (undefined :: BlameRangeSource CommitOverview)
     declare (undefined :: BlameInfo)
 

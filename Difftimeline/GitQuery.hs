@@ -8,11 +8,13 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , CommitOverview( .. )
                             , BranchInfo( .. )
                             , RemoteBranches( .. )
+                            , FileComparison( .. )
 
                             , brancheslist
                             , diffCommit
                             , diffBranches
                             , compareBranches
+                            , compareFiles
                             , diffCommitTree
                             , workingDirectoryChanges 
                             , findFirstCommit
@@ -549,6 +551,37 @@ fetchBlobInCommit repo ref bytePath = do
     Blob blobContent <- accessBlob ("Can't read file (" ++ path ++ ") content in commit (" ++ show ref ++ ")" )
                                 repo thisFileRef
     return (commit, blobContent)
+
+data FileComparison = FileComparison
+    { comparisonFile1    :: !T.Text
+    , comparisonRef1     :: !Ref
+    , comparisonFile2    :: !T.Text
+    , comparisonRef2     :: !Ref
+    , comparisonDiff     :: ![DiffCommand]
+    }
+
+
+compareFiles :: Git -> String -> FilePath -> String -> FilePath
+             -> IO (Either String FileComparison)
+compareFiles repo commitKey1 file1 commitKey2 file2 = runErrorT $ do
+    let ref1 = fromHexString commitKey1
+        ref2 = fromHexString commitKey2
+
+        bytePath1 = map BC.pack $ splitDirectories file1
+        bytePath2 = map BC.pack $ splitDirectories file2
+
+        byteToText (_, b) = decodeUtf8 . B.concat $ L.toChunks b
+
+    blobContent1 <- byteToText <$> fetchBlobInCommit repo ref1 bytePath1
+    blobContent2 <- byteToText <$>fetchBlobInCommit repo ref2 bytePath2
+
+    return FileComparison { 
+          comparisonFile1 = blobContent1
+        , comparisonFile2 = blobContent2
+        , comparisonRef1  = ref1
+        , comparisonRef2  = ref2
+        , comparisonDiff = computeTextDiff blobContent1 blobContent2
+        }
 
 findParentFile :: Git -> String -> FilePath -> IO (Either String ParentFile)
 findParentFile repository commitStrSha path = runErrorT $ inner

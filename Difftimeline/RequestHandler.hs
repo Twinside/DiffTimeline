@@ -182,6 +182,11 @@ getBranchComparisonR :: String -> String -> Handler RepJson
 getBranchComparisonR b1 b2 = withRepository extractor
   where extractor repo = compareBranches repo 3 b1 b2
 
+getFileComparisonR :: String -> String -> String -> [Text] -> Handler RepJson
+getFileComparisonR key1 file1 key2 file2 = withRepository extractor
+  where extractor repo = compareFiles repo key1 file1 key2 file
+        file = T.unpack $ T.intercalate (T.pack "/") file2
+
 getInitialBranch :: String -> String -> Handler RepPlain
 getInitialBranch b1 b2 = do
   app <- getYesod
