@@ -276,7 +276,15 @@ Project.state = (function () {
             var new_state = CommitComparer.create_from_args(b1, b2);
             states.push( new_state );
             show_hide_toolbar_elements(new_state.gui_descr);
-            breadcrumb.append_breadcrumb('Compare');
+            breadcrumb.append_breadcrumb('Compare commit');
+        },
+
+        switch_file_comp: function(key1, file1, key2, file2) {
+            this.clear_display();
+            var new_state = FileComparer.create_from_args(key1, file1, key2, file2);
+            states.push( new_state );
+            show_hide_toolbar_elements(new_state.gui_descr);
+            breadcrumb.append_breadcrumb('Compare file');
         },
 
         /** @type {function(ref) : void} */
@@ -390,8 +398,8 @@ Project.state = (function () {
                 return;
             }
 
-            var file_a = $(zone_a, '> .file_widget');
-            var file_b = $(zone_b, '> .file_widget');
+            var file_a = $('> .file_widget', node_a);
+            var file_b = $('> .file_widget', node_b);
             var file_count = (file_a.length > 0 ? 1 : 0) +
                              (file_b.length > 0 ? 1 : 0);
 
@@ -401,7 +409,12 @@ Project.state = (function () {
             }
 
             if (file_count == 2) {
-                show_error({error: "Sadly unimplemented yet :(" });
+                var file1 = $('.path', file_a).text();
+                var file2 = $('.path', file_b).text();
+                var key1  = $('.key', file_a).text();
+                var key2  = $('.key', file_b).text();
+                
+                this.switch_file_comp(key1, file1, key2, file2);
                 return;
             }
         }
@@ -810,12 +823,30 @@ var DiffManipulator = (function () {
         return ret;
     }
 
+    var to_diff_del_range = function(diff) {
+        var ret = [];
+        for (var i = 0; i < diff.length; i++) {
+            ret.push({ way: diff[i].way, beg: diff[i].orig_idx, end: diff[i].orig_idx + diff[i].size });
+        }
+        return ret;
+    }
+
+    var to_diff_add_range = function(diff) {
+        var ret = [];
+        for (var i = 0; i < diff.length; i++) {
+            ret.push({ way: diff[i].way, beg: diff[i].dest_idx, end: diff[i].dest_idx + diff[i].size });
+        }
+        return ret;
+    }
+
     return {
         generateFullHtml:    generate_full_html,
         generateCompactHtml: generate_compact_html,
         filterAdds: filter_adds,
         filterRems: filter_rems,
-        calculateFoldSet: calculate_fold_set 
+        calculateFoldSet: calculate_fold_set,
+        toDiffDelRange: to_diff_del_range,
+        toDiffAddRange: to_diff_add_range 
     };
 })();
 
@@ -1063,6 +1094,12 @@ var Commit = function(key, data) {
 
         } else {
             new_node = ich.tree_elem(elem);
+            $('.file_widget', new_node).draggable({ 
+                helper: 'clone',
+                appendTo: 'body',
+                start: function(event, ui) { $(this).css("z-index", 15); },
+                zIndex: 300,
+            });
             node.appendChild(new_node[0]);
         }
 
@@ -1723,14 +1760,11 @@ var CommitComparer = (function() {
 
         this.render_all = function() {
             /* nothing */
-            if (this_obj.last_comparison)
-                this_obj.last_comparison.render();
+            if (this.last_comparison)
+                this.last_comparison.render();
         };
 
         this.refresh_diff = function() {
-            if (!this.is_a_filled || !this.is_b_filled)
-                return;
-
             var this_obj = this;
 
             $.ajax({  
@@ -1747,21 +1781,14 @@ var CommitComparer = (function() {
                     }
 
                     this_obj.last_comparison = new Commit(data.key, data);
-
-                    var content = $('.branch_diff_content');
-                    $('> *', content).remove();
-                    var new_node = this_obj.last_comparison.create_dom();
-                    new_node.addClass(global_focus);
-                    content.append(new_node);
+                    this_obj.create_all_dom();
                     this_obj.render_all();
                 }
             });
         }
 
         this.create_all_dom = function() {
-            var this_obj = this;
-
-            $('.container').append(ich.commit_comparer(this));
+            $('.container').append(this.last_comparison.create_dom());
         };
 
         this.send_message = function( msg ) {
@@ -1783,7 +1810,88 @@ var CommitComparer = (function() {
             return created;
         }
     };
-});
+})();
+
+var FileComparer = (function() {
+    var init_methods = function() {
+
+        this.fetch_previous = function() {
+            show_error({error: 'Does not exists in this mode'});
+        };
+
+        this.render_all = function() {
+            var rems = DiffManipulator.toDiffDelRange( DiffManipulator.filterRems(this.data.diff) );
+            var adds = DiffManipulator.toDiffAddRange( DiffManipulator.filterAdds(this.data.diff) );
+            var number_node = $('.line_number_column');
+            var node = $('.syntax_highlighted');
+
+            if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT) {
+                DiffManipulator.generateCompactHtml(this.file1, Project.state.active_context_size(),
+                                                    false, this.data.data_orig, rems,
+                                                    number_node[0], node[0]);
+
+                DiffManipulator.generateCompactHtml(this.file2, Project.state.active_context_size(),
+                                                    false, this.data.data_dest, adds,
+                                                    number_node[1], node[1]);
+            }
+            else { // render full
+                DiffManipulator.generateFullHtml(this.file1, false, this.data.data_orig, rems,
+                                                 number_node[0], node[0]);
+
+                DiffManipulator.generateFullHtml(this.file2, false, this.data.data_dest, adds,
+                                                 number_node[1], node[1]);
+            }
+        };
+
+        this.refresh_diff = function() {
+            var this_obj = this;
+            var url = ('/compare_files/' + encodeURIComponent(this.key1)
+                                   + '/' + encodeURIComponent(this.file1.slice(1))
+                                   + '/' + encodeURIComponent(this.key2)
+                                   + this.file2);
+
+            $.ajax({  
+                url: url,
+                dataType: 'json',
+                data: {},
+                error: function() {
+                    show_error({error: 'Communication error with server while comparing files'}); },
+                success: function(data) {
+                    if (data['error']) { 
+                        show_error( data );
+                        return;
+                    }
+
+                    this_obj.data = data;
+                    this_obj.create_all_dom();
+                    this_obj.render_all();
+                }
+            });
+        }
+
+        this.create_all_dom = function() {
+            $('.container').append(ich.compare_files(this));
+        };
+
+        this.send_message = function( msg ) {};
+
+        this.gui_descr = { compact_view: true, fetch_previous: false
+                         , context_size: true, syntax_toggle: false };
+    }
+
+    return {
+        create_from_args: function(key1, file1, key2, file2) {
+            var created = new init_methods();
+            created.key1 = key1;
+            created.file1 = file1;
+            created.key2 = key2;
+            created.file2 = file2;
+            created.refresh_diff();
+
+            return created;
+        }
+    };
+})();
 
 var BranchComparer = (function() {
     "use strict";

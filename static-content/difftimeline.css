@@ -221,10 +221,14 @@ pre
 
 .commitmsg .id
 {
-    color:     #888;
+    color:     #AAA;
     font-size: 0.75em;
     padding: 2px;
     margin: 2px;
+
+    border: 1px solid white;
+    margin: 2px;
+    display: inline-block;
 }
 
 .commitmsg .time
@@ -320,8 +324,8 @@ pre
 .global_compare_recipient_a,
 .global_compare_recipient_b {
     display: inline-block;
-    width: 200px;
-    height: 25px;
+    width: 295px;
+    height: 30px;
     border: 1px solid white;
 }
 
@@ -627,11 +631,18 @@ pre
     background: darkgray;
 }
 
+.file_widget {
+}
+
+.file_widget .path,
+.file_widget .key {
+    display: none;
+}
+
 .branch_widget {
     cursor: default;
     padding: 3px;
     border: 1px solid white;
-    width: 100px;
     background: #777777;
     margin: 2px;
     display: inline-block;
@@ -645,7 +656,6 @@ pre
 .branch_container > .dropzone_a,
 .branch_container > .dropzone_b {
     float: left;
-    width: 200px;
     height: 60px;
     border: 1px solid white;
 }

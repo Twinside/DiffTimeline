@@ -64,6 +64,8 @@ instance Yesod DiffTimeline where
 
     defaultLayout _ = return . RepHtml $ toContent ("" :: String)
 
+    logLevel _ = LevelDebug
+
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticroot setting in Settings.hs
     urlRenderOverride _ _ = Nothing

@@ -11,7 +11,7 @@
 /branches_list                      BranchesR         GET
 /commit/#String                     CommitR           GET
 /commit_list/#Int/#String           CommitListR       GET
-/compare_file/#String/#String/#String/*Texts FileComparisonR GET
+/compare_files/#String/#String/#String/*Texts FileComparisonR GET
 /quit                               QuitR             GET
 
 /initial_info.js                    InitialInfoR      GET

@@ -37,7 +37,11 @@
             <div class="tree_{{kind}}">
                 <span class="commit_diff_symbol"
                       onclick="Project.state.switch_file('{{full_path}}', '{{hash}}', '{{key}}')"></span>
-                <span>{{name}}</span>
+                <span class="file_widget">
+                    {{name}}
+                    <span class="path">{{full_path}}</span>
+                    <span class="key">{{key}}</span>
+                </span>
                 <span onclick="Project.state.switch_blame('{{key}}', '{{full_path}}')"
                       class="blame_button">Blame</span>
             </div>
@@ -64,7 +68,7 @@
         <script id="commit_compact" type="text/html">
             <div class="commit_compact" id="{{key}}">
                 <div class="commitmsg">
-                    <span class="id .branch_widget">{{key}}</span>
+                    <span class="id branch_widget">{{key}}</span>
                     <span class="time">{{commit_date}}</span>
                     <h4 title="{{message}}">{{{split_message}}}</h4>
                 </div>
@@ -75,7 +79,7 @@
             <div class="commit" id="{{key}}">
                 <div class="commitinfo">
                     <div class="commitmsg">
-                        <span class="id .branch_widget">{{key}}</span>
+                        <span class="id branch_widget">{{key}}</span>
                         <span class="time">{{commit_date}}</span>
                         <hr />
                         <h4 title="{{message}}">{{{head_message}}}</h4>
@@ -137,6 +141,31 @@
                             <td><pre class="syntax_highlighted"></pre></td>
                         </tr>
                     </table>
+                </div>
+            </div>
+        </script>
+
+        <script id="compare_files" type="text/html">
+            <div class="commitfile" id="{{key1}}">
+                <div class="commitinfo">
+                        <span class="id .branch_widget">{{key1}}</span>
+                        <span class="time"></span><hr />
+                        <h4>{{file1}}</h4>
+                </div>
+
+                <div class="file_content">
+                    {{>file_table}}
+                </div>
+            </div>
+            <div class="commitfile" id="{{key2}}">
+                <div class="commitinfo">
+                        <span class="id .branch_widget">{{key2}}</span>
+                        <span class="time"></span><hr />
+                        <h4>{{file2}}</h4>
+                </div>
+
+                <div class="file_content">
+                    {{>file_table}}
                 </div>
             </div>
         </script>
