@@ -146,26 +146,34 @@
         </script>
 
         <script id="compare_files" type="text/html">
-            <div class="commitfile" id="{{key1}}">
-                <div class="commitinfo">
-                        <span class="id .branch_widget">{{key1}}</span>
-                        <span class="time"></span><hr />
-                        <h4>{{file1}}</h4>
-                </div>
+            <div class="commit">
+                <div class="commitfile" id="{{key1}}">
+                    <div class="commitinfo">
+                        <div class="commitmsg">
+                            <span class="id .branch_widget">{{key1}}</span>
+                            <span class="time"></span><hr />
+                            <h4>{{file1}}</h4>
+                        </div>
+                    </div>
 
-                <div class="file_content">
-                    {{>file_table}}
+                    <div class="file_content">
+                        {{>file_table}}
+                    </div>
                 </div>
             </div>
-            <div class="commitfile" id="{{key2}}">
-                <div class="commitinfo">
-                        <span class="id .branch_widget">{{key2}}</span>
-                        <span class="time"></span><hr />
-                        <h4>{{file2}}</h4>
-                </div>
+            <div class="commit">
+                <div class="commitfile" id="{{key2}}">
+                    <div class="commitinfo">
+                        <div class="commitmsg">
+                            <span class="id .branch_widget">{{key2}}</span>
+                            <span class="time"></span><hr />
+                            <h4>{{file2}}</h4>
+                        </div>
+                    </div>
 
-                <div class="file_content">
-                    {{>file_table}}
+                    <div class="file_content">
+                        {{>file_table}}
+                    </div>
                 </div>
             </div>
         </script>

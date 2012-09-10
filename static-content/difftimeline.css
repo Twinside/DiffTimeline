@@ -678,13 +678,9 @@ table.file_display td {
     margin: 0px;
 }
 
-table.file_display td ~ td {
-    width: 100%;
-}
-
 table.file_display pre.line_number_column {
     margin: 0px;
-    width: 27px;
+    min-width: 27px;
 }
 
 /* Blame information */
