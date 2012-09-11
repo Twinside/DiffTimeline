@@ -22,6 +22,25 @@ var sub_focus = 'focused_diff';
  */
 var global_focus = 'focused_commit';
 
+/**
+ * @type {function(jQuery) : void}
+ */
+function make_draggable_elems(node) {
+    $('.file_widget', node).draggable({ 
+        helper: 'clone',
+        appendTo: 'body',
+        start: function(event, ui) { $(this).css("z-index", 15); },
+        zIndex: 300,
+    });
+
+    $('.branch_widget', node).draggable({
+        appendTo: 'body',
+        zIndex: 300,
+        start: function(event, ui) { $(this).css("z-index", 15); },
+        helper: 'clone'
+    });
+}
+
 /////////////////////////////////////////////////////////////////////
 //              Initial state
 /////////////////////////////////////////////////////////////////////
@@ -1079,12 +1098,7 @@ var Commit = function(key, data) {
 
         } else {
             new_node = ich.tree_elem(elem);
-            $('.file_widget', new_node).draggable({ 
-                helper: 'clone',
-                appendTo: 'body',
-                start: function(event, ui) { $(this).css("z-index", 15); },
-                zIndex: 300,
-            });
+            make_draggable_elems( new_node );
             node.appendChild(new_node[0]);
         }
 
@@ -1147,17 +1161,6 @@ var Commit = function(key, data) {
             this.orig_node = ich.commit_compact(this);
         }
 
-        var this_obj = this;
-        var widgets = $("[class*='branch_widget']", this.orig_node)
-        widgets.draggable({
-            appendTo: 'body',
-            zIndex: 300,
-            start: function(event, ui) { $(this).css("z-index", 15); },
-            helper: function() {
-                return ich.branch_widget(this_obj);
-            }
-        });
-
         return this.orig_node;
     };
 
@@ -1177,6 +1180,8 @@ var Commit = function(key, data) {
             this.orig_node.append( new_node );
             this.diff_nodes.push( new_node );
         }
+
+        make_draggable_elems( this.orig_node );
     };
 
     this.render_compact = function() {
@@ -1438,6 +1443,8 @@ var FileBlob = function (data) {
             e.key = this.key;
             detail_node.append(ich.commit_file(e));
         }
+
+        make_draggable_elems(node);
     };
 
     this.toggle_detail_pane = function(node) {
@@ -1551,6 +1558,7 @@ var FileBlob = function (data) {
             $('.more_info', this.orig_node).html("&#x25bc");
         }
 
+        make_draggable_elems(this.orig_node);
         return this.orig_node;
     }
 
@@ -2017,13 +2025,10 @@ function fetch_branch_list() {
                 return;
             }
 
-            $('body').append(ich.branch_list({ref_list: data}));
-            $('.branch_list .branch_widget').draggable({
-                containment: '.branch_container',
-                helper: 'clone'
-            });
-
-            setup_banch_toggle();
+            var new_node = ich.branch_list({ref_list: data});
+            $('body').append(new_node);
+            make_draggable_elems(new_node);
+            setup_branch_toggle();
         }
     });
 }
@@ -2061,7 +2066,7 @@ function setup_global_drop()
     });
 }
 
-function setup_banch_toggle() {  
+function setup_branch_toggle() {  
     $('.branch_list .list').animate({width: 'toggle'}, 0);
 
     var is_opened = false;
