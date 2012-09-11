@@ -24,5 +24,5 @@ tests = test
     ]
 
 main :: IO ()
-main =  runTestTT tests >>= (putStrLn . show)
+main =  runTestTT tests >>= print
 

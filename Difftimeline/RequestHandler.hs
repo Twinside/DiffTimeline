@@ -158,8 +158,7 @@ getCommitListR count commitSha = withRepository extractor
 
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
-  app <- getYesod
-  let repository = getRepository app
+  repository <- getRepository <$> getYesod
   Just headRef <- liftIO $ getHead repository
   diffRez <- liftIO $ workingDirectoryChanges repository 3 headRef 
   return . RepPlain . toContent $ case diffRez of
@@ -176,9 +175,8 @@ renderJson = decodeUtf8 . BC.concat . LC.toChunks . encode . toJSON
 
 getInitialFile :: FilePath -> Handler RepPlain
 getInitialFile filename = do
-    app <- getYesod
-    let repository = getRepository app
-        splitedFilename = map BC.pack $ splitDirectories filename
+    repository <- getRepository <$> getYesod
+    let splitedFilename = map BC.pack $ splitDirectories filename
     answer <- liftIO $ basePage repository splitedFilename
     let rendered = case answer of
             Left err ->
@@ -208,8 +206,7 @@ getFileComparisonR key1 file1 key2 file2 = withRepository extractor
 
 getInitialBranch :: String -> String -> Handler RepPlain
 getInitialBranch b1 b2 = do
-  app <- getYesod
-  let repository = getRepository app
+  repository <- getRepository <$> getYesod
   diffRez <- liftIO $ compareBranches repository 3 b1 b2
   return . RepPlain . toContent $ case diffRez of
     Left err ->
@@ -222,8 +219,7 @@ getInitialBranch b1 b2 = do
 
 getInitialBlame :: String -> Handler RepPlain
 getInitialBlame file = do
-  app <- getYesod
-  let repository = getRepository app
+  repository <- getRepository <$> getYesod
   Just headRef <- liftIO $ getHead repository
   blameRez <- liftIO $ blameFile repository (show headRef) file
   return . RepPlain . toContent $ case blameRez of
@@ -247,5 +243,5 @@ getInitialInfoR = do
 getQuitR :: Handler RepJson
 getQuitR = do
     _ <- jsonToRepJson $ object ["ok" .= True]
-    liftIO $ exitSuccess
+    liftIO exitSuccess
 

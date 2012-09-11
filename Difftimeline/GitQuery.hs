@@ -36,19 +36,18 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
 
 import Prelude
 
-import Data.List( sortBy, foldl' )
+import Data.List( sortBy, foldl', find  )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
 import qualified Control.Exception as E
-import Control.Monad( forM, when )
+import Control.Monad( forM, when, void )
 import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
 import Control.Monad.IO.Class( liftIO )
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
-import Data.List( find )
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
@@ -103,7 +102,7 @@ data CommitTreeDiff = AddElement !T.Text !Ref
 
 joinBytePath :: [BC.ByteString] -> T.Text
 joinBytePath = foldl' (<//>) mempty
-    where (<//>) t n = t `mappend` T.pack "/" `mappend` (decodeUtf8 n)
+    where (<//>) t n = t `mappend` T.pack "/" `mappend` decodeUtf8 n
 
 flattenTreeDiff :: CommitTreeDiff -> [CommitTreeDiff]
 flattenTreeDiff = starter
@@ -128,7 +127,7 @@ filterCommitTreeDiff f = inner
     where inner a@(AddElement _ _) | f a = [a]
           inner a@(DelElement _ _) | f a = [a]
           inner a@(NeutralElement _ _) | f a = [a]
-          inner a@(ModifyElement _ _ _) | f a = [a]
+          inner a@(ModifyElement {}) | f a = [a]
           inner a@(TreeElement n r sub) | f a =
                 [TreeElement n r $ concatMap inner sub]
           inner _ = []
@@ -204,13 +203,13 @@ batchSubTree  repository f = aux
 
           aux name r (Blob _) = return $ f (T.pack name) r
           aux name r (Tree t) = TreeElement (T.pack name) r <$>
-            sequence [objAccess subRef >>= (aux (BC.unpack n) subRef)
+            sequence [objAccess subRef >>= aux (BC.unpack n) subRef
                                         | (_, n, subRef) <- t]
           aux _ _ _ = throwError "Wrong git object kind"
 
 compareBranches :: Git -> Int -> String -> String
                 -> IO (Either String CommitDetail)
-compareBranches repo contextSize b1 b2 = runErrorT $ do
+compareBranches repo contextSize b1 b2 = runErrorT $
     detailer <$> diffBranches repo contextSize b1 b2
   where detailer diff = CommitDetail
             { commitDetailMessage = T.pack $ "Comparing " ++ b1 ++ " and " ++ b2
@@ -253,11 +252,11 @@ brancheslist repo = do
           branchesName <- E.catch (getRemoteBranchNames repo remote)
                                   (\(_ :: IOError) -> pure [])
 
-          branches <- concat <$> (E.catch (mapM (fetchRemoteBranch remote) branchesName)
-                                          (\(_ :: IOError) -> pure []))
-          pure $ RemoteBranches { remoteName = T.pack remote
-                                , remoteBranches = branches 
-                                })
+          branches <- concat <$> E.catch (mapM (fetchRemoteBranch remote) branchesName)
+                                          (\(_ :: IOError) -> pure [])
+          pure RemoteBranches { remoteName = T.pack remote
+                              , remoteBranches = branches 
+                              })
     tagInfo <- getTagNames repo >>= mapM fetchTag
     let localBranch = RemoteBranches {
         remoteName = "local",
@@ -300,7 +299,7 @@ workingDirectoryChanges repository contextSize ref = do
    detailer time <$> diffWorkingDirectory repository contextSize ref
     where detailer _ (Left err) = Left err
           detailer time (Right (_, diff)) =
-            Right $ CommitDetail {
+            Right CommitDetail {
                   commitDetailMessage = "Working directory"
                 , commitDetailParents = [ref]
                 , commitDetailKey     = nullRef
@@ -462,9 +461,9 @@ filterCommitModifications = filter isModification
     where isModification (AddElement _ _) = True
           isModification (DelElement _ _) = True
           isModification (NeutralElement _ _) = False
-          isModification (ModifyElement _ _ _) = True
+          isModification (ModifyElement {}) = True
           isModification (ModifyBinaryElement _ _)= True
-          isModification (TreeElement _ _ _) = False
+          isModification (TreeElement {}) = False
 
 -- | For a given commit, compute the diff with it's first parent.
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
@@ -492,18 +491,19 @@ findFirstCommit :: Git              -- ^ Repository
                 -> Ref              -- ^ Ref of the element in the path
                 -> Ref              -- ^ First commit ref
                 -> ErrorT String IO (CommitInfo, Ref, [CommitPath])
-findFirstCommit repository path currentFileRef firstCommit = inner undefined undefined firstCommit
-    where inner prevCommit prevRef currentCommit = do
+findFirstCommit repository path currentFileRef = inner undefined undefined
+    where inner prevCommit prevRef currentCommit =
             catchError (do
                 (info, commitFileRef) <- fetchFileRefInCommit repository currentCommit path
                 if commitFileRef /= currentFileRef
                     then return (prevCommit, prevRef, [])
                     else do
-                        (obj, r, commitPathRest) <- inner info currentCommit $ commitParents info !! 0
+                        (obj, r, commitPathRest) <- inner info currentCommit 
+                                                  . head $ commitParents info
                         let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
-                                pathParentRef = (commitParents info) !! 0,
+                                pathParentRef = head $ commitParents info,
                                 pathMessage = decodeUtf8 $ commitMessage info,
                                 pathAuthor = decodeUtf8 $ authorName author,
                                 pathTimestamp = authorTimestamp author,
@@ -512,7 +512,7 @@ findFirstCommit repository path currentFileRef firstCommit = inner undefined und
                             (\_ -> return (prevCommit, prevRef, []))
 
 accessObject :: Git -> Ref -> IO (Maybe GitObject)
-accessObject g r = findObject g r
+accessObject = findObject
 
 -- | Given a Tree object, try to find a path in it.
 -- This function should not call error
@@ -584,7 +584,7 @@ compareFiles repo commitKey1 file1 commitKey2 file2 = runErrorT $ do
         }
 
 findParentFile :: Git -> String -> FilePath -> IO (Either String ParentFile)
-findParentFile repository commitStrSha path = runErrorT $ inner
+findParentFile repository commitStrSha path = runErrorT inner
   where currentCommit = fromHexString commitStrSha
         bytePath = map BC.pack $ splitDirectories path
 
@@ -604,7 +604,7 @@ findParentFile repository commitStrSha path = runErrorT $ inner
                 author = commitAuthor firstNfo
                 isBinary = detectBinary nextFile
 
-            return $ ParentFile
+            return ParentFile
                 { fileData = if isBinary then "" else T.filter (/= '\r') nextData
                 , fileDataIsBinary = isBinary
                 , fileName = T.pack path
@@ -713,7 +713,7 @@ blameFile repository commitStrSha path = runErrorT finalData
 
         aux []            _       _ _ = return ()
         aux ranges backData backRef [] =
-            blameInitialStep backRef (V.length backData) ranges >> return ()
+            void $ blameInitialStep backRef (V.length backData) ranges
 
         aux ranges backData backRef (firstParentRef:_) = do
             Commit commit <- fetchCommit firstParentRef
@@ -764,7 +764,7 @@ basePage repository path = runErrorT $ do
         thisData = decodeUtf8 $ toStrict content
         isBinary = detectBinary content
 
-    return $ ParentFile {
+    return ParentFile {
         commitRef = headRef,
         fileRef = foundFileRef,
         fileName = joinBytePath path,

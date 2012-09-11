@@ -24,9 +24,8 @@ module Difftimeline.Diff( -- * Types
 
 import Prelude
 import Data.Monoid( mappend )
-import Control.Applicative( (<$>), (<*>), pure )
+import Control.Applicative( Applicative, (<$>), (<*>), pure )
 import Control.Monad.ST( ST, runST )
-import Control.Applicative( Applicative )
 import Control.Monad.Trans.Writer.Strict( WriterT )
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -219,7 +218,7 @@ computeTextScript contextSize orig dest = map extract
           addNeutral = addContextInformation contextSize (V.length origArray)
                                                          (V.length destArray)
 
-          slicer idx size array = V.slice idx size array
+          slicer = V.slice
 
           extract c@(DiffCommand DiffAddition _oi  di s)   = (c, slicer di s destArray)
           extract c@(DiffRefined DiffAddition _oi  di s _) = (c, slicer di s destArray)
@@ -284,15 +283,15 @@ computeDiffRaw orig dest = compactCommands $ runST $ do
 increaseWithin :: (Index, Index) -> (Index, Index) -> MU.STVector s Index -> Index -> Index
                -> ST s (Index, Index)
 increaseWithin (mi, ma) (mini, maxi) vec bias nullVal = do
-    let (.<-.) v idx val = MU.write v (idx + bias) val
+    let v .<-. idx = MU.write v (idx + bias)
     newMin <- if mi > mini
                 then do
-                    (vec .<-. (mi - 2)) $ nullVal
+                    (vec .<-. (mi - 2)) nullVal
                     return $ mi - 1
                 else return $ mi + 1
     newMax <- if ma < maxi
                 then do
-                    (vec .<-. (ma + 2)) $ nullVal
+                    (vec .<-. (ma + 2)) nullVal
                     return $ ma + 1
                 else return $ ma - 1
 
@@ -329,15 +328,15 @@ findMiddleSnake ctxt xMin xMax yMin yMax = do
         backwardMid = xMax - yMax
 
         bias = arrayBias ctxt
-        (.<-.) v idx val = MU.write v (idx + bias) val
-        (.!!!.) v idx = MU.read v (idx + bias)
+        v .<-. idx = MU.write v (idx + bias)
+        v .!!!. idx = MU.read v (idx + bias)
 
         validDiagonal = (xMin - yMax, xMax - yMin)
 
         isOdd = odd $ forwardMid - backwardMid
 
-    ((forwardSnake  ctxt) .<-.  forwardMid) $ xMin
-    ((backwardSnake ctxt) .<-. backwardMid) $ xMax
+    (forwardSnake  ctxt .<-.  forwardMid) xMin
+    (backwardSnake ctxt .<-. backwardMid) xMax
 
     -- The forwardPass and backwardPass simulate an infinite loop with
     -- a return statement via mutual recursion.

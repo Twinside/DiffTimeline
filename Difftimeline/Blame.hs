@@ -32,7 +32,7 @@ createBlameRangeForSize :: Int -> [BlameRange]
 createBlameRangeForSize size = [BlameRange 0 size 0]
 
 offsetListBy :: Int -> [BlameRange] -> [BlameRange]
-offsetListBy shift lst = map (flip offsetBy shift) lst
+offsetListBy shift = map (`offsetBy` shift)
 
 offsetBy :: BlameRange -> Int -> BlameRange
 offsetBy (BlameRange bStart bSize bOffset) shift =
@@ -62,7 +62,7 @@ shiftDeletions remRanges blames = aux 0 blames remRanges
         -- rem before range
         --            #######
         -- #######
-        aux shift ranges@((BlameRange bStart _ _):_) ((remBeg, remSize) : remRest)
+        aux shift ranges@(BlameRange bStart _ _ : _) ((remBeg, remSize) : remRest)
           | remBeg <= bStart - shift = aux (shift - remSize) ranges remRest
 
         aux shift (blameElem@(BlameRange bStart bSize _):blameRest) rems@((remBeg, _) : _)
@@ -98,7 +98,7 @@ cutAddedLines :: ( Monoid (container (BlameRangeSource tag))
 cutAddedLines tag addRanges blameRanges = aux 0 blameRanges addRanges
   where aux     _   []  _ = pure []
         aux shift rest [] = pure $ shift `offsetListBy` rest
-        aux shift ((BlameRange _ 0 _):rangeRest) adds = aux shift rangeRest adds
+        aux shift (BlameRange _ 0 _ : rangeRest) adds = aux shift rangeRest adds
         aux shift           ranges ((_, 0) : addRest) = aux shift ranges addRest
         aux shift
             ranges@(blameElem@(BlameRange bStart bSize bOffset):rangeRest)

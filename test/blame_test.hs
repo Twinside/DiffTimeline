@@ -225,5 +225,5 @@ parseTest =
     ]
 
 main :: IO ()
-main =  runTestTT (test $ remTests ++ parseTest ++ addTests) >>= (putStrLn . show)
+main =  runTestTT (test $ remTests ++ parseTest ++ addTests) >>= print
 

@@ -19,7 +19,7 @@ import Network.Socket( socket
                      )
 
 import System.Environment( getArgs )
-import System.Exit( exitWith, ExitCode( ExitSuccess ) )
+import System.Exit( exitSuccess )
 import System.Console.GetOpt( OptDescr( Option )
                             , ArgDescr( ReqArg, NoArg )
                             , ArgOrder( Permute )
@@ -120,7 +120,7 @@ main = do
 
     when (confShowHelp conf)
          (do putStrLn $ usageInfo helpText options
-             exitWith ExitSuccess)
+             exitSuccess)
 
     usePort <- case confPort conf of
         Nothing -> findNextPort

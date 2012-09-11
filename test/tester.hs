@@ -44,7 +44,7 @@ main = do
     {-diffRez <- workingDirectoryChanges repo 3 headRef -}
     {-putStrLn $ show branches-}
     nfo <- compareBranches repo 3 "1896b4e2601c0c857ac19b07673029bbb6c69f93" "f467ceb8b3a0bf85427636e63903ac81e3dc3de5"
-    putStrLn $ show nfo
+    print nfo
 
     {-Right rez <- blameFile repo (show headRef) "test/blame_test.hs"-}
 

@@ -18,12 +18,12 @@ data ErrorReturn = ErrorReturn
     }
 
 treeDiffToKind :: CommitTreeDiff -> T.Text
-treeDiffToKind (TreeElement _ _ _) = "neutral"
+treeDiffToKind (TreeElement {}) = "neutral"
 treeDiffToKind (NeutralElement _ _) = "neutral"
 treeDiffToKind (AddElement _ _ ) = "addition"
 treeDiffToKind (DelElement _ _) = "deletion"
 treeDiffToKind (ModifyBinaryElement _ _) = "modification"
-treeDiffToKind (ModifyElement _ _ _) = "modification"
+treeDiffToKind (ModifyElement {}) = "modification"
 
 treeDiffToName :: CommitTreeDiff -> T.Text
 treeDiffToName (TreeElement n _ _) = n

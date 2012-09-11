@@ -18,6 +18,9 @@ conf:
 all:
 	yesod --dev devel
 
+hlint:
+	hlint .
+
 # Do not use the normal folder version, sdist doesn't work
 # on windows, instead, prepare a tiny tar gz and install
 # it manually

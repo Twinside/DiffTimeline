@@ -1,16 +1,13 @@
 module Difftimeline.Import
-    ( module Prelude
-    , module Difftimeline.Foundation
-    , (<>)
+    ( (<>)
     , Text
-    , module Data.Monoid
-    , module Control.Applicative
+    , module X
     ) where
 
-import Prelude hiding (writeFile, readFile)
-import Difftimeline.Foundation
-import Data.Monoid (Monoid (mappend, mempty, mconcat))
-import Control.Applicative ((<$>), (<*>), pure)
+import Prelude as X hiding (writeFile, readFile)
+import Difftimeline.Foundation as X
+import Data.Monoid as X (Monoid (mappend, mempty, mconcat))
+import Control.Applicative as X ((<$>), (<*>), pure)
 import Data.Text (Text)
 
 infixr 5 <>
