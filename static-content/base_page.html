@@ -239,25 +239,22 @@
             <div class="branch_diff_content">
             </div>
         </script>
-        <script id="branch_comparer" type="text/html">
+        <script id="branch_list" type="text/html">
             <div class="branch_list">
-                {{#ref_list}}
-                    <h4>{{name}} branches</h4>
-                    {{#branches}}
-                    <div class="branch_switcher" onclick="Project.state.switch_commit('{{key}}')"
-                         alt="switch to branch view for branch {{name}}">=&gt;</div>
-                        <div class="branch_widget">
-                            {{name}}
-                        </div>
-                    {{/branches}}
-                {{/ref_list}}
-            </div>
-            <div class="branch_container">
-                <div class="dropzone_a">
-                </div>
-                <div class="dropzone_b">
-                </div>
-                <div class="branch_diff_content">
+                <div class="toggler"><div>&#x25bc; Branches</div></div>
+                <div class="list">
+                    {{#ref_list}}
+                        <h4>{{name}} branches</h4>
+                        {{#branches}}
+                            <div>
+                                <div class="branch_switcher" onclick="Project.state.switch_commit('{{key}}')"
+                                    alt="switch to branch view for branch {{name}}">=&gt;</div>
+                                <div class="branch_widget">
+                                    {{name}}
+                                </div>
+                            </div>
+                        {{/branches}}
+                    {{/ref_list}}
                 </div>
             </div>
         </script>

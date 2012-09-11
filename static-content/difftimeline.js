@@ -263,14 +263,6 @@ Project.state = (function () {
             breadcrumb.append_breadcrumb(file);
         },
 
-        switch_branch_comp: function( b1, b2 ) {
-            this.clear_display();
-            var new_state = BranchComparer.create_from_args(b1, b2);
-            states.push( new_state );
-            show_hide_toolbar_elements(new_state.gui_descr);
-            breadcrumb.append_breadcrumb('Compare');
-        },
-
         switch_commit_comp: function( b1, b2 ) {
             this.clear_display();
             var new_state = CommitComparer.create_from_args(b1, b2);
@@ -351,13 +343,6 @@ Project.state = (function () {
 
         chrome_scroll_offset: function() {
             return {top:-120, left:-120};
-        },
-
-        start_branch_comp: function() {
-            var new_state = BranchComparer.create();
-            states.push( new_state );
-            breadcrumb.append_breadcrumb('Branches');
-            show_hide_toolbar_elements(new_state.gui_descr);
         },
 
         start_blame: function(blame_obj) {
@@ -1893,136 +1878,6 @@ var FileComparer = (function() {
     };
 })();
 
-var BranchComparer = (function() {
-    "use strict";
-    var fetch_branch_list = function() {
-        var this_obj = this;
-
-        $.ajax({
-            url:'/branches_list', dataType: 'json',
-            data: {},
-            error: function() {
-                show_error({error: 'Communication error with server while fetching branches'}); },
-            success: function(data) {
-                if (data['error']) { 
-                    show_error( data );
-                    return;
-                }
-
-                this_obj.ref_list = data;
-                this_obj.create_all_dom();
-            }
-        });
-    }
-
-    var init = function() {
-        fetch_branch_list.call(this);
-    }
-
-    var init_methods = function() {
-
-        this.is_a_filled = false;
-        this.is_b_filled = false;
-
-        this.fetch_previous = function() {
-            show_error({error: 'Does not exists in this mode'});
-        };
-
-        this.render_all = function() {
-            /* nothing */
-        };
-
-        this.refresh_diff = function() {
-            if (!this.is_a_filled || !this.is_b_filled)
-                return;
-
-            var this_obj = this;
-
-            $.ajax({  
-                url:'/compare_branches/' + encodeURIComponent(this.branch_a)
-                                   + '/' + encodeURIComponent(this.branch_b),
-                dataType: 'json',
-                data: {},
-                error: function() {
-                    show_error({error: 'Communication error with server while comparing branches'}); },
-                success: function(data) {
-                    if (data['error']) { 
-                        show_error( data );
-                        return;
-                    }
-
-                    this_obj.last_comparison = new Commit(data.key, data);
-
-                    var content = $('.branch_diff_content');
-                    $('> *', content).remove();
-                    var new_node = this_obj.last_comparison.create_dom();
-                    new_node.addClass(global_focus);
-                    content.append(new_node);
-                    this_obj.last_comparison.render();
-                }
-            });
-        }
-
-        this.create_all_dom = function() {
-            var this_obj = this;
-
-            $('.container').append(ich.branch_comparer(this));
-            $('.container .branch_widget').draggable({
-                containment: '.branch_container',
-                helper: 'clone'
-            });
-
-            $('.container .dropzone_a').droppable( {
-                drop: function(evt, ui) {
-                    $(this).find('.branch_widget').remove();
-                    $(this).append($(ui.draggable).clone());
-                    this_obj.is_a_filled = true;
-                    this_obj.branch_a = $('.dropzone_a > .branch_widget').text().replace(/^\s+|\s+$/g, '');
-                    this_obj.refresh_diff();
-                }
-            });
-
-            $('.container .dropzone_b').droppable( {
-                drop: function(evt, ui) {
-                    $(this).find('.branch_widget').remove();
-                    $(this).append($(ui.draggable).clone());
-                    this_obj.is_b_filled = true;
-                    this_obj.branch_b = $('.dropzone_b > .branch_widget').text().replace(/^\s+|\s+$/g, '');
-                    this_obj.refresh_diff();
-                }
-            });
-        };
-
-        this.send_message = function( msg ) {
-            if (this.last_comparison)
-                this.last_comparison.send_message(msg);
-        };
-
-        this.gui_descr = { compact_view: false, fetch_previous: false
-                         , context_size: false, syntax_toggle: false };
-    }
-
-    return {
-        create: function() {
-            var created = new init_methods();
-            init.call(created);
-            return created;
-        },
-
-        create_from_args: function(b1, b2) {
-            var created = new init_methods();
-            init.call(created);
-            created.is_a_filled = true;
-            created.is_b_filled = true;
-            created.branch_a = b1;
-            created.branch_b = b2;
-            created.refresh_diff();
-
-            return created;
-        }
-    };
-})();
-
 var BlameShower = (function() {
     "use strict";
 
@@ -2150,6 +2005,29 @@ var BlameShower = (function() {
     };
 })();
 
+function fetch_branch_list() {
+    $.ajax({
+        url:'/branches_list', dataType: 'json',
+        data: {},
+        error: function() {
+            show_error({error: 'Communication error with server while fetching branches'}); },
+        success: function(data) {
+            if (data['error']) { 
+                show_error( data );
+                return;
+            }
+
+            $('body').append(ich.branch_list({ref_list: data}));
+            $('.branch_list .branch_widget').draggable({
+                containment: '.branch_container',
+                helper: 'clone'
+            });
+
+            setup_banch_toggle();
+        }
+    });
+}
+
 function show_error( data )
 {
     $('.message_carret').html( data.error )
@@ -2181,12 +2059,29 @@ function setup_global_drop()
             Project.state.check_comparison(zone_a, zone_b);
         }
     });
+}
 
+function setup_banch_toggle() {  
+    $('.branch_list .list').animate({width: 'toggle'}, 0);
+
+    var is_opened = false;
+
+    $('.branch_list .toggler').click( function( event ){
+        $('.branch_list .list').animate({width: 'toggle'}, 100);
+        if (is_opened) {
+            $('.branch_list .toggler div').html('&#x25bc; Branches');
+        } else {
+            $('.branch_list .toggler div').html('&#x25b2 Branches');
+        }
+
+        is_opened = !is_opened;
+    })
 }
 
 ich.grabTemplates();
 
 $(document).ready(function() {
+    fetch_branch_list();
     setup_global_drop();
 });
 
