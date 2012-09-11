@@ -69,7 +69,6 @@ options =
 commandOfRest :: [String] -> Command
 commandOfRest [] = DiffWorking
 commandOfRest ("compare":c1:c2:_) = DiffCompare c1 c2
-commandOfRest ("compare":_) = DiffCompare "" ""
 commandOfRest ("blame":f:_) = DiffBlame f
 commandOfRest (a:_) = DiffFile a
 
@@ -103,6 +102,7 @@ helpText =
     "usage: difftimeline [options] [file]\n" ++
     "       difftimeline [options] [folder]\n" ++
     "       difftimeline [options] compare branch1 branch2\n" ++
+    "       difftimeline [otpions] blame file\n" ++
     "\n" ++
     "Without argument, difftimeline will start diff from the current\n" ++
     "directory to HEAD.\n" ++

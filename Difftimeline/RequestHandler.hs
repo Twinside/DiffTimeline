@@ -1,5 +1,38 @@
 {-# LANGUAGE OverlappingInstances #-}
-module Difftimeline.RequestHandler where
+module Difftimeline.RequestHandler( getRootR
+                                  , getQuitR
+
+                                  -- * Dynamic JSON
+                                  , getInitialInfoR
+                                  , getFileComparisonR
+                                  , getBranchComparisonR
+                                  , getBranchesR
+                                  , getCommitListR
+                                  , getJSONExternR
+                                  , getCommitTreeR
+                                  , getCommitR
+                                  , getCommitOverviewR
+                                  , getFileParentR
+                                  , getBlameR
+                                  , getBlameFromRoot
+
+                                  -- * Static files
+
+                                  -- ** Scripts
+                                  , getICanHaz_min
+                                  , getDifftimelineJs
+                                  , getFavicon
+                                  , getJquery
+                                  , getJqueryUI
+                                  , getTinysyntaxhighlighter
+                                  , getJqueryHotKeys
+                                  , getJqueryScrollTo
+
+                                  -- ** CSS
+                                  , getDifftimelineCss
+                                  , getSyntax_highlight
+                                  , getScreen
+                                  ) where
 
 import Difftimeline.Import
 import qualified Data.ByteString as B
@@ -123,16 +156,6 @@ getCommitListR count commitSha = withRepository extractor
     where extractor repository =
               commitList repository count $ fromHexString commitSha 
 
-javascriptize :: T.Text -> T.Text
-javascriptize = T.replace quo quoRep
-              . T.replace nl nlRep
-              . T.replace bs bsRep
-              . T.replace cr crRep
-    where (cr, crRep) = (T.pack "\r",  T.pack "\\r")
-          (nl, nlRep) = (T.pack "\n",  T.pack "\\n")
-          (bs, bsRep) = (T.pack "\\",  T.pack "\\\\")
-          (quo, quoRep) = (T.pack "\"",  T.pack "\\\"")
-
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   app <- getYesod
@@ -173,10 +196,6 @@ getInitialFile filename = do
 getBranchesR :: Handler RepJson
 getBranchesR = withRepository extractor
   where extractor repo = Right <$> brancheslist repo
-
-getBranchComparer :: Handler RepPlain
-getBranchComparer = return . RepPlain . toContent . renderJavascript $
-    [julius| Project.state.start_branch_comp(); |] ("" :: Text)
 
 getBranchComparisonR :: String -> String -> Handler RepJson
 getBranchComparisonR b1 b2 = withRepository extractor
@@ -223,7 +242,6 @@ getInitialInfoR = do
         DiffWorking -> getInitialCommit
         DiffFile fname -> getInitialFile fname
         DiffBlame fname -> getInitialBlame fname
-        DiffCompare "" "" -> getBranchComparer
         DiffCompare b1 b2 -> getInitialBranch b1 b2
 
 getQuitR :: Handler RepJson
