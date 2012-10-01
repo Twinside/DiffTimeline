@@ -458,6 +458,7 @@ pre
     filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#686868', endColorstr='#8c8c8c',GradientType=0 ); /* IE6-9 */
 }
 
+.file_modification .blame_button,
 .tree_neutral .blame_button,
 .tree_modification .blame_button,
 .tree_addition .blame_button,
@@ -465,6 +466,7 @@ pre
     visibility: hidden;
 }
 
+.file_modification:hover .blame_button,
 .tree_neutral:hover .blame_button,
 .tree_modification:hover .blame_button {
     visibility: visible;

@@ -34,6 +34,10 @@
                     <span class="path">{{name}}</span>
                     <span class="key">{{key}}</span>
                 </span>
+                {{^binary}}
+                    <span onclick="Project.state.switch_blame('{{key}}', '{{name}}')"
+                          class="blame_button">Blame</span>
+                {{/binary}}
                 <div>
                     {{#binary}}Binary file modification{{/binary}}
                     {{>file_table}}
@@ -197,6 +201,8 @@
                         <span class="time">{{commit_date}}</span><hr />
                         <h4 title="{{message}}">{{short_message}}</h4>
                     </div>
+                    <span onclick="Project.state.switch_blame('{{key}}', '{{file}}')"
+                        class="blame_button">Blame</span>
 
                     <div class="commit_list">
                         {{#path}} {{>commitcircle}} {{/path}}
