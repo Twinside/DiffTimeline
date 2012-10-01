@@ -157,7 +157,7 @@ var blame_gradient = {
 
 var color_lerp = function ( c1, c2, v ) {
     var lerp = function( v1, v2 ) {
-        return v2 * v + v1 * (1 - v);
+        return Math.floor(v2 * v + v1 * (1 - v));
     };
 
     return ('rgb(' + lerp(c1.r, c2.r) + ', '
@@ -455,7 +455,7 @@ var DiffManipulator = (function () {
     var append_all = function(n, lst) {
         var maxi = lst.length;
 
-        for (var i = 0; i < maxi; i++) {
+       for (var i = 0; i < maxi; i++) {
             n.appendChild(lst[i]);
         }
 
@@ -1965,9 +1965,14 @@ var BlameShower = (function() {
             for (var i = 0; i < ranges.length; i++) {
                 var range = ranges[i];
                 var zeroToOne = (range.tag.timestamp - this.data.earliest) / date_interval;
+                var newColor = color_lerp(blame_gradient.beg, blame_gradient.end, zeroToOne);
 
-                $(nodes[i]).css('background-color',
-                                color_lerp(blame_gradient.beg, blame_gradient.end, zeroToOne));
+                $(nodes[i]).css('background-color', newColor);
+                $(nodes[i]).hover(function() {
+                    $(this).addClass('blame_hover');
+                }, function() {
+                    $(this).removeClass('blame_hover');
+                });
             }
         }
 
