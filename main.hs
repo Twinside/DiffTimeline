@@ -1,6 +1,5 @@
 import Prelude
 
-import Control.Applicative( (<$>) )
 import Control.Monad( when )
 import Data.List( foldl' )
 import Difftimeline.Application( getApplication, Command( .. )  )
@@ -39,6 +38,7 @@ version = "1.0"
 -- | Type representing flag present on the command line
 data Flag = Port String
           | Help
+          | Quiet
           | Dev String
           deriving Eq
 
@@ -48,6 +48,7 @@ data Conf = Conf
     , confPort     :: Maybe Int
     , confCommand  :: Command
     , confDevMode  :: Maybe FilePath
+    , confVerbose  :: !Bool
     }
 
 -- | Initial and default configuration
@@ -57,6 +58,7 @@ defaultConf = Conf
     , confPort     = Nothing
     , confCommand  = DiffWorking
     , confDevMode  = Nothing
+    , confVerbose  = True
     }
 
 -- | Command line description
@@ -66,6 +68,7 @@ options =
                 "Server port number (random by default)"
     , Option "" ["help"] (NoArg Help) "Show help (this screen)"
     , Option "d" ["dev"] (ReqArg Dev "Path") "Enable dev mode (load static file from current dir)"
+    , Option "q" ["quiet"] (NoArg Quiet) "Hide request received by the Difftimeline server"
     ]
 
 commandOfRest :: [String] -> Command
@@ -84,6 +87,7 @@ parseArgs = do
      where configurator c Help = c{ confShowHelp = True }
            configurator c (Dev p) = c{ confDevMode = Just p }
            configurator c (Port n) = c { confPort = Just $ read n }
+           configurator c Quiet = c { confVerbose = False }
 
 -- | Ugly workaround to find a free port :
 -- create a socket with any port as configuration and retrieve
@@ -136,7 +140,10 @@ main = do
             appExtra = ()
       }
 
-    app <- logStdoutDev
-         <$> getApplication (confDevMode conf) (confCommand conf) config
-    runUrlPort usePort "" app
+    app <- getApplication (confDevMode conf) (confCommand conf) config
+    let finalApp 
+            | confVerbose conf = logStdoutDev app
+            | otherwise = app
+
+    runUrlPort usePort "" finalApp
 
