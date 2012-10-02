@@ -4,7 +4,6 @@ module Difftimeline.Application( getApplication, Command( .. ) ) where
 import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist )
 import Network.Wai( Application )
-{-import System.Log.FastLogger( Logger, toLogStr, loggerPutStr )-}
 import Yesod.Default.Config( AppConfig, DefaultEnv )
 import Yesod.Default.Handlers (getFaviconR)
 

@@ -15,12 +15,7 @@ import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
 import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
-import System.IO( hFlush, stderr, stdout, hPutStrLn )
-import System.Log.FastLogger (Logger, mkLogger, loggerDate, LogStr (..), loggerPutStr, loggerFlush )
-{-import Yesod.Internal.Core( formatLogMessage )-}
 
-import qualified Data.ByteString.Lazy as B
-import Debug.Trace
 data Command = DiffCompare String String
              | DiffBlame String
              | DiffFile String

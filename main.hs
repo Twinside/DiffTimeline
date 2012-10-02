@@ -1,5 +1,6 @@
 import Prelude
 
+import Control.Applicative( (<$>) )
 import Control.Monad( when )
 import Data.List( foldl' )
 import Difftimeline.Application( getApplication, Command( .. )  )
@@ -27,6 +28,7 @@ import System.Console.GetOpt( OptDescr( Option )
                             , usageInfo
                             )
 
+import Network.Wai.Middleware.RequestLogger(logStdoutDev)
 import Yesod.Default.Config( AppConfig(..)
                            , DefaultEnv( Development )
                            )
@@ -134,6 +136,7 @@ main = do
             appExtra = ()
       }
 
-    app <- getApplication (confDevMode conf) (confCommand conf) config
+    app <- logStdoutDev
+         <$> getApplication (confDevMode conf) (confCommand conf) config
     runUrlPort usePort "" app
 
