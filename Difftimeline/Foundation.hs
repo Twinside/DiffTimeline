@@ -15,7 +15,12 @@ import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
 import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
+import System.IO( hFlush, stderr, stdout, hPutStrLn )
+import System.Log.FastLogger (Logger, mkLogger, loggerDate, LogStr (..), loggerPutStr, loggerFlush )
+{-import Yesod.Internal.Core( formatLogMessage )-}
 
+import qualified Data.ByteString.Lazy as B
+import Debug.Trace
 data Command = DiffCompare String String
              | DiffBlame String
              | DiffFile String
@@ -64,7 +69,7 @@ instance Yesod DiffTimeline where
 
     defaultLayout _ = return . RepHtml $ toContent ("" :: String)
 
-    logLevel _ = LevelDebug
+    shouldLog _ _ _ = True
 
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticroot setting in Settings.hs
@@ -72,6 +77,5 @@ instance Yesod DiffTimeline where
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
-
     makeSessionBackend _ = return Nothing
 

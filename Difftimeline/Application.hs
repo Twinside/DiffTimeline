@@ -5,7 +5,7 @@ import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist )
 import Network.Wai( Application )
 {-import System.Log.FastLogger( Logger, toLogStr, loggerPutStr )-}
-import Yesod.Default.Config
+import Yesod.Default.Config( AppConfig, DefaultEnv )
 import Yesod.Default.Handlers (getFaviconR)
 
 import System.FilePath( (</>), makeRelative, takeDirectory,

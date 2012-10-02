@@ -39,7 +39,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
-import Text.Julius( julius, renderJavascript )
+import Text.Julius( julius, renderJavascriptUrl, JavascriptUrl  )
 
 import Yesod.Json( jsonToRepJson )
 import System.Directory( doesFileExist )
@@ -49,7 +49,7 @@ import Data.Git( Git, getHead, fromHexString )
 import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 
 import Text.Language.Closure( renderClosureEnvironment )
-
+import qualified Data.Text.Lazy.Internal as TLI
 import Difftimeline.Externs
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
@@ -156,6 +156,9 @@ getCommitListR count commitSha = withRepository extractor
     where extractor repository =
               commitList repository count $ fromHexString commitSha 
 
+renderJs :: JavascriptUrl url -> TLI.Text
+renderJs = renderJavascriptUrl (\_ _ -> undefined)
+
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   repository <- getRepository <$> getYesod
@@ -163,12 +166,12 @@ getInitialCommit = do
   diffRez <- liftIO $ workingDirectoryChanges repository 3 headRef 
   return . RepPlain . toContent $ case diffRez of
     Left err ->
-        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+        renderJs [julius| alert("Error #{err}"); |]
 
     Right rez ->
-        renderJavascript $ [julius|
+        renderJs [julius|
             var first_state = #{renderJson rez};
-            Project.state.start_commit( first_state ); |] ("" :: Text)
+            Project.state.start_commit( first_state ); |]
 
 renderJson :: (ToJSON a) => a -> T.Text
 renderJson = decodeUtf8 . BC.concat . LC.toChunks . encode . toJSON
@@ -180,13 +183,13 @@ getInitialFile filename = do
     answer <- liftIO $ basePage repository splitedFilename
     let rendered = case answer of
             Left err ->
-                renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+                renderJs [julius| alert("Error #{err}"); |]
 
             Right initialAnswer ->
             	let renderedAnswer = renderJson initialAnswer
-				in renderJavascript $ [julius|
+				in renderJs [julius|
                         var first_state = #{renderedAnswer};
-                        Project.state.start_file( first_state ); |] ("" :: Text)
+                        Project.state.start_file( first_state ); |]
 
     return . RepPlain $ toContent rendered
 
@@ -210,12 +213,12 @@ getInitialBranch b1 b2 = do
   diffRez <- liftIO $ compareBranches repository 3 b1 b2
   return . RepPlain . toContent $ case diffRez of
     Left err ->
-        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+        renderJs [julius| alert("Error #{err}"); |]
 
     Right rez ->
-        renderJavascript $ [julius|
+        renderJs [julius|
             var first_state = #{renderJson rez};
-            Project.state.start_commit( first_state ); |] ("" :: Text)
+            Project.state.start_commit( first_state ); |]
 
 getInitialBlame :: String -> Handler RepPlain
 getInitialBlame file = do
@@ -224,12 +227,12 @@ getInitialBlame file = do
   blameRez <- liftIO $ blameFile repository (show headRef) file
   return . RepPlain . toContent $ case blameRez of
     Left err ->
-        renderJavascript $ [julius| alert("Error #{err}"); |] ("" :: Text)
+        renderJs [julius| alert("Error #{err}"); |]
 
     Right rez ->
-        renderJavascript $ [julius|
+        renderJs [julius|
             var first_state = #{renderJson rez};
-            Project.state.start_blame( first_state ); |] ("" :: Text)
+            Project.state.start_blame( first_state ); |]
 
 getInitialInfoR :: Handler RepPlain
 getInitialInfoR = do
