@@ -385,7 +385,6 @@ pre
 .tree_node {
     position:        relative;
     margin-left:     15px;
-    cursor:          pointer;
 
     font-size: 14px;
     font-weight: bold;
@@ -398,6 +397,7 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
+    cursor:          pointer;
 }
 
 .tree_neutral {
