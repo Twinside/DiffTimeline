@@ -862,6 +862,45 @@ var TinySyntaxHighlighter = (function () {
     }
 
     /** @type {LangDef} */
+    var ocamlDef = {
+        begin:null_region, end:null_region,
+
+        regions: [make_region_recursive({ begin:tok_region("(*")
+                                        , end:tok_region("*)"), kind:"syntax_comment"
+                                        , regions:[], parsers:[], keywords:[] })],
+
+        parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.double_quote_string
+                , generic_parsers.integer
+                , rexp_parser('syntax_constant', /[A-Z][A-Za-z0-9_]+/)
+                ],
+
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ['if', 'then', 'else'] }
+            , { kind:'syntax_structure', words:['module', 'sig'] }
+            , { kind:'syntax_repeat', words:['downto', 'to', 'for'] }
+            , { kind:'syntax_preproc', words:['import'] }
+            , { kind:'syntax_keyword', words:['and', 'as', 'assert', 'class', 'constraint'
+                                             ,'exception', 'external', 'fun', 'in'
+                                             ,'inherit', 'initializer', 'land', 'lazy'
+                                             ,'let', 'match', 'method', 'mutable', 'new'
+                                             ,'of', 'parser', 'private', 'raise', 'rec', 'end'
+                                             ,'done', 'open'
+                                             ,'try', 'type', 'virtual', 'when', 'while', 'with'] }
+            , { kind:'syntax_typedef', words: ['type'] }
+            , { kind:'syntax_bool'     , words:["True", "False"] }
+            , { kind:'syntax_operator', words:['asr', 'lnot', 'lor', 'lsl', 'lsr'
+                                              ,'lxor', 'mod', 'not'] }
+
+            , { kind:'syntax_type'
+              , words:['array', 'bool', 'char', 'exn', 'float',
+                       'format', 'format4', 'int', 'int32', 'int64',
+                       'lazy_t', 'list', 'nativeint', 'option',
+                       'string', 'unit']}
+
+            ])
+    };
+    /** @type {LangDef} */
     var haskellDef = {
         begin:null_region, end:null_region,
 
@@ -1070,6 +1109,8 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.h$/       , cppDef),
         assoc(/\.hpp$/     , cppDef),
         assoc(/\.php$/     , phpDef),
+        assoc(/\.ml$/      , ocamlDef),
+        assoc(/\.mli$/     , ocamlDef),
         assoc(/\.php3$/    , phpDef),
         assoc(/\.hs$/      , haskellDef),
         assoc(/\.css$/     , cssDef),
