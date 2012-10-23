@@ -39,6 +39,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
+import Control.Monad.Error( runErrorT )
 import Text.Julius( julius, renderJavascriptUrl, JavascriptUrl  )
 
 import Yesod.Json( jsonToRepJson )
@@ -53,6 +54,7 @@ import qualified Data.Text.Lazy.Internal as TLI
 import Difftimeline.Externs
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
+import Difftimeline.Diff( invertWay )
 
 -- import Yesod.Logger
 
@@ -163,7 +165,7 @@ getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   repository <- getRepository <$> getYesod
   Just headRef <- liftIO $ getHead repository
-  diffRez <- liftIO $ workingDirectoryChanges repository 3 headRef 
+  diffRez <- liftIO . runErrorT $ workingDirectoryChanges' repository 3 headRef 
   return . RepPlain . toContent $ case diffRez of
     Left err ->
         renderJs [julius| alert("Error #{err}"); |]
@@ -198,7 +200,24 @@ getBranchesR :: Handler RepJson
 getBranchesR = withRepository extractor
   where extractor repo = Right <$> brancheslist repo
 
+workingDirRequestToken :: String
+workingDirRequestToken = "__WORKING_DIR__"
+
 getBranchComparisonR :: String -> String -> Handler RepJson
+getBranchComparisonR b1 b2 
+    | b1 == b2 = withRepository (\_ -> return val)
+            where val :: Either String Int
+                  val = Left "Source is identical to destination"
+getBranchComparisonR b1 b2 
+    | b2 == workingDirRequestToken = withRepository extractor
+        where extractor repo = workingDirectoryChanges repo 3 b1
+getBranchComparisonR b1 b2 
+    | b1 == workingDirRequestToken = withRepository extractor
+        where inverter c =
+                c { commitDetailChanges = invertWay <$> commitDetailChanges c }
+              extractor repo = do
+                changes <- workingDirectoryChanges repo 3 b2
+                return $ inverter <$> changes
 getBranchComparisonR b1 b2 = withRepository extractor
   where extractor repo = compareBranches repo 3 b1 b2
 

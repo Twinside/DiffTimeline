@@ -16,7 +16,8 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , compareBranches
                             , compareFiles
                             , diffCommitTree
-                            , workingDirectoryChanges 
+                            , workingDirectoryChanges
+                            , workingDirectoryChanges'
                             , findFirstCommit
                             , findParentFile
                             , basePage
@@ -99,6 +100,17 @@ data CommitTreeDiff = AddElement !T.Text !Ref
                     | ModifyElement !T.Text !Ref ![(DiffCommand, V.Vector T.Text)]
                     | ModifyBinaryElement !T.Text !Ref
                     deriving (Eq, Show)
+
+instance Invertible CommitTreeDiff where
+    invertWay e@(NeutralElement _ _) = e
+    invertWay e@(ModifyBinaryElement _ _)  = e
+    invertWay (AddElement t r) = DelElement t r
+    invertWay (DelElement t r) = AddElement t r
+    invertWay (TreeElement t r sub) =
+        TreeElement t r $ invertWay <$> sub
+    invertWay (ModifyElement t r lst) =
+        ModifyElement t r $ invertDiff <$> lst
+          where invertDiff (d, v) = (invertWay d, v)
 
 joinBytePath :: [BC.ByteString] -> T.Text
 joinBytePath = foldl' (<//>) mempty
@@ -266,17 +278,9 @@ brancheslist repo = do
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
-    let fetchRef = liftIO . either (return . Left)
-                                   (\a -> Right <$> resolveRevision repo a) . revFromString
-    ref1 <- fetchRef branch1
-    ref2 <- fetchRef branch2
-    case (ref1, ref2) of
-      (Right Nothing,       _) -> throwError ("Error branch " ++ branch1 ++ " doesnt exist")
-      (Left txt,            _) -> throwError ("Error : " ++ txt)
-      (      _, Right Nothing) -> throwError ("Error branch " ++ branch2 ++ " doesnt exist")
-      (      _, Left      txt) -> throwError ("Error : " ++ txt)
-      (Right (Just b1Ref), Right (Just b2Ref)) ->
-            snd <$> createCommitDiff  repo contextSize True b1Ref b2Ref
+    ref1 <- revisionToRef repo branch1
+    ref2 <- revisionToRef repo branch2
+    snd <$> createCommitDiff  repo contextSize True ref1 ref2
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = runErrorT $ do
@@ -293,13 +297,28 @@ fetchDirectoryInfo name = do
         where kindOfExist True = KindFile
               kindOfExist False = KindDirectory
 
-workingDirectoryChanges  :: Git -> Int -> Ref -> IO (Either String CommitDetail)
-workingDirectoryChanges repository contextSize ref = do
-   time <- truncate <$> getPOSIXTime 
+revisionToRef :: Git -> String -> ErrorT String IO Ref
+revisionToRef repo r =
+    case revFromString r of
+      Left err -> throwError $ "Can't parse revision " ++ r ++ " " ++ err
+      Right rev -> do
+          rr <- liftIO $ resolveRevision repo rev
+          case rr of
+               Nothing -> throwError $ "Can't resolve revision" ++ r
+               Just f -> return f
+
+
+workingDirectoryChanges  :: Git -> Int -> String -> IO (Either String CommitDetail)
+workingDirectoryChanges repository contextSize ref = runErrorT $ do
+    resolved <- revisionToRef repository ref
+    workingDirectoryChanges' repository contextSize resolved
+
+workingDirectoryChanges'  :: Git -> Int -> Ref -> ErrorT String IO CommitDetail
+workingDirectoryChanges' repository contextSize ref = do
+   time <- lift $ truncate <$> getPOSIXTime 
    detailer time <$> diffWorkingDirectory repository contextSize ref
-    where detailer _ (Left err) = Left err
-          detailer time (Right (_, diff)) =
-            Right CommitDetail {
+    where detailer time (_, diff) =
+            CommitDetail {
                   commitDetailMessage = "Working directory"
                 , commitDetailParents = [ref]
                 , commitDetailKey     = nullRef
@@ -311,8 +330,9 @@ workingDirectoryChanges repository contextSize ref = do
                 }
 
 
-diffWorkingDirectory :: Git -> Int -> Ref -> IO (Either String (CommitInfo, CommitTreeDiff))
-diffWorkingDirectory repository contextSize ref = runErrorT $ do
+diffWorkingDirectory :: Git -> Int -> Ref
+                     -> ErrorT String IO (CommitInfo, CommitTreeDiff)
+diffWorkingDirectory repository contextSize ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     (,) thisCommit <$> inner (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 

@@ -2,11 +2,15 @@
 -- | Implement the LCS diff algorithm.
 -- As I already implemented it in another language, I'm
 -- being lazy and implement it in an imperative way.
-module Difftimeline.Diff( -- * Types
+module Difftimeline.Diff( 
+                        -- * Types
                           DiffAction( .. )
                         , DiffCommand( .. )
                         , SubModification( .. )
                         , Index
+
+                        -- * Typeclass
+                        , Invertible( .. )
 
                         -- * Blaming
                         , BlameRange
@@ -33,6 +37,10 @@ import qualified Data.Vector.Unboxed.Mutable as MU
 
 import Difftimeline.Blame
 
+-- | Class used to reverse diff orientation, can be used at a high level.
+class Invertible a where
+    invertWay :: a -> a
+
 type Index = Int
 
 -- | Represent the action to be taken for the diff
@@ -40,6 +48,11 @@ data DiffAction = DiffAddition  -- ^ Data which should be inserted
                 | DiffDeletion  -- ^ Data which should be removed
                 | DiffNeutral   -- ^ Only used to render context
                 deriving (Eq, Show)
+
+instance Invertible DiffAction where
+    invertWay DiffAddition = DiffDeletion
+    invertWay DiffDeletion = DiffAddition
+    invertWay DiffNeutral = DiffNeutral
 
 -- | Basic modification on a line, used for refined highlighting.
 data SubModification = SubModification {-# UNPACK #-}!Int  -- ^ Begin
@@ -54,6 +67,10 @@ data RawDiffCommand = DiffAdd {-# UNPACK #-}!Int         -- ^ Beginning index in
                               {-# UNPACK #-}!Int         -- ^ Size of the modification
                     deriving (Eq, Show)
 
+instance Invertible RawDiffCommand where
+    invertWay (DiffAdd ob od s) = DiffDel od ob s
+    invertWay (DiffDel ob od s) = DiffAdd od ob s
+
 -- | Hold computed information about the diff
 data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Beginning index in the original vector
@@ -65,6 +82,11 @@ data DiffCommand = DiffCommand !DiffAction  -- ^ Addition or deletion
                                {-# UNPACK #-}!Int         -- ^ Size of the modification
                                ![[SubModification]]       -- ^ Refined diff
                  deriving (Eq, Show)
+
+instance Invertible DiffCommand where
+    invertWay (DiffCommand act oi di s) = DiffCommand (invertWay act) di oi s
+    invertWay (DiffRefined act oi di s sub) =
+        DiffRefined (invertWay act) di oi s sub
 
 --------------------------------------------------
 ----            Diff

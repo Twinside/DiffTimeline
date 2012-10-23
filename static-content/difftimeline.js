@@ -14,6 +14,18 @@ var null_ref = "0000000000000000000000000000000000000000";
  * @const
  * @type {string}
  */
+var display_null_ref = 'Working directory';
+
+/**
+ * @const
+ * @type {string}
+ */
+var working_dir_request_token = '__WORKING_DIR__';
+
+/**
+ * @const
+ * @type {string}
+ */
 var sub_focus = 'focused_diff';
 
 /**
@@ -398,6 +410,13 @@ Project.state = (function () {
             if (commit_count == 2) {
                 var b1 = commit_a.text().replace(/^\s+|\s+$/g, '');
                 var b2 = commit_b.text().replace(/^\s+|\s+$/g, '');
+
+                if (b1 == display_null_ref)
+                    b1 = working_dir_request_token;
+
+                if (b2 == display_null_ref)
+                    b2 = working_dir_request_token;
+
                 this.switch_commit_comp(b1, b2);
                 return;
             }
@@ -417,7 +436,13 @@ Project.state = (function () {
                 var file2 = $('.path', file_b).text();
                 var key1  = $('.key', file_a).text();
                 var key2  = $('.key', file_b).text();
+
+                if (key1 == display_null_ref)
+                    key1 = working_dir_request_token;
                 
+                if (key2 == display_null_ref)
+                    key2 = working_dir_request_token;
+
                 this.switch_file_comp(key1, file1, key2, file2);
                 return;
             }
@@ -882,7 +907,7 @@ var html_encodize = function(snipp) {
 var Commit = function(key, data) {
     "use strict";
 
-    this.key = key === null_ref ? 'Working directory' : key;
+    this.key = key === null_ref ? display_null_ref : key;
     this.is_key_real = key !== null_ref;
     this.commit_date = timestamp_to_string(data.timestamp);
     this.parents_sha = data.parents_sha;
