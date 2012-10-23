@@ -9,6 +9,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , BranchInfo( .. )
                             , RemoteBranches( .. )
                             , FileComparison( .. )
+                            , FileReference( .. )
 
                             , brancheslist
                             , diffCommit
@@ -50,6 +51,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
 
@@ -580,26 +582,31 @@ data FileComparison = FileComparison
     , comparisonDiff     :: ![DiffCommand]
     }
 
+data FileReference = LocalRef FilePath
+                   | RepoRef String FilePath
 
-compareFiles :: Git -> String -> FilePath -> String -> FilePath
-             -> IO (Either String FileComparison)
-compareFiles repo commitKey1 file1 commitKey2 file2 = runErrorT $ do
-    let ref1 = fromHexString commitKey1
-        ref2 = fromHexString commitKey2
+fetchFileReference :: Git -> FileReference
+                   -> ErrorT String IO (T.Text, Ref)
+fetchFileReference _ (LocalRef path) =
+    liftIO $ (,nullRef) <$> TIO.readFile path
 
-        bytePath1 = map BC.pack $ splitDirectories file1
-        bytePath2 = map BC.pack $ splitDirectories file2
-
+fetchFileReference repo (RepoRef commitKey path) = do
+    ref <- revisionToRef repo commitKey
+    let bytePath = map BC.pack $ splitDirectories path
         byteToText (_, b) = decodeUtf8 . B.concat $ L.toChunks b
+    (,ref) . byteToText <$> fetchBlobInCommit repo ref bytePath
 
-    blobContent1 <- byteToText <$> fetchBlobInCommit repo ref1 bytePath1
-    blobContent2 <- byteToText <$>fetchBlobInCommit repo ref2 bytePath2
+compareFiles :: Git -> FileReference -> FileReference
+             -> IO (Either String FileComparison)
+compareFiles repo ref1 ref2 = runErrorT $ do
+    (blobContent1, f1) <- fetchFileReference repo ref1
+    (blobContent2, f2) <- fetchFileReference repo ref2
 
     return FileComparison { 
           comparisonFile1 = blobContent1
         , comparisonFile2 = blobContent2
-        , comparisonRef1  = ref1
-        , comparisonRef2  = ref2
+        , comparisonRef1  = f1
+        , comparisonRef2  = f2
         , comparisonDiff = computeTextDiff blobContent1 blobContent2
         }
 

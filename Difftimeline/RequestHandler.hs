@@ -223,7 +223,11 @@ getBranchComparisonR b1 b2 = withRepository extractor
 
 getFileComparisonR :: String -> String -> String -> [Text] -> Handler RepJson
 getFileComparisonR key1 file1 key2 file2 = withRepository extractor
-  where extractor repo = compareFiles repo key1 file1 key2 file
+  where extractor repo = compareFiles repo (toRef key1 file1) (toRef key2 file)
+
+        toRef k f | k == workingDirRequestToken = LocalRef f
+                  | otherwise = RepoRef k f
+
         file = T.unpack $ T.intercalate (T.pack "/") file2
 
 getInitialBranch :: String -> String -> Handler RepPlain
