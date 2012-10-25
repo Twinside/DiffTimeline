@@ -869,10 +869,11 @@ var TinySyntaxHighlighter = (function () {
                                         , end:tok_region("*)"), kind:"syntax_comment"
                                         , regions:[], parsers:[], keywords:[] })],
 
-        parsers:[ generic_parsers.c_like_identifier
+        parsers:[ rexp_parser('syntax_structure', /[A-Z][A-Za-z0-9_]*\./)
+                , rexp_parser('syntax_constant', /[A-Z][A-Za-z0-9_]*/)
+                , generic_parsers.c_like_identifier
                 , generic_parsers.double_quote_string
                 , generic_parsers.integer
-                , rexp_parser('syntax_constant', /[A-Z][A-Za-z0-9_]+/)
                 ],
 
         keywords: expand_keyword_groups(
@@ -887,8 +888,7 @@ var TinySyntaxHighlighter = (function () {
                                              ,'of', 'parser', 'private', 'raise', 'rec', 'end'
                                              ,'done', 'open'
                                              ,'try', 'type', 'virtual', 'when', 'while', 'with'] }
-            , { kind:'syntax_typedef', words: ['type'] }
-            , { kind:'syntax_bool'     , words:["True", "False"] }
+            , { kind:'syntax_bool'     , words:["true", "false"] }
             , { kind:'syntax_operator', words:['asr', 'lnot', 'lor', 'lsl', 'lsr'
                                               ,'lxor', 'mod', 'not'] }
 
@@ -1111,6 +1111,8 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.php$/     , phpDef),
         assoc(/\.ml$/      , ocamlDef),
         assoc(/\.mli$/     , ocamlDef),
+        assoc(/\.mll$/     , ocamlDef),
+        assoc(/\.mly$/     , ocamlDef),
         assoc(/\.php3$/    , phpDef),
         assoc(/\.hs$/      , haskellDef),
         assoc(/\.css$/     , cssDef),
