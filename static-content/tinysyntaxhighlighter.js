@@ -739,11 +739,11 @@ var TinySyntaxHighlighter = (function () {
                  , regions:[]
                  , parsers:
                     [ generic_parsers.double_quote_string
-                    , rexp_parser( 'syntax_storage_class', /[a-zA-Z][a-zA-Z0-9-]*\s*(?=:)/ )
+                    , rexp_parser( 'syntax_storage_class', /[a-zA-Z][a-zA-Z0-9-]*\s*(?=:)/g )
                     , rexp_parser( 'syntax_number',
-                                   /[-+]?\d+(\.\d*)?(%|mm|cm|in|pt|pc|em|ex|px)/ )
-                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{6}/ )
-                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{3}/ )
+                                   /[-+]?\d+(\.\d*)?(%|mm|cm|in|pt|pc|em|ex|px)/g )
+                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{6}/g )
+                    , rexp_parser( 'syntax_constant', /#[0-9a-fA-F]{3}/g )
                     ]
                  , keywords:[]
                  }
@@ -788,8 +788,8 @@ var TinySyntaxHighlighter = (function () {
                 , generic_parsers.simple_quote_string
                 , generic_parsers.back_quote_string
                 , generic_parsers.integer
-                , rexp_parser('syntax_identifier', /[a-zA-Z0-9.!@_%+,]*(?==)/)
-                , rexp_parser('syntax_operator', /<<|>>|!=|==|\||\&>/)
+                , rexp_parser('syntax_identifier', /[a-zA-Z0-9.!@_%+,]*(?==)/g)
+                , rexp_parser('syntax_operator', /<<|>>|!=|==|\||\&>/g)
                 , exact_token_match('syntax_identifier', '$#')
                 , { kind: 'syntax_identifier'
                   , recognizer:prefix_parser_kind('$', generic_parsers.c_like_identifier )}
@@ -837,7 +837,7 @@ var TinySyntaxHighlighter = (function () {
 
         parsers:[ generic_parsers.monoline_comment('#')
                  // target
-                , rexp_parser('syntax_function', /^[A-Za-z0-9_./$()%-][A-Za-z0-9_./\t $()%-]*::?/)
+                , rexp_parser('syntax_function', /^[A-Za-z0-9_./$()%-][A-Za-z0-9_./\t $()%-]*::?/g)
                 , generic_parsers.c_like_identifier
                 ],
 
@@ -869,8 +869,8 @@ var TinySyntaxHighlighter = (function () {
                                         , end:tok_region("*)"), kind:"syntax_comment"
                                         , regions:[], parsers:[], keywords:[] })],
 
-        parsers:[ rexp_parser('syntax_structure', /[A-Z][A-Za-z0-9_]*\./)
-                , rexp_parser('syntax_constant', /[A-Z][A-Za-z0-9_]*/)
+        parsers:[ rexp_parser('syntax_structure', /[A-Z][A-Za-z0-9_]*\./g)
+                , rexp_parser('syntax_constant', /[A-Z][A-Za-z0-9_]*/g)
                 , generic_parsers.c_like_identifier
                 , generic_parsers.double_quote_string
                 , generic_parsers.integer
@@ -886,7 +886,7 @@ var TinySyntaxHighlighter = (function () {
                                              ,'inherit', 'initializer', 'land', 'lazy'
                                              ,'let', 'match', 'method', 'mutable', 'new'
                                              ,'of', 'parser', 'private', 'raise', 'rec', 'end'
-                                             ,'done', 'open'
+                                             ,'done', 'open', 'val',
                                              ,'try', 'type', 'virtual', 'when', 'while', 'with'] }
             , { kind:'syntax_bool'     , words:["true", "false"] }
             , { kind:'syntax_operator', words:['asr', 'lnot', 'lor', 'lsl', 'lsr'
