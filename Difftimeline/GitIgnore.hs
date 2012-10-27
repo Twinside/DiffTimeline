@@ -3,36 +3,34 @@ module Difftimeline.GitIgnore ( IgnoredSet
                               , isPathIgnored
                               , emptyIgnoreSet
                               ) where
+
+import Prelude
+import Data.Monoid
 import Control.Applicative( (<$>) )
-import Data.Either( Rights )
-import Data.Maybe( isJust )
-import qualified Data.ByteString as B
-import qualified Text.Regex.PCRE.Light as R
+import System.FilePath.Glob( Pattern, compile, match )
+import System.FilePath( pathSeparator )
 
-newtype IgnoredSet = IgnoredSet [R.Regex]
+newtype IgnoredSet = IgnoredSet [Pattern]
+    deriving Show
 
-convertToRegexp :: Char -> String
-convertToRegexp '.' = "\\."
-convertToRegexp '*' = ".*"
-convertToRegexp '^' = "\\^"
-convertToRegexp '(' = "\\("
-convertToRegexp ')' = "\\)"
-convertToRegexp '{' = "\\{"
-convertToRegexp '}' = "\\}"
-convertToRegexp '?' = "."
-convertToRegexp a = [a]
-
-compileGlob :: String -> Either String R.Regex
-compileGlob = R.compileM . B.pack . globToRegexp
-    where globToRegexp = concatMap convertToRegexp
+instance Monoid IgnoredSet where
+    mempty = IgnoredSet mempty
+    mappend (IgnoredSet a) (IgnoredSet b) =
+        IgnoredSet $ mappend a b
 
 loadIgnoreFile :: FilePath -> IO IgnoredSet
 loadIgnoreFile path =
-     IgnoredSet . rights . compileGlob . lines <$> readFile path
+     IgnoredSet . fmap compile. lines <$> readFile path
+
+sepChanger :: Char -> Char
+sepChanger '/' = pathSeparator
+sepChanger '\\' = pathSeparator
+sepChanger a = a
 
 isPathIgnored :: IgnoredSet -> FilePath -> Bool
 isPathIgnored (IgnoredSet lst) path = any isMatching lst
-    where isMatching r = isJust $ match r path []
+    where isMatching r = match r preparedMatch
+          preparedMatch = map sepChanger path
 
 emptyIgnoreSet :: IgnoredSet
 emptyIgnoreSet = IgnoredSet []

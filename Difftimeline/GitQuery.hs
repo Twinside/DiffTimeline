@@ -91,6 +91,7 @@ import qualified Data.Vector as V
 import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
+import Difftimeline.GitIgnore
 
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
@@ -310,15 +311,16 @@ revisionToRef repo r =
                Just f -> return f
 
 
-workingDirectoryChanges  :: Git -> Int -> String -> IO (Either String CommitDetail)
-workingDirectoryChanges repository contextSize ref = runErrorT $ do
+workingDirectoryChanges  :: Git -> IgnoredSet -> Int -> String
+                         -> IO (Either String CommitDetail)
+workingDirectoryChanges repository ignoreSet contextSize ref = runErrorT $ do
     resolved <- revisionToRef repository ref
-    workingDirectoryChanges' repository contextSize resolved
+    workingDirectoryChanges' repository ignoreSet contextSize resolved
 
-workingDirectoryChanges'  :: Git -> Int -> Ref -> ErrorT String IO CommitDetail
-workingDirectoryChanges' repository contextSize ref = do
+workingDirectoryChanges'  :: Git -> IgnoredSet -> Int -> Ref -> ErrorT String IO CommitDetail
+workingDirectoryChanges' repository ignoreSet contextSize ref = do
    time <- lift $ truncate <$> getPOSIXTime 
-   detailer time <$> diffWorkingDirectory repository contextSize ref
+   detailer time <$> diffWorkingDirectory repository ignoreSet contextSize ref
     where detailer time (_, diff) =
             CommitDetail {
                   commitDetailMessage = "Working directory"
@@ -331,10 +333,13 @@ workingDirectoryChanges' repository contextSize ref = do
                                       $ flattenTreeDiff diff
                 }
 
+(<///>) :: FilePath -> FilePath -> FilePath
+"" <///> a = a
+a  <///> b = a </> b
 
-diffWorkingDirectory :: Git -> Int -> Ref
+diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
                      -> ErrorT String IO (CommitInfo, CommitTreeDiff)
-diffWorkingDirectory repository contextSize ref = do
+diffWorkingDirectory repository ignoreSet contextSize ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     (,) thisCommit <$> inner (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 
@@ -375,13 +380,16 @@ diffWorkingDirectory repository contextSize ref = do
         diffTree _ _name   []     [] = return []
         diffTree _ name    [] rights = pure
             [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
-                                                  , let fullName = name </> BC.unpack fname ]
+                                                  , let fullName = name </> BC.unpack fname 
+                                                        fullNameCheck = name <///> BC.unpack fname
+                                                  , not $ isPathIgnored ignoreSet fullNameCheck]
 
         diffTree _flatname name lefts     [] = sequence
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                               , let fullName = name </> BC.unpack item ]
         diffTree flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
-            | rName `elem` [".", "..", ".git"] = diffTree flatname name lefts rs
+            | rName `elem` [".", "..", ".git"]
+                || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree flatname name lefts rs
             | lName == rName = do
                 maySubL <- liftIO $ accessObject repository lRef
 

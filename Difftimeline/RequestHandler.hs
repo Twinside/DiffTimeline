@@ -54,6 +54,7 @@ import qualified Data.Text.Lazy.Internal as TLI
 import Difftimeline.Externs
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
+import Difftimeline.GitIgnore( IgnoredSet )
 import Difftimeline.Diff( invertWay )
 
 -- import Yesod.Logger
@@ -133,6 +134,18 @@ withRepository act = do
         Left err -> jsonToRepJson $ object ["error" .= err]
         Right info -> jsonToRepJson $ toJSON info
 
+withRepositoryAndIgnore :: (ToJSON a)
+                        => (Git -> IgnoredSet -> IO (Either String a)) -> Handler RepJson
+withRepositoryAndIgnore act = do
+    app <- getYesod
+    let repository = getRepository app
+        ignoreSet = getIgnoreSet app
+    rez <- liftIO $ act repository ignoreSet
+    case rez of
+        Left err -> jsonToRepJson $ object ["error" .= err]
+        Right info -> jsonToRepJson $ toJSON info
+
+
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha = withRepository extractor
     where extractor repository = do
@@ -163,9 +176,11 @@ renderJs = renderJavascriptUrl (\_ _ -> undefined)
 
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
-  repository <- getRepository <$> getYesod
+  app <- getYesod
+  let repository = getRepository app
+      ignoreSet = getIgnoreSet app
   Just headRef <- liftIO $ getHead repository
-  diffRez <- liftIO . runErrorT $ workingDirectoryChanges' repository 3 headRef 
+  diffRez <- liftIO . runErrorT $ workingDirectoryChanges' repository ignoreSet 3 headRef 
   return . RepPlain . toContent $ case diffRez of
     Left err ->
         renderJs [julius| alert("Error #{err}"); |]
@@ -209,14 +224,14 @@ getBranchComparisonR b1 b2
             where val :: Either String Int
                   val = Left "Source is identical to destination"
 getBranchComparisonR b1 b2 
-    | b2 == workingDirRequestToken = withRepository extractor
-        where extractor repo = workingDirectoryChanges repo 3 b1
+    | b2 == workingDirRequestToken = withRepositoryAndIgnore extractor
+        where extractor repo ignored = workingDirectoryChanges repo ignored 3 b1
 getBranchComparisonR b1 b2 
-    | b1 == workingDirRequestToken = withRepository extractor
+    | b1 == workingDirRequestToken = withRepositoryAndIgnore extractor
         where inverter c =
                 c { commitDetailChanges = invertWay <$> commitDetailChanges c }
-              extractor repo = do
-                changes <- workingDirectoryChanges repo 3 b2
+              extractor repo ignored = do
+                changes <- workingDirectoryChanges repo ignored 3 b2
                 return $ inverter <$> changes
 getBranchComparisonR b1 b2 = withRepository extractor
   where extractor repo = compareBranches repo 3 b1 b2

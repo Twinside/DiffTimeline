@@ -15,6 +15,7 @@ import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
 import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
+import Difftimeline.GitIgnore( IgnoredSet )
 
 data Command = DiffCompare String String
              | DiffBlame String
@@ -30,7 +31,8 @@ data DiffTimeline = DiffTimeline
     { settings  :: AppConfig DefaultEnv ()
     , getDevMode :: Maybe FilePath
     , getRepository :: Git
-    , initialCommand   :: Command
+    , initialCommand :: Command
+    , getIgnoreSet :: IgnoredSet
     }
 
 -- Set up i18n messages. See the message folder.

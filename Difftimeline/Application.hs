@@ -2,7 +2,7 @@
 module Difftimeline.Application( getApplication, Command( .. ) ) where
 
 import Difftimeline.Import
-import System.Directory( getCurrentDirectory, doesDirectoryExist )
+import System.Directory( getCurrentDirectory, doesDirectoryExist, doesFileExist )
 import Network.Wai( Application )
 import Yesod.Default.Config( AppConfig, DefaultEnv )
 import Yesod.Default.Handlers (getFaviconR)
@@ -13,6 +13,7 @@ import qualified System.FilePath as FP
 import Data.Git( Git, openRepo, findRepository, gitRepoPath )
 -- Import all relevant handler modules here.
 import Difftimeline.RequestHandler
+import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile )
 import System.Exit( exitFailure )
 
 -- This line actually creates our YesodSite instance. It is the second half
@@ -42,6 +43,14 @@ simplifyPath = map subst . FP.joinPath . inner . splitPath . normalise
           inner (_:"..\\":xs) = inner xs
           inner (x:xs)      = x : inner xs
 
+loadIgnoreSet :: FilePath -> IO IgnoredSet
+loadIgnoreSet path = do
+    let ignoreFile = path </> ".gitignore"
+    isExisting <- doesFileExist ignoreFile
+    if isExisting
+        then loadIgnoreFile ignoreFile
+        else pure mempty
+
 -- This function allocates resources (such as a database connection pool),
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
@@ -66,7 +75,8 @@ getApplication devModePath (DiffBlame fname) conf = do
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffBlame relPath
 
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath
+    ignoreSet <- loadIgnoreSet cwd
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath (DiffFile fname) conf = do
     cwd <- getCurrentDirectory 
@@ -86,9 +96,12 @@ getApplication devModePath (DiffFile fname) conf = do
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffFile relPath
 
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath
+    ignoreSet <- loadIgnoreSet $ takeDirectory name
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath cmd conf = do
-    initRepo <- getCurrentDirectory >>= initRepository
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd
+    initDir <- getCurrentDirectory 
+    initRepo <- initRepository initDir 
+    ignoreSet <- loadIgnoreSet initDir
+    toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd ignoreSet
 
