@@ -67,6 +67,7 @@ import Data.Git( GitObject( .. )
                , CommitInfo( .. )
                , getHead
                , Ref
+               , RefSpec( .. )
                , fromHexString
                , toHexString
                , getBranchNames
@@ -74,6 +75,7 @@ import Data.Git( GitObject( .. )
                , getRemoteBranchNames
                , getTagNames
                , readRemoteBranch
+               , readAllRemoteBranches
                , readBranch
                , readTag
 
@@ -262,17 +264,14 @@ brancheslist repo = do
         fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
     branchNames <- getBranchNames repo
     branchInfo <- concat <$> mapM fetchBranch branchNames 
-    remoteList <- getRemoteNames repo
-    remotes <-  forM remoteList (\remote -> do
-          branchesName <- E.catch (getRemoteBranchNames repo remote)
-                                  (\(_ :: IOError) -> pure [])
 
-          branches <- concat <$> E.catch (mapM (fetchRemoteBranch remote) branchesName)
-                                          (\(_ :: IOError) -> pure [])
-          pure RemoteBranches { remoteName = T.pack remote
-                              , remoteBranches = branches 
-                              })
-    tagInfo <- getTagNames repo >>= mapM fetchTag
+    allBranches <- readAllRemoteBranches repo
+
+    let remotes = [RemoteBranches (T.pack n)
+                      [BranchInfo (T.pack s) r | (r, s) <- lst]
+                        | RefRemote n lst <- allBranches ]
+        tagInfo = [BranchInfo (T.pack s) r | RefTag r s <- allBranches]
+
     let localBranch = RemoteBranches {
         remoteName = "local",
         remoteBranches = branchInfo ++ tagInfo
