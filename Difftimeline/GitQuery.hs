@@ -266,6 +266,15 @@ brancheslist repo = do
     branchInfo <- concat <$> mapM fetchBranch branchNames 
 
     allBranches <- readAllRemoteBranches repo
+    remoteList <- getRemoteNames repo
+    remotesOldStyle <- forM remoteList (\remote -> do
+        branchesName <- E.catch (getRemoteBranchNames repo remote)
+                                (\(_ :: IOError) -> pure [])
+        branches <- concat <$> E.catch (mapM (fetchRemoteBranch remote) branchesName)
+                                       (\(_ :: IOError) -> pure [])
+        pure RemoteBranches { remoteName = T.pack remote
+                            , remoteBranches = branches })
+    oldTagInfo <- getTagNames repo >>= mapM fetchTag 
 
     let remotes = [RemoteBranches (T.pack n)
                       [BranchInfo (T.pack s) r | (r, s) <- lst]
@@ -274,9 +283,9 @@ brancheslist repo = do
 
     let localBranch = RemoteBranches {
         remoteName = "local",
-        remoteBranches = branchInfo ++ tagInfo
+        remoteBranches = branchInfo ++ tagInfo ++ oldTagInfo
     }
-    pure $ localBranch : remotes
+    pure $ localBranch : remotesOldStyle ++ remotes
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
