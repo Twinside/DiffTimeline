@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Difftimeline.Application( getApplication, Command( .. ) ) where
 
@@ -21,11 +22,11 @@ import System.Exit( exitFailure )
 -- the comments there for more details.
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
-initRepository :: FilePath -> IO Git
+initRepository :: FilePath -> IO (FilePath, Git)
 initRepository startDir = do
     maybeRepo <- findRepository startDir
     case maybeRepo of
-       Just dir -> openRepo $ dir </> ".git"
+       Just dir -> (dir,) <$> (openRepo $ dir </> ".git")
        Nothing -> do
            putStrLn "Error : no git repository found"
            exitFailure
@@ -67,7 +68,7 @@ getApplication devModePath (DiffBlame fname) conf = do
         name | isDir = absName ++ "/"
              | otherwise = absName
 
-    initRepo <- initRepository $ takeDirectory name
+    (repoDir, initRepo) <- initRepository $ takeDirectory name
     initPath <- if isDir 
         then pure DiffWorking
         else do
@@ -75,7 +76,7 @@ getApplication devModePath (DiffBlame fname) conf = do
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffBlame relPath
 
-    ignoreSet <- loadIgnoreSet cwd
+    ignoreSet <- loadIgnoreSet repoDir
     toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath (DiffFile fname) conf = do
@@ -88,7 +89,7 @@ getApplication devModePath (DiffFile fname) conf = do
         name | isDir = absName ++ "/"
              | otherwise = absName
 
-    initRepo <- initRepository $ takeDirectory name
+    (repoDir, initRepo) <- initRepository $ takeDirectory name
     initPath <- if isDir 
         then pure DiffWorking
         else do
@@ -96,12 +97,12 @@ getApplication devModePath (DiffFile fname) conf = do
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffFile relPath
 
-    ignoreSet <- loadIgnoreSet $ takeDirectory name
+    ignoreSet <- loadIgnoreSet repoDir
     toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath cmd conf = do
     initDir <- getCurrentDirectory 
-    initRepo <- initRepository initDir 
-    ignoreSet <- loadIgnoreSet initDir
+    (repoDir, initRepo) <- initRepository initDir 
+    ignoreSet <- loadIgnoreSet repoDir
     toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd ignoreSet
 
