@@ -10,6 +10,8 @@ import Control.Applicative( (<$>) )
 import System.FilePath.Glob( Pattern, compile, match )
 import System.FilePath( pathSeparator )
 
+{-import Debug.Trace-}
+
 newtype IgnoredSet = IgnoredSet [Pattern]
     deriving Show
 
@@ -19,16 +21,23 @@ instance Monoid IgnoredSet where
         IgnoredSet $ mappend a b
 
 loadIgnoreFile :: FilePath -> IO IgnoredSet
-loadIgnoreFile path =
-     IgnoredSet . fmap compile. lines <$> readFile path
+loadIgnoreFile path = -- (\a -> trace (show a) a) <$>
+   IgnoredSet . fmap (compile . changeGlobalGlob) . lines <$> readFile path
 
 sepChanger :: Char -> Char
 sepChanger '/' = pathSeparator
 sepChanger '\\' = pathSeparator
 sepChanger a = a
 
+changeGlobalGlob :: String -> String
+changeGlobalGlob a@('*':'*':'/':_) = a
+changeGlobalGlob ('*':xs) = "**/*" ++ xs
+changeGlobalGlob a = a
+
+
 isPathIgnored :: IgnoredSet -> FilePath -> Bool
-isPathIgnored (IgnoredSet lst) path = any isMatching lst
+isPathIgnored (IgnoredSet lst) path = -- (\a -> trace ("# " ++ path ++ " " ++ show a) a) $
+  any isMatching lst
     where isMatching r = match r preparedMatch
           preparedMatch = map sepChanger path
 
