@@ -254,6 +254,8 @@ pre
     color: white;
     display: block;
     z-index: 0;
+    font-size: 14px;
+    font-weight: bold;
 
     text-align: center;
     width:		100%;
