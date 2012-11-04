@@ -1843,6 +1843,8 @@ var FileComparer = (function() {
             var number_node = $('.line_number_column');
             var node = $('.syntax_highlighted');
 
+            number_node.children().remove();
+
             if (Project.state.active_view_mode() === Project.ViewMode.VIEW_COMPACT) {
                 DiffManipulator.generateCompactHtml(this.file1, Project.state.active_context_size(),
                                                     false, this.data.data_orig, rems,
