@@ -174,6 +174,10 @@ detectBinary :: L.ByteString -> Bool
 detectBinary = L.any (== 0) . L.take binaryDetectionSize
     where binaryDetectionSize = 8 * 1024
 
+firstParentRef :: CommitInfo -> Ref
+firstParentRef info = case commitParents info of
+    [] -> nullRef
+    (r:_) -> r
 
 -- | Want same behaviour between windows & Unix
 (</>) :: FilePath -> FilePath -> FilePath
@@ -296,7 +300,7 @@ diffBranches repo contextSize branch1 branch2 = do
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = runErrorT $ do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    let prevRef = head $ commitParents thisCommit
+    let prevRef = firstParentRef thisCommit
     snd <$> createCommitDiff repository 0 False prevRef ref
 
 data SubKind = KindFile | KindDirectory
@@ -507,7 +511,7 @@ filterCommitModifications = filter isModification
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository contextSize deep ref = runErrorT $ do
    (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
-   let prevRef = head $ commitParents thisCommit
+   let prevRef = firstParentRef thisCommit
    detailer <$> createCommitDiff  repository contextSize deep prevRef ref 
     where detailer (thisCommit, diff) = 
             let author = commitAuthor thisCommit
@@ -541,7 +545,7 @@ findFirstCommit repository path currentFileRef ref = inner undefined undefined [
                         let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
-                                pathParentRef = head $ commitParents info,
+                                pathParentRef = firstParentRef info,
                                 pathMessage = decodeUtf8 $ commitMessage info,
                                 pathAuthor = decodeUtf8 $ authorName author,
                                 pathTimestamp = authorTimestamp author,
@@ -638,7 +642,7 @@ findParentFile repository commitStrSha path = runErrorT inner
 
             Blob nextFile <- accessBlob "can't find file content" repository currentFileRef
             thisFile <-
-                catchError (snd <$> fetchBlobInCommit repository (head $ commitParents firstNfo) bytePath)
+                catchError (snd <$> fetchBlobInCommit repository (firstParentRef firstNfo) bytePath)
                            (\_ -> return L.empty)
 
             let toStrict = B.concat . L.toChunks
@@ -758,13 +762,13 @@ blameFile repository commitStrSha path = runErrorT finalData
         aux ranges backData backRef [] =
             void $ blameInitialStep backRef (V.length backData) ranges
 
-        aux ranges backData backRef (firstParentRef:_) = do
-            Commit commit <- fetchCommit firstParentRef
+        aux ranges backData backRef (firstParent:_) = do
+            Commit commit <- fetchCommit firstParent
             t@(Tree _)    <- fetchTree  $ commitTree commit
             (parents, overview, thisCommitData) <- catchError (do
                             currentFileRef <- fetchFileRef t
                             (firstNfo, firstRef, _betweenCommits) <- lift $
-                                    findFirstCommit repository bytePath currentFileRef firstParentRef
+                                    findFirstCommit repository bytePath currentFileRef firstParent
                             Blob nextFile <- fetchBlob currentFileRef
                             let overview = makeOverview firstRef firstNfo
                             return (commitParents firstNfo, overview, nextFile))
@@ -790,7 +794,7 @@ commitList repository count = runErrorT . inner count
           inner n _ | n < 0 = return []
           inner n r = do
               Commit commit <- accessCommit "" repository r
-              (makeOverview r commit :) <$> inner (n - 1) (head $ commitParents commit)
+              (makeOverview r commit :) <$> inner (n - 1) (firstParentRef commit)
 
 basePage :: Git -> [B.ByteString] -> IO (Either String ParentFile)
 basePage repository path = runErrorT $ do
@@ -799,7 +803,7 @@ basePage repository path = runErrorT $ do
     (cInfo, foundFileRef) <- fetchFileRefInCommit repository headRef path
     (Blob content) <-
         getObj ("Error can't find file (" ++ bytePathToString path ++ ") content in HEAD") foundFileRef
-    (_, prevContent) <- fetchBlobInCommit repository (head $ commitParents cInfo) path
+    (_, prevContent) <- fetchBlobInCommit repository (firstParentRef cInfo) path
 
     let toStrict = B.concat . L.toChunks
         author = commitAuthor cInfo
@@ -812,7 +816,7 @@ basePage repository path = runErrorT $ do
         fileRef = foundFileRef,
         fileName = joinBytePath path,
         commitPath = [CommitPath { pathCommitRef = headRef
-                                 , pathParentRef = head $ commitParents cInfo
+                                 , pathParentRef = firstParentRef cInfo
                                  , pathMessage = decodeUtf8 $ commitMessage cInfo
                                  , pathTimestamp = authorTimestamp author
                                  , pathTimezone = authorTimezone author
