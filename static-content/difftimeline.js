@@ -1350,7 +1350,8 @@ var CommitRenderer = (function() {
 
         this.fetch_previous = function() {
             var this_obj = this;
-            var prev_id = this.collection[this.collection.length - 1].parents_sha[0];
+            var parents = this.collection[this.collection.length - 1].parents_sha;
+            var prev_id = parents.length > 0 ? parents[0] : null_ref;
 
             if (this_obj.fetching)
                 return;

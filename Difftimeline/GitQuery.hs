@@ -430,10 +430,15 @@ createCommitDiff :: Git
                  -> ErrorT String IO (CommitInfo, CommitTreeDiff)
 createCommitDiff repository contextSize deep prevRef ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    (Commit prevCommit) <- accessCommit "Error can't file parent commit" repository prevRef
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
-    prevTree <- getObj "Error can't access previous commit tree" $ commitTree prevCommit
-    (,) thisCommit <$> inner "" prevTree (commitTree prevCommit) thisTree (commitTree thisCommit)
+
+    (prevTreeRef, prevTree) <- if prevRef /= nullRef
+            then do Commit prevCommit <- accessCommit "Error can't file parent commit" repository prevRef
+                    let prevTreeRef = commitTree prevCommit
+                    (prevTreeRef,) <$> getObj "Error can't access previous commit tree" prevTreeRef
+            else return (nullRef, Tree [])
+
+    (,) thisCommit <$> inner "" prevTree prevTreeRef thisTree (commitTree thisCommit)
   where getObj reason = errorIO reason . accessObject repository
         inner name (Tree left) _r1 (Tree right) _r2 = 
           TreeElement (T.pack name) nullRef <$> diffTree name sortedLeft sortedRight
