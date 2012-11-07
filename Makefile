@@ -34,6 +34,9 @@ prepare:
 place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/
 
+unixplace:
+	cp dist/build/difftimeline/difftimeline ~/.cabal/bin/
+
 check:
 	java -jar compiler.jar \
 		 --warning_level VERBOSE \

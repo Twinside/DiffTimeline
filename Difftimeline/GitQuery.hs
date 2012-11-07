@@ -529,15 +529,15 @@ findFirstCommit :: Git              -- ^ Repository
                 -> Ref              -- ^ Ref of the element in the path
                 -> Ref              -- ^ First commit ref
                 -> ErrorT String IO (CommitInfo, Ref, [CommitPath])
-findFirstCommit repository path currentFileRef = inner undefined undefined
-    where inner prevCommit prevRef currentCommit =
+findFirstCommit repository path currentFileRef ref = inner undefined undefined [ref]
+    where inner prevCommit prevRef [] = return (prevCommit, prevRef, [])
+          inner prevCommit prevRef (currentCommit:_) =
             catchError (do
                 (info, commitFileRef) <- fetchFileRefInCommit repository currentCommit path
                 if commitFileRef /= currentFileRef
                     then return (prevCommit, prevRef, [])
                     else do
-                        (obj, r, commitPathRest) <- inner info currentCommit 
-                                                  . head $ commitParents info
+                        (obj, r, commitPathRest) <- inner info currentCommit $ commitParents info
                         let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
