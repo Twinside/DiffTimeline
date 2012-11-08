@@ -628,6 +628,7 @@ var DiffManipulator = (function () {
                 number_node.appendChild(document.createTextNode('...\n'));
             }
 
+            highlighter.reset_context();
             highlighter.set_current_line_number(context_begin + 1);
             for ( var lineNum = context_begin; lineNum < d.beg; lineNum++ ) {
                 add_number(highlighter.current_line);
@@ -964,6 +965,7 @@ var Commit = function(key, data) {
         var curr_diff;
         var acc = ""
         var diff_node;
+        var prev_end = -1;
 
         var create_number_node = function(n) {
             var node = document.createElement('span');
@@ -1002,7 +1004,12 @@ var Commit = function(key, data) {
             else {
                 diff_node = div_node("diff_context");
                 hl.set_current_line_number(curr_diff.dest_idx + 1);
+
+                if (prev_end != curr_diff.dest_idx)
+                    hl.reset_context();
             }
+
+            prev_end = curr_diff.dest_idx + curr_diff.data.length;
 
             for ( var l = 0; l < curr_diff.data.length; l++ )
             {
