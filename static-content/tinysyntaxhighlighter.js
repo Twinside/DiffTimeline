@@ -163,6 +163,7 @@ var LangDef;
  *    setPositionHighlight: function(Array.<subrange>),
  *     compute_line_number: function(),
  * set_current_line_number: function(number),
+ *           reset_context: function (),
  *                    lang: LangDef}) */
 var LineHighlighter;
 
@@ -427,6 +428,8 @@ var TinySyntaxHighlighter = (function () {
             pos_highlight.positional_setter(lst);
         };
 
+        // pass-through, no context to reset
+        this.reset_context = function () {};
         this.current_line = 1;
         this.set_current_line_number = function (i) {
             this.current_line = i;
@@ -453,6 +456,10 @@ var TinySyntaxHighlighter = (function () {
         };
         this.activeStack = [highlight_def];
         this.colorLine = colorLine;
+
+        this.reset_context = function () {
+            this.activeStack = [ this.activeStack[0] ];
+        };
 
         /** @type {LangDef} */
         this.lang = highlight_def;
