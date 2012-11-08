@@ -24,6 +24,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , basePage
                             , decodeUtf8
                             , commitList
+                            , nullRef
 
                             -- * Blame Management
                             , blameFile
@@ -646,10 +647,13 @@ findParentFile repository commitStrSha path = runErrorT inner
             (_, currentFileRef) <- fetchFileRefInCommit repository currentCommit bytePath
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef currentCommit
+            let previousRef = case commitParents firstNfo of
+                    [] -> currentCommit
+                    (r:_) -> r
 
             Blob nextFile <- accessBlob "can't find file content" repository currentFileRef
             thisFile <-
-                catchError (snd <$> fetchBlobInCommit repository (firstParentRef firstNfo) bytePath)
+                catchError (snd <$> fetchBlobInCommit repository previousRef bytePath)
                            (\_ -> return L.empty)
 
             let toStrict = B.concat . L.toChunks
