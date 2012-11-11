@@ -11,3 +11,5 @@ static-content/tmp
 dist
 cabal-dev
 static/tmp
+difftimeline
+*.bz2
