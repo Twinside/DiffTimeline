@@ -33,5 +33,15 @@ cabal-dev install
 # Prepare
 cp dist/build/difftimeline/difftimeline .
 strip difftimeline
-tar cvjf difftimeline-$VERSION-$OS.tar.bz2 difftimeline
+binaryfile="difftimeline-$VERSION-$OS.tar.bz2"
+tar cvjf $binaryfile difftimeline
+
+# push to intarweb
+git branch -D gh-pages
+git co -b gh-pages origin/gh-pages
+mv $binaryfile binaries/
+git add "binaries/$binaryfile"
+git commit -m "New binary for $OS (version : $VERSION)"
+git push
+git co master
 
