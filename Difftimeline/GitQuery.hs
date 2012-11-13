@@ -270,7 +270,7 @@ brancheslist repo = do
 
         fetchTag b = trace ("[9 ] fetching tag " ++ b) $ BranchInfo (T.pack b) <$> readTag repo b
     branchNames <- (trace "[1 ] Fetching local branch names") $ getBranchNames repo
-    branchInfo <- (trace "[2 ] Fetching local branch values") $ concat <$> mapM fetchBranch branchNames
+    oldBranchInfo <- (trace "[2 ] Fetching local branch values") $ concat <$> mapM fetchBranch branchNames
 
     allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" ++ show a) a) <$> readAllRemoteBranches repo
     remoteList <- (trace "[4 ] Gather all remotes (old way)") $ getRemoteNames repo
@@ -286,11 +286,16 @@ brancheslist repo = do
     let remotes = [RemoteBranches (T.pack n)
                       [BranchInfo (T.pack s) r | (r, s) <- lst]
                         | RefRemote n lst <- allBranches ]
+                  ++
+                    [RemoteBranches (T.pack "/others/")
+                        [BranchInfo (T.pack s) r | RefOther r s <- allBranches ]
+                    ]
         tagInfo = [BranchInfo (T.pack s) r | RefTag r s <- allBranches]
+        branchInfo = [BranchInfo (T.pack s) r | RefLocal r s <- allBranches]
 
     let localBranch = RemoteBranches {
         remoteName = "local",
-        remoteBranches = branchInfo ++ tagInfo ++ oldTagInfo
+        remoteBranches = branchInfo ++ oldBranchInfo ++ tagInfo ++ oldTagInfo
     }
     pure . trace ("[10] OK.") $ localBranch : remotesOldStyle ++ remotes
 
