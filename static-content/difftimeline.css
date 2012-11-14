@@ -653,6 +653,8 @@ pre
     margin-left: 7px;
     margin-right: 7px;
     margin-top: 10px;
+    height: 100%;
+    overflow: scroll;
 }
 
 .branch_list .toggler {
