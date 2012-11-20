@@ -114,14 +114,29 @@ pre
     display: table;
 }
 
-.vertical_cell
-{
+.vertical_cell {
     display: table-row;
 }
 
+.vertical_cell > .tooltip {
+    display: none;
+}
+.vertical_cell:hover > .tooltip {
+    font-style: normal;
+    display:    block;
+    position:   absolute;
+    top:        20px;
+    left:       5px;
+    padding:    5px;
+    color:      #fff;
+    width:      auto;
+	z-index: 1;
+    background-color: #5C5F68;
+    border: 1px solid #1D1E21;
+}
+
 /** The back to the past button, big blue */
-.btn_returnpast
-{
+.btn_returnpast {
    width:            20px;
    position:         relative;
    font-width:       bold;
