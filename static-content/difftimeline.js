@@ -267,7 +267,18 @@ Project.state = (function () {
             last_path.render_all();
         },
 
-        get_previous: function() {
+        set_previous_button_count: function( count ) {
+            var i;
+            var container = $('div .return_past_container');
+            container.children().remove();
+
+            for (i = 0; i < count; i++) {
+                var sub_node = ich.fetch_previous({id: i});
+                $(container).append( sub_node[0] );
+            }
+        },
+
+        get_previous: function(id) {
             var last_path = states[ states.length - 1 ];
             last_path.fetch_previous();
         },
@@ -915,6 +926,8 @@ var Commit = function(key, data) {
     this.file_changes = data.file_changes;
     this.author = data.author
     this.message = data.message;
+
+    Project.state.set_previous_button_count(this.parents_sha.length);
 
     var messages_lines = data.message.split('\n');
     var first_non_null = 0;
@@ -1724,9 +1737,16 @@ var FileRenderer = (function() {
 
             if (this.fetching) return;
 
+            if (last_commit.parent_commit.length <= 0) {
+                show_error( "The commit has no parents" );
+                return;
+            }
+
+            var to_fetch = last_commit.parent_commit[0];
+
             this_obj.fetching = true;
 
-            fetch_file(last_commit.file, last_commit.parent_commit,
+            fetch_file(last_commit.file, to_fetch,
                        last_commit.filekey, function(data) {
                                 
                 if (data === null) {

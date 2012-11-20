@@ -165,7 +165,7 @@ data CommitDetail = CommitDetail
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
-    , pathParentRef     :: Ref
+    , pathParentRef     :: [Ref]
     , pathMessage       :: T.Text
     , pathTimestamp     :: Int
     , pathTimezone      :: Int
@@ -272,7 +272,7 @@ brancheslist repo = do
     branchNames <- (trace "[1 ] Fetching local branch names") $ getBranchNames repo
     oldBranchInfo <- (trace "[2 ] Fetching local branch values") $ concat <$> mapM fetchBranch branchNames
 
-    allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" ++ show a) a) <$> readAllRemoteBranches repo
+    allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" {-++ show a -}) a) <$> readAllRemoteBranches repo
     remoteList <- (trace "[4 ] Gather all remotes (old way)") $ getRemoteNames repo
     remotesOldStyle <- forM remoteList (\remote -> do
         branchesName <- trace ("[5 ] branches for remote" ++ remote) $ E.catch (getRemoteBranchNames repo remote)
@@ -558,7 +558,7 @@ findFirstCommit repository path currentFileRef ref = inner undefined undefined [
                         let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
-                                pathParentRef = firstParentRef info,
+                                pathParentRef = commitParents info,
                                 pathMessage = decodeUtf8 $ commitMessage info,
                                 pathAuthor = decodeUtf8 $ authorName author,
                                 pathTimestamp = authorTimestamp author,
@@ -832,7 +832,7 @@ basePage repository path = runErrorT $ do
         fileRef = foundFileRef,
         fileName = joinBytePath path,
         commitPath = [CommitPath { pathCommitRef = headRef
-                                 , pathParentRef = firstParentRef cInfo
+                                 , pathParentRef = commitParents cInfo
                                  , pathMessage = decodeUtf8 $ commitMessage cInfo
                                  , pathTimestamp = authorTimestamp author
                                  , pathTimezone = authorTimezone author

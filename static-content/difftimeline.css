@@ -101,6 +101,24 @@ pre
     background-color: #554;
 }
 
+.toolbar div div
+{
+    width: 13px;
+    /*display: inline-block;*/
+}
+
+.return_past_container
+{
+    width: 20px;
+    height: 500px;
+    display: table;
+}
+
+.vertical_cell
+{
+    display: table-row;
+}
+
 /** The back to the past button, big blue */
 .btn_returnpast
 {
@@ -108,10 +126,14 @@ pre
    position:         relative;
    font-width:       bold;
    font-size:        30px;
+   /*height:           100%;*/
    padding-left:     10px;
    padding-right:    10px;
-   padding-top:      150px;
-   padding-bottom:   150px;
+   /*padding-top:      30%;*/
+   /*padding-bottom:   30%;*/
+
+   display: table-cell;
+   vertical-align: middle;
 
    border:  1px solid #AAAAAA;
 
@@ -182,12 +204,6 @@ pre
     width:  12px;
     height: 12px;
     font-size: 8px;
-}
-
-.toolbar div div
-{
-    width: 13px;
-    display: inline-block;
 }
 
 .toolbar div .label
