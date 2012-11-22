@@ -154,18 +154,17 @@ filterCommitTreeDiff f = inner
 
 data CommitDetail = CommitDetail
     { commitDetailMessage :: T.Text
-    , commitDetailParents :: [Ref]
+    , commitDetailParents :: [CommitOverview]
     , commitDetailKey     :: Ref
     , commitDetailTimestamp :: Int
     , commitDetailTimezone  :: Int
     , commitDetailAuthor  :: T.Text
     , commitDetailChanges :: [CommitTreeDiff]
     }
-    deriving Show
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
-    , pathParentRef     :: Ref
+    , pathParentRef     :: [Ref]
     , pathMessage       :: T.Text
     , pathTimestamp     :: Int
     , pathTimezone      :: Int
@@ -237,7 +236,7 @@ compareBranches repo contextSize b1 b2 = runErrorT $
     detailer <$> diffBranches repo contextSize b1 b2
   where detailer diff = CommitDetail
             { commitDetailMessage = T.pack $ "Comparing " ++ b1 ++ " and " ++ b2
-            , commitDetailParents = [nullRef]
+            , commitDetailParents = []
             , commitDetailKey     = nullRef
             , commitDetailAuthor  = ""
             , commitDetailTimestamp = 0
@@ -272,7 +271,7 @@ brancheslist repo = do
     branchNames <- (trace "[1 ] Fetching local branch names") $ getBranchNames repo
     oldBranchInfo <- (trace "[2 ] Fetching local branch values") $ concat <$> mapM fetchBranch branchNames
 
-    allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" ++ show a) a) <$> readAllRemoteBranches repo
+    allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" {-++ show a -}) a) <$> readAllRemoteBranches repo
     remoteList <- (trace "[4 ] Gather all remotes (old way)") $ getRemoteNames repo
     remotesOldStyle <- forM remoteList (\remote -> do
         branchesName <- trace ("[5 ] branches for remote" ++ remote) $ E.catch (getRemoteBranchNames repo remote)
@@ -340,11 +339,13 @@ workingDirectoryChanges repository ignoreSet contextSize ref = runErrorT $ do
 workingDirectoryChanges'  :: Git -> IgnoredSet -> Int -> Ref -> ErrorT String IO CommitDetail
 workingDirectoryChanges' repository ignoreSet contextSize ref = do
    time <- lift $ truncate <$> getPOSIXTime 
-   detailer time <$> diffWorkingDirectory repository ignoreSet contextSize ref
-    where detailer time (_, diff) =
+   parentDetail <- fetchCommitOverview repository ref
+   detailer parentDetail time
+            <$> diffWorkingDirectory repository ignoreSet contextSize ref
+    where detailer parentInfo time (_, diff) =
             CommitDetail {
                   commitDetailMessage = "Working directory"
-                , commitDetailParents = [ref]
+                , commitDetailParents = [parentInfo]
                 , commitDetailKey     = nullRef
                 , commitDetailAuthor  = ""
                 , commitDetailTimestamp = time
@@ -525,12 +526,13 @@ diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository contextSize deep ref = runErrorT $ do
    (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = firstParentRef thisCommit
-   detailer <$> createCommitDiff  repository contextSize deep prevRef ref 
-    where detailer (thisCommit, diff) = 
+   parentsInfo <- mapM (fetchCommitOverview repository) $ commitParents thisCommit
+   detailer parentsInfo <$> createCommitDiff  repository contextSize deep prevRef ref 
+    where detailer parents (thisCommit, diff) = 
             let author = commitAuthor thisCommit
             in CommitDetail {
                   commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
-                , commitDetailParents = commitParents thisCommit
+                , commitDetailParents = parents
                 , commitDetailKey     = ref
                 , commitDetailAuthor  = decodeUtf8 $ authorName author
                 , commitDetailTimestamp = authorTimestamp author
@@ -558,7 +560,7 @@ findFirstCommit repository path currentFileRef ref = inner undefined undefined [
                         let author = commitAuthor info
                         return (obj, r, CommitPath {
                                 pathCommitRef = currentCommit,
-                                pathParentRef = firstParentRef info,
+                                pathParentRef = commitParents info,
                                 pathMessage = decodeUtf8 $ commitMessage info,
                                 pathAuthor = decodeUtf8 $ authorName author,
                                 pathTimestamp = authorTimestamp author,
@@ -667,12 +669,15 @@ findParentFile repository commitStrSha path = runErrorT inner
                 author = commitAuthor firstNfo
                 isBinary = detectBinary nextFile
 
+            parentsInfo <- mapM (fetchCommitOverview repository)
+                         $ commitParents firstNfo
+
             return ParentFile
                 { fileData = if isBinary then "" else T.filter (/= '\r') nextData
                 , fileDataIsBinary = isBinary
                 , fileName = T.pack path
                 , fileRef = currentFileRef
-                , parentRef = commitParents firstNfo
+                , parentRef = parentsInfo
                 , fileMessage = decodeUtf8 $ commitMessage firstNfo
                 , commitRef = firstRef
                 , commitPath = reverse betweenCommits
@@ -687,7 +692,7 @@ data ParentFile = ParentFile
     , fileDataIsBinary :: Bool
     , fileName    :: T.Text
     , fileRef     :: Ref
-    , parentRef   :: [Ref]
+    , parentRef   :: [CommitOverview]
     , fileMessage :: T.Text
     , commitRef   :: Ref
     , commitPath  :: [CommitPath]
@@ -795,6 +800,11 @@ blameFile repository commitStrSha path = runErrorT finalData
             leftRanges <- blameStep backRef nextData backData ranges
             aux leftRanges nextData overview parents
 
+fetchCommitOverview :: Git -> Ref -> ErrorT String IO CommitOverview
+fetchCommitOverview git ref = do
+    Commit info <- accessCommit ("Invalid parent " ++ show ref) git ref
+    return $ makeOverview ref info
+
 makeOverview :: Ref -> CommitInfo -> CommitOverview
 makeOverview r c = CommitOverview
    { commitOverviewParent = commitParents c
@@ -827,12 +837,15 @@ basePage repository path = runErrorT $ do
         thisData = decodeUtf8 $ toStrict content
         isBinary = detectBinary content
 
+    parentsInfo <- mapM (fetchCommitOverview repository)
+                 $ commitParents cInfo
+
     return ParentFile {
         commitRef = headRef,
         fileRef = foundFileRef,
         fileName = joinBytePath path,
         commitPath = [CommitPath { pathCommitRef = headRef
-                                 , pathParentRef = firstParentRef cInfo
+                                 , pathParentRef = commitParents cInfo
                                  , pathMessage = decodeUtf8 $ commitMessage cInfo
                                  , pathTimestamp = authorTimestamp author
                                  , pathTimezone = authorTimezone author
@@ -841,7 +854,7 @@ basePage repository path = runErrorT $ do
         fileDiff = computeTextDiff prevData thisData,
         fileData = if isBinary then "" else thisData,
         fileDataIsBinary = isBinary,
-        parentRef = commitParents cInfo,
+        parentRef = parentsInfo,
         fileMessage = decodeUtf8 $ commitMessage cInfo,
         parentCommitAuthor = decodeUtf8 $ authorName author,
         parentCommitTimestamp = authorTimestamp author,

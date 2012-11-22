@@ -267,9 +267,23 @@ Project.state = (function () {
             last_path.render_all();
         },
 
-        get_previous: function() {
+        set_previous_button_count: function( count, tooltips ) {
+            var i;
+            var container = $('div .return_past_container');
+            container.children().remove();
+
+            for (i = 0; i < count; i++) {
+                var tooltip = i < tooltips.length ? tooltips[i] : "";
+                var sub_node = ich.fetch_previous(
+                    {id: i, tooltip: tooltip}
+                );
+                $(container).append( sub_node[0] );
+            }
+        },
+
+        get_previous: function(id) {
             var last_path = states[ states.length - 1 ];
-            last_path.fetch_previous();
+            last_path.fetch_previous(id);
         },
 
         /**
@@ -341,9 +355,11 @@ Project.state = (function () {
             this.clear_display();
             this.create_all_dom();
             this.render_all();
+            /* TODO restore button count */
         },
 
         clear_display: function () {
+            this.set_previous_button_count(1, []);
             $('.container > *').remove();
         },
 
@@ -916,6 +932,16 @@ var Commit = function(key, data) {
     this.author = data.author
     this.message = data.message;
 
+    var i;
+    var tooltips = [];
+    for (i = 0; i < this.parents_sha.length; i++)
+    {
+        var overview = this.parents_sha[i];
+        tooltips.push(overview.key + " : " + overview.message);
+    }
+
+    Project.state.set_previous_button_count(this.parents_sha.length, tooltips);
+
     var messages_lines = data.message.split('\n');
     var first_non_null = 0;
 
@@ -1308,7 +1334,7 @@ var CommitRenderer = (function() {
             $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === this.collection.length - 1) {
-                this.fetch_previous();
+                this.fetch_previous(0);
             } else {
                 this.focused_index++;
                 var new_focused_node = this.collection[this.focused_index].orig_node;
@@ -1355,10 +1381,10 @@ var CommitRenderer = (function() {
         this.gui_descr = { compact_view: true, fetch_previous: true
                          , context_size: false, syntax_toggle: false };
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             var this_obj = this;
             var parents = this.collection[this.collection.length - 1].parents_sha;
-            var prev_id = parents.length > 0 ? parents[0] : null_ref;
+            var prev_id = parents.length > 0 ? parents[0].key : null_ref;
 
             if (this_obj.fetching)
                 return;
@@ -1456,6 +1482,12 @@ var FileBlob = function (data) {
     this.message = data.message;
     this.parent_commit = data.parent_commit;
     this.path = data.path;
+
+    var tooltips = [];
+    for (var i = 0; i < this.parent_commit.length; i++) {
+        tooltips.push( this.parent_commit[i].key + " - " + this.parent_commit[i].message );
+    }
+    Project.state.set_previous_button_count(this.parent_commit.length, tooltips);
 
     for (var i = 0; i < this.path.length; i++) {
         this.path[i].commit_date = timestamp_to_string(this.path[i].timestamp);
@@ -1686,7 +1718,7 @@ var FileRenderer = (function() {
             $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === 0) {
-                this.fetch_previous();
+                this.fetch_previous(0);
                 return;
             }
 
@@ -1718,15 +1750,22 @@ var FileRenderer = (function() {
                 return this.move_right();
         };
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             var last_commit = this.collection[0];
             var this_obj = this;
 
             if (this.fetching) return;
 
+            if (last_commit.parent_commit.length <= 0) {
+                show_error( "The commit has no parents" );
+                return;
+            }
+
+            var to_fetch = last_commit.parent_commit[id].key;
+
             this_obj.fetching = true;
 
-            fetch_file(last_commit.file, last_commit.parent_commit,
+            fetch_file(last_commit.file, to_fetch,
                        last_commit.filekey, function(data) {
                                 
                 if (data === null) {
@@ -1780,7 +1819,7 @@ var FileRenderer = (function() {
 var CommitComparer = (function() {
     var init_methods = function() {
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 
@@ -1841,7 +1880,7 @@ var CommitComparer = (function() {
 var FileComparer = (function() {
     var init_methods = function() {
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 
@@ -2011,7 +2050,7 @@ var BlameShower = (function() {
             }
         }
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 

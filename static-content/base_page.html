@@ -256,6 +256,14 @@
             <div class="branch_diff_content">
             </div>
         </script>
+        <script id="fetch_previous" type="text/html">
+            <div class="vertical_cell">
+                <div class="btn_returnpast"
+                    onClick="Project.state.get_previous({{id}})"
+                    title="Fetch previous version">&lt;</div>
+                <div class="tooltip">{{tooltip}}</div>
+            </div>
+        </script>
         <script id="branch_list" type="text/html">
             <div class="branch_list">
                 <div class="toggler"><div>&#x25bc; Branches</div></div>
@@ -305,9 +313,8 @@
             <div class="btn_toggleview"
                  onClick="Project.state.toggle_diff_full()"
                  title="Switch between compact and full view">&#x25bc;<br/>&#x25b2;</div>
-            <div class="btn_returnpast"
-                 onClick="Project.state.get_previous()"
-                 title="Fetch previous version">&lt;</div>
+            <div class="return_past_container">
+            </div>
             <div class="context_size">
                 <span class="label">Context size</span><br />
                 <textarea readonly="true" rows="1">2</textarea>
