@@ -885,6 +885,52 @@ var DiffManipulator = (function () {
         return ret;
     }
 
+    /**
+     * @param {number} line
+     * @param {DiffCommand} diff
+     * @return {number}
+     */
+    var to_prev_diff = function(line, diffs) {
+    };
+
+    /**
+     * @param {number} line
+     * @param {DiffCommand} diff
+     * @return {number}
+     */
+    var to_next_diff = function(line, diffs) {
+        var i = 0;
+        var offset = 0;
+        var diff;
+
+        var add = '+';
+        var del = '-';
+        var neutral = '=';
+
+        for (i = 0; i < diffs.length; i++) {
+            diff = diffs[i];
+
+            if (diff.way === neutral)
+                continue;
+
+            if (line < diff.orig_idx)
+                break;
+
+            if (diff.way === add) {
+                offset += diff.size;
+            }
+            else if (diff.way === del) {
+                if (line < diff.orig_idx + diff.size) {
+                    return diff.dest_idx;
+                } else {
+                    offset -= diff.size;
+                }
+            }
+        }
+
+        return line + offset;
+    };
+
     return {
         generateFullHtml:    generate_full_html,
         generateCompactHtml: generate_compact_html,
@@ -892,7 +938,10 @@ var DiffManipulator = (function () {
         filterRems: filter_rems,
         calculateFoldSet: calculate_fold_set,
         toDiffDelRange: to_diff_del_range,
-        toDiffAddRange: to_diff_add_range 
+        toDiffAddRange: to_diff_add_range,
+
+        toNextDiff: to_next_diff,
+        toPrevDiff: to_prev_diff
     };
 })();
 
@@ -1937,7 +1986,18 @@ var FileComparer = (function() {
         }
 
         this.create_all_dom = function() {
-            $('.container').append(ich.compare_files(this));
+            var created = ich.compare_files(this);
+            $('.container').append(created);
+
+            var this_obj = this;
+            $('.line_number_column', created).click(function(event) {
+                /* it's a bit ugly for now, but at least we're sure
+                 * about the line number.
+                 */
+                var line = parseInt(event.originalEvent.target.textContent);
+                var next_line = DiffManipulator.toNextDiff(line, this_obj.data.diff);
+                alert( "line:" + line + " next:" + next_line );
+            });
         };
 
         this.send_message = function( msg ) {};

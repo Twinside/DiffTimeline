@@ -24,6 +24,9 @@ module Difftimeline.Diff(
                         , computeTextDiff
                         , computeTextScript
                         , computeStringDiff
+
+                        , shiftToFuture
+                        , shiftToPast
                         ) where
 
 import Prelude
@@ -66,6 +69,36 @@ data RawDiffCommand = DiffAdd {-# UNPACK #-}!Int         -- ^ Beginning index in
                               {-# UNPACK #-}!Int         -- ^ Beginning index in the destination vector
                               {-# UNPACK #-}!Int         -- ^ Size of the modification
                     deriving (Eq, Show)
+
+simplifyCommand :: [DiffCommand] -> [RawDiffCommand]
+simplifyCommand = inner
+  where inner [] = []
+        inner (DiffRefined a oi di s _:xs) =
+            inner (DiffCommand a oi di s : xs)
+        inner (DiffCommand DiffNeutral _ _ _:xs) = inner xs
+        inner (DiffCommand DiffAddition oi di s:xs) =
+            DiffAdd oi di s : inner xs
+        inner (DiffCommand DiffDeletion oi di s:xs) =
+            DiffDel oi di s : inner xs
+
+
+-- | Given a line in the actual file (with deletions)
+-- translate the line to the referencial of the destination
+-- file.
+shiftToFuture :: Int -> [DiffCommand] -> Int
+shiftToFuture line = shift 0 . simplifyCommand
+  where shift offset [] = line + offset
+        shift offset (DiffAdd oi _di s : xs)
+            | line < oi = line + offset
+            | otherwise = shift (offset + s) xs
+
+        shift offset (DiffDel oi di s : xs)
+            | line < oi = line + offset
+            | oi <= line && line < oi + s = di
+            | otherwise = shift (offset - s) xs
+
+shiftToPast :: Int -> [DiffCommand] -> Int
+shiftToPast line = shiftToFuture line . map invertWay
 
 instance Invertible RawDiffCommand where
     invertWay (DiffAdd ob od s) = DiffDel od ob s
