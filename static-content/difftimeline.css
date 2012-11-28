@@ -4,6 +4,13 @@ body
     color: white;
 }
 
+.align_padder
+{
+    margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    height: 0px;
+}
+
 /** Position of various elements of the application.
  */
 .horizontal_toolbar

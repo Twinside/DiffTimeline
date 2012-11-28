@@ -1989,14 +1989,34 @@ var FileComparer = (function() {
             var created = ich.compare_files(this);
             $('.container').append(created);
 
+
+            var padders = $('.container .file_content .align_padder pre');
+            
             var this_obj = this;
             $('.line_number_column', created).click(function(event) {
-                /* it's a bit ugly for now, but at least we're sure
-                 * about the line number.
-                 */
-                var line = parseInt(event.originalEvent.target.textContent);
+                var line = parseInt(event.originalEvent.target.textContent) - 1;
                 var next_line = DiffManipulator.toNextDiff(line, this_obj.data.diff);
-                alert( "line:" + line + " next:" + next_line );
+                var line_diff = Math.abs(line - next_line);
+
+                var string_padder = '';
+
+                if (line_diff > 0) {
+                    string_padder = '\n ';
+                    for (var i = 1; i < line_diff; i++) {
+                        string_padder += '\n ';
+                    }
+                }
+
+                if (next_line >= line)
+                {
+                    $(padders[0]).text(string_padder);
+                    $(padders[1]).text('');
+                }
+                else
+                {
+                    $(padders[0]).text('');
+                    $(padders[1]).text(string_padder);
+                }
             });
         };
 
