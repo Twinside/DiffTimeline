@@ -708,6 +708,12 @@ pre
     width: 20px;
 }
 
+.highlighted_line
+{
+    color: pink;
+    background-color: blue;
+}
+
 .branch_list .toggler div {
     -webkit-transform: rotate(90deg);
     -moz-transform: rotate(90deg);

@@ -1717,6 +1717,27 @@ var FileBlob = function (data) {
         render_node.appendTo($('table td:last', this.orig_node));
     }
 
+    this.line_index = 0;
+    this.move_line_up = function () {
+        if (this.line_index === 0)
+            return this.line_index;
+
+        var numbers = $('.syntax_line_number', this.orig_node);
+        $(numbers[this.line_index]).removeClass('highlighted_line');
+        this.line_index = this.line_index - 1;
+        $(numbers[this.line_index]).addClass('highlighted_line');
+        return this.line_index;
+    };
+
+    this.move_line_down = function() {
+        var numbers = $('.syntax_line_number', this.orig_node);
+        $(numbers[this.line_index]).removeClass('highlighted_line');
+        this.line_index = this.line_index + 1;
+        $(numbers[this.line_index]).addClass('highlighted_line');
+
+        return this.line_index;
+    }
+
     return this;
 };
 
@@ -1820,6 +1841,16 @@ var FileRenderer = (function() {
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
+        this.move_line_up = function() {
+            var curr = this.collection[this.focused_index];
+            var new_line = curr.move_line_up();
+        };
+
+        this.move_line_down = function() {
+            var curr = this.collection[this.focused_index];
+            var new_line = curr.move_line_down();
+        };
+
         this.send_message = function( msg ) {
             if (msg.action === Project.GuiMessage.FETCH_DETAIL)
                 return this.fetch_details(msg.key);
@@ -1827,6 +1858,10 @@ var FileRenderer = (function() {
                 return this.move_left();
             else if (msg.action === Project.GuiMessage.MOVE_RIGHT)
                 return this.move_right();
+            else if (msg.action === Project.GuiMessage.MOVE_DOWN)
+                return this.move_line_down();
+            else if (msg.action === Project.GuiMessage.MOVE_UP)
+                return this.move_line_up();
         };
 
         this.fetch_previous = function(id) {
