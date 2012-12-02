@@ -891,6 +891,36 @@ var DiffManipulator = (function () {
      * @return {number}
      */
     var to_prev_diff = function(line, diffs) {
+        var i = 0;
+        var offset = 0;
+        var diff;
+
+        var add = '+';
+        var del = '-';
+        var neutral = '=';
+
+        for (i = 0; i < diffs.length; i++) {
+            diff = diffs[i];
+
+            if (diff.way === neutral)
+                continue;
+
+            if (line < diff.dest_idx)
+                break;
+
+            if (diff.way === del) {
+                offset += diff.size;
+            }
+            else if (diff.way === add) {
+                if (line < diff.dest_idx + diff.size) {
+                    return diff.orig_idx;
+                } else {
+                    offset -= diff.size;
+                }
+            }
+        }
+
+        return line + offset;
     };
 
     /**
@@ -1993,31 +2023,42 @@ var FileComparer = (function() {
             var padders = $('.container .file_content .align_padder pre');
             
             var this_obj = this;
-            $('.line_number_column', created).click(function(event) {
-                var line = parseInt(event.originalEvent.target.textContent) - 1;
-                var next_line = DiffManipulator.toNextDiff(line, this_obj.data.diff);
-                var line_diff = Math.abs(line - next_line);
+            var number_columns = $('.line_number_column', created);
 
-                var string_padder = '';
+            var translaters = [
+                function (line) { return DiffManipulator.toNextDiff(line, this_obj.data.diff); },
+                function (line) { return DiffManipulator.toPrevDiff(line, this_obj.data.diff); }
+            ];
 
-                if (line_diff > 0) {
-                    string_padder = '\n ';
-                    for (var i = 1; i < line_diff; i++) {
-                        string_padder += '\n ';
-                    }
-                }
+            for (var i = 0; i < number_columns.length; i++) {
+                (function(n) {
+                    var side_id = n;
+                    var other_id = 1 - n;
 
-                if (next_line >= line)
-                {
-                    $(padders[0]).text(string_padder);
-                    $(padders[1]).text('');
-                }
-                else
-                {
-                    $(padders[0]).text('');
-                    $(padders[1]).text(string_padder);
-                }
-            });
+                    $(number_columns[i]).click(function(event) {
+                        var line = parseInt(event.originalEvent.target.textContent) - 1;
+                        var next_line = (translaters[side_id])(line);
+                        var line_diff = Math.abs(line - next_line);
+
+                        var string_padder = '';
+
+                        if (line_diff > 0) {
+                            string_padder = '\n ';
+                            for (var i = 1; i < line_diff; i++) {
+                                string_padder += '\n ';
+                            }
+                        }
+
+                        if (next_line >= line) {
+                            $(padders[side_id]).text(string_padder);
+                            $(padders[other_id]).text('');
+                        } else {
+                            $(padders[side_id]).text('');
+                            $(padders[other_id]).text(string_padder);
+                        }
+                    });
+                })( i );
+            }
         };
 
         this.send_message = function( msg ) {};
