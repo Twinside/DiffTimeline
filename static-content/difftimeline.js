@@ -267,9 +267,23 @@ Project.state = (function () {
             last_path.render_all();
         },
 
-        get_previous: function() {
+        set_previous_button_count: function( count, tooltips ) {
+            var i;
+            var container = $('div .return_past_container');
+            container.children().remove();
+
+            for (i = 0; i < count; i++) {
+                var tooltip = i < tooltips.length ? tooltips[i] : "";
+                var sub_node = ich.fetch_previous(
+                    {id: i, tooltip: tooltip}
+                );
+                $(container).append( sub_node[0] );
+            }
+        },
+
+        get_previous: function(id) {
             var last_path = states[ states.length - 1 ];
-            last_path.fetch_previous();
+            last_path.fetch_previous(id);
         },
 
         /**
@@ -341,9 +355,11 @@ Project.state = (function () {
             this.clear_display();
             this.create_all_dom();
             this.render_all();
+            /* TODO restore button count */
         },
 
         clear_display: function () {
+            this.set_previous_button_count(1, []);
             $('.container > *').remove();
         },
 
@@ -869,6 +885,82 @@ var DiffManipulator = (function () {
         return ret;
     }
 
+    /**
+     * @param {number} line
+     * @param {DiffCommand} diff
+     * @return {number}
+     */
+    var to_prev_diff = function(line, diffs) {
+        var i = 0;
+        var offset = 0;
+        var diff;
+
+        var add = '+';
+        var del = '-';
+        var neutral = '=';
+
+        for (i = 0; i < diffs.length; i++) {
+            diff = diffs[i];
+
+            if (diff.way === neutral)
+                continue;
+
+            if (line < diff.dest_idx)
+                break;
+
+            if (diff.way === del) {
+                offset += diff.size;
+            }
+            else if (diff.way === add) {
+                if (line < diff.dest_idx + diff.size) {
+                    return diff.orig_idx;
+                } else {
+                    offset -= diff.size;
+                }
+            }
+        }
+
+        return line + offset;
+    };
+
+    /**
+     * @param {number} line
+     * @param {DiffCommand} diff
+     * @return {number}
+     */
+    var to_next_diff = function(line, diffs) {
+        var i = 0;
+        var offset = 0;
+        var diff;
+
+        var add = '+';
+        var del = '-';
+        var neutral = '=';
+
+        for (i = 0; i < diffs.length; i++) {
+            diff = diffs[i];
+
+            if (diff.way === neutral)
+                continue;
+
+            if (line < diff.orig_idx)
+                break;
+
+            if (diff.way === add) {
+                offset += diff.size;
+            }
+            else if (diff.way === del) {
+                if (line < diff.orig_idx + diff.size) {
+                    return diff.dest_idx;
+                } else {
+                    offset -= diff.size;
+                }
+            }
+        }
+
+        return line + offset;
+    };
+
     return {
         generateFullHtml:    generate_full_html,
         generateCompactHtml: generate_compact_html,
@@ -876,7 +968,10 @@ var DiffManipulator = (function () {
         filterRems: filter_rems,
         calculateFoldSet: calculate_fold_set,
         toDiffDelRange: to_diff_del_range,
-        toDiffAddRange: to_diff_add_range 
+        toDiffAddRange: to_diff_add_range,
+
+        toNextDiff: to_next_diff,
+        toPrevDiff: to_prev_diff
     };
 })();
 
@@ -915,6 +1010,16 @@ var Commit = function(key, data) {
     this.file_changes = data.file_changes;
     this.author = data.author
     this.message = data.message;
+
+    var i;
+    var tooltips = [];
+    for (i = 0; i < this.parents_sha.length; i++)
+    {
+        var overview = this.parents_sha[i];
+        tooltips.push(overview.key + " : " + overview.message);
+    }
+
+    Project.state.set_previous_button_count(this.parents_sha.length, tooltips);
 
     var messages_lines = data.message.split('\n');
     var first_non_null = 0;
@@ -1308,7 +1413,7 @@ var CommitRenderer = (function() {
             $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === this.collection.length - 1) {
-                this.fetch_previous();
+                this.fetch_previous(0);
             } else {
                 this.focused_index++;
                 var new_focused_node = this.collection[this.focused_index].orig_node;
@@ -1355,10 +1460,10 @@ var CommitRenderer = (function() {
         this.gui_descr = { compact_view: true, fetch_previous: true
                          , context_size: false, syntax_toggle: false };
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             var this_obj = this;
             var parents = this.collection[this.collection.length - 1].parents_sha;
-            var prev_id = parents.length > 0 ? parents[0] : null_ref;
+            var prev_id = parents.length > 0 ? parents[0].key : null_ref;
 
             if (this_obj.fetching)
                 return;
@@ -1456,6 +1561,12 @@ var FileBlob = function (data) {
     this.message = data.message;
     this.parent_commit = data.parent_commit;
     this.path = data.path;
+
+    var tooltips = [];
+    for (var i = 0; i < this.parent_commit.length; i++) {
+        tooltips.push( this.parent_commit[i].key + " - " + this.parent_commit[i].message );
+    }
+    Project.state.set_previous_button_count(this.parent_commit.length, tooltips);
 
     for (var i = 0; i < this.path.length; i++) {
         this.path[i].commit_date = timestamp_to_string(this.path[i].timestamp);
@@ -1606,6 +1717,27 @@ var FileBlob = function (data) {
         render_node.appendTo($('table td:last', this.orig_node));
     }
 
+    this.line_index = 0;
+    this.move_line_up = function () {
+        if (this.line_index === 0)
+            return this.line_index;
+
+        var numbers = $('.syntax_line_number', this.orig_node);
+        $(numbers[this.line_index]).removeClass('highlighted_line');
+        this.line_index = this.line_index - 1;
+        $(numbers[this.line_index]).addClass('highlighted_line');
+        return this.line_index;
+    };
+
+    this.move_line_down = function() {
+        var numbers = $('.syntax_line_number', this.orig_node);
+        $(numbers[this.line_index]).removeClass('highlighted_line');
+        this.line_index = this.line_index + 1;
+        $(numbers[this.line_index]).addClass('highlighted_line');
+
+        return this.line_index;
+    }
+
     return this;
 };
 
@@ -1686,7 +1818,7 @@ var FileRenderer = (function() {
             $(this.collection[this.focused_index].orig_node).removeClass(global_focus);
 
             if (this.focused_index === 0) {
-                this.fetch_previous();
+                this.fetch_previous(0);
                 return;
             }
 
@@ -1709,6 +1841,16 @@ var FileRenderer = (function() {
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
+        this.move_line_up = function() {
+            var curr = this.collection[this.focused_index];
+            var new_line = curr.move_line_up();
+        };
+
+        this.move_line_down = function() {
+            var curr = this.collection[this.focused_index];
+            var new_line = curr.move_line_down();
+        };
+
         this.send_message = function( msg ) {
             if (msg.action === Project.GuiMessage.FETCH_DETAIL)
                 return this.fetch_details(msg.key);
@@ -1716,17 +1858,28 @@ var FileRenderer = (function() {
                 return this.move_left();
             else if (msg.action === Project.GuiMessage.MOVE_RIGHT)
                 return this.move_right();
+            else if (msg.action === Project.GuiMessage.MOVE_DOWN)
+                return this.move_line_down();
+            else if (msg.action === Project.GuiMessage.MOVE_UP)
+                return this.move_line_up();
         };
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             var last_commit = this.collection[0];
             var this_obj = this;
 
             if (this.fetching) return;
 
+            if (last_commit.parent_commit.length <= 0) {
+                show_error( "The commit has no parents" );
+                return;
+            }
+
+            var to_fetch = last_commit.parent_commit[id].key;
+
             this_obj.fetching = true;
 
-            fetch_file(last_commit.file, last_commit.parent_commit,
+            fetch_file(last_commit.file, to_fetch,
                        last_commit.filekey, function(data) {
                                 
                 if (data === null) {
@@ -1780,7 +1933,7 @@ var FileRenderer = (function() {
 var CommitComparer = (function() {
     var init_methods = function() {
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 
@@ -1841,7 +1994,7 @@ var CommitComparer = (function() {
 var FileComparer = (function() {
     var init_methods = function() {
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 
@@ -1898,7 +2051,49 @@ var FileComparer = (function() {
         }
 
         this.create_all_dom = function() {
-            $('.container').append(ich.compare_files(this));
+            var created = ich.compare_files(this);
+            $('.container').append(created);
+
+
+            var padders = $('.container .file_content .align_padder pre');
+            
+            var this_obj = this;
+            var number_columns = $('.line_number_column', created);
+
+            var translaters = [
+                function (line) { return DiffManipulator.toNextDiff(line, this_obj.data.diff); },
+                function (line) { return DiffManipulator.toPrevDiff(line, this_obj.data.diff); }
+            ];
+
+            for (var i = 0; i < number_columns.length; i++) {
+                (function(n) {
+                    var side_id = n;
+                    var other_id = 1 - n;
+
+                    $(number_columns[i]).click(function(event) {
+                        var line = parseInt(event.originalEvent.target.textContent) - 1;
+                        var next_line = (translaters[side_id])(line);
+                        var line_diff = Math.abs(line - next_line);
+
+                        var string_padder = '';
+
+                        if (line_diff > 0) {
+                            string_padder = '\n ';
+                            for (var i = 1; i < line_diff; i++) {
+                                string_padder += '\n ';
+                            }
+                        }
+
+                        if (next_line >= line) {
+                            $(padders[side_id]).text(string_padder);
+                            $(padders[other_id]).text('');
+                        } else {
+                            $(padders[side_id]).text('');
+                            $(padders[other_id]).text(string_padder);
+                        }
+                    });
+                })( i );
+            }
         };
 
         this.send_message = function( msg ) {};
@@ -2011,7 +2206,7 @@ var BlameShower = (function() {
             }
         }
 
-        this.fetch_previous = function() {
+        this.fetch_previous = function(id) {
             show_error({error: 'Does not exists in this mode'});
         };
 

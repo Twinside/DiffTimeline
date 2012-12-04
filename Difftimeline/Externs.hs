@@ -224,7 +224,7 @@ instance ClosureDescriptable ParentFile Serializable where
              ,"binary"        .: fileDataIsBinary
              ,"filekey"       .: fileRef
              ,"filename"      .: fileName
-             ,"parent_commit" .: (lastOrNull . parentRef)
+             ,"parent_commit" .: parentRef
              ,"message"       .: fileMessage
              ,"diff"          .: fileDiff
              ,"path"          .: commitPath
@@ -233,8 +233,6 @@ instance ClosureDescriptable ParentFile Serializable where
              ,"timestamp"     .: parentCommitTimestamp
              ,"timezone"      .: parentCommmitTimezone
              ]
-       where lastOrNull lst@(_:_) = last lst
-             lastOrNull [] = nullRef
 
 difftimelineEnv :: ClosTypingEnvironment ()
 difftimelineEnv = do

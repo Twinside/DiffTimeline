@@ -4,6 +4,13 @@ body
     color: white;
 }
 
+.align_padder
+{
+    margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    height: 0px;
+}
+
 /** Position of various elements of the application.
  */
 .horizontal_toolbar
@@ -101,17 +108,54 @@ pre
     background-color: #554;
 }
 
-/** The back to the past button, big blue */
-.btn_returnpast
+.toolbar div div
 {
+    width: 13px;
+    /*display: inline-block;*/
+}
+
+.return_past_container
+{
+    width: 20px;
+    height: 500px;
+    display: table;
+}
+
+.vertical_cell {
+    display: table-row;
+}
+
+.vertical_cell > .tooltip {
+    display: none;
+}
+.vertical_cell:hover > .tooltip {
+    font-style: normal;
+    display:    block;
+    position:   absolute;
+    top:        20px;
+    left:       5px;
+    padding:    5px;
+    color:      #fff;
+    width:      auto;
+	z-index: 1;
+    background-color: #5C5F68;
+    border: 1px solid #1D1E21;
+}
+
+/** The back to the past button, big blue */
+.btn_returnpast {
    width:            20px;
    position:         relative;
    font-width:       bold;
    font-size:        30px;
+   /*height:           100%;*/
    padding-left:     10px;
    padding-right:    10px;
-   padding-top:      150px;
-   padding-bottom:   150px;
+   /*padding-top:      30%;*/
+   /*padding-bottom:   30%;*/
+
+   display: table-cell;
+   vertical-align: middle;
 
    border:  1px solid #AAAAAA;
 
@@ -182,12 +226,6 @@ pre
     width:  12px;
     height: 12px;
     font-size: 8px;
-}
-
-.toolbar div div
-{
-    width: 13px;
-    display: inline-block;
 }
 
 .toolbar div .label
@@ -668,6 +706,12 @@ pre
     vertical-align: middle;
 
     width: 20px;
+}
+
+.highlighted_line
+{
+    color: pink;
+    background-color: blue;
 }
 
 .branch_list .toggler div {
