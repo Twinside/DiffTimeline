@@ -1577,6 +1577,29 @@ var FileBlob = function (data) {
 
     this.ellipsis_size = this.path.length - 15;
 
+    this.set_line_offset = function( offset ) {
+        var node = $('.align_padder pre', this.orig_node);
+
+        if (offset === 0) {
+            node.html('');
+            return;
+        }
+
+        var str_offset = '\n ';
+
+        for (var i = 1; i < offset; i++)
+            str_offset += ' \n ';
+
+        node.html(str_offset);
+    };
+
+    this.compute_matching_line_from_past = function( line ) {
+        return DiffManipulator.toNextDiff(line, this.diff);
+    };
+
+    this.compute_matching_line_from_future = function( line ) {
+        return DiffManipulator.toPrevDiff(line, this.diff);
+    };
 
     this.create_dom_details = function(node) {
         var detail_node = $('.commit_detail', node);
@@ -1841,14 +1864,40 @@ var FileRenderer = (function() {
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
+        this.synchronize_lines = function( targetted_line ) {
+            var i;
+            var computed_line;
+            var curr_index = this.focused_index;
+            var max_idx = this.collection.length;
+            var matching_lines = new Array( max_idx );
+
+            matching_lines[curr_index] = targetted_line;
+
+            for (i = curr_index; i < max_idx - 1; i++) {
+                matching_lines[i + 1] =
+                    this.collection[i + 1].compute_matching_line_from_past(matching_lines[i]);
+            }
+
+            for (i = curr_index; i > 0; i--) {
+                matching_lines[i - 1] =
+                    this.collection[i].compute_matching_line_from_future(matching_lines[i]);
+            }
+
+            var min_line = Math.min.apply(Math, matching_lines);
+
+            for (i = 0; i < max_idx; i++) {
+                this.collection[i].set_line_offset(matching_lines[i] - min_line);
+            }
+        };
+
         this.move_line_up = function() {
             var curr = this.collection[this.focused_index];
-            var new_line = curr.move_line_up();
+            this.synchronize_lines(curr.move_line_up());
         };
 
         this.move_line_down = function() {
             var curr = this.collection[this.focused_index];
-            var new_line = curr.move_line_down();
+            this.synchronize_lines(curr.move_line_down());
         };
 
         this.send_message = function( msg ) {
