@@ -1577,6 +1577,10 @@ var FileBlob = function (data) {
 
     this.ellipsis_size = this.path.length - 15;
 
+    this.set_line = function(line) {
+        this.line_index = line;
+    }
+
     this.set_line_offset = function( offset ) {
         var node = $('.align_padder pre', this.orig_node);
 
@@ -1697,7 +1701,6 @@ var FileBlob = function (data) {
         } else {
             node[0].appendChild(document.createTextNode("Binary element"));
         }
-
     }
 
 
@@ -1859,7 +1862,8 @@ var FileRenderer = (function() {
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
             $(new_focused_node).addClass(global_focus);
-            $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+            this.collection[this.focused_index].focus_line();
+            //$(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
         this.move_right = function() {
@@ -1871,7 +1875,8 @@ var FileRenderer = (function() {
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
             $(new_focused_node).addClass(global_focus);
-            $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+            this.collection[this.focused_index].focus_line();
+            //$(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
         this.synchronize_lines = function( targetted_line ) {
@@ -1895,8 +1900,11 @@ var FileRenderer = (function() {
 
             var max_line = Math.max.apply(Math, matching_lines);
 
+            var blob;
             for (i = 0; i < max_idx; i++) {
-                this.collection[i].set_line_offset(max_line - matching_lines[i]);
+                blob = this.collection[i];
+                blob.set_line_offset(max_line - matching_lines[i]);
+                blob.set_line(matching_lines[i]);
             }
 
             this.collection[ curr_index ].focus_line();
