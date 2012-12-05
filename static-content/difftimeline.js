@@ -1883,10 +1883,10 @@ var FileRenderer = (function() {
                     this.collection[i].compute_matching_line_from_future(matching_lines[i]);
             }
 
-            var min_line = Math.min.apply(Math, matching_lines);
+            var max_line = Math.max.apply(Math, matching_lines);
 
             for (i = 0; i < max_idx; i++) {
-                this.collection[i].set_line_offset(matching_lines[i] - min_line);
+                this.collection[i].set_line_offset(max_line - matching_lines[i]);
             }
         };
 
