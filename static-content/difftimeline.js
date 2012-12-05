@@ -1741,6 +1741,16 @@ var FileBlob = function (data) {
     }
 
     this.line_index = 0;
+
+    this.focus_line = function() {
+        var numbers = $('.syntax_line_number', this.orig_node);
+        var offsets = Project.state.chrome_scroll_offset();
+        offsets.left -= 30;
+        offsets.top -= 200;
+
+        $(document).scrollTo(numbers[this.line_index], 5, {offset: offsets });
+    };
+
     this.move_line_up = function () {
         if (this.line_index === 0)
             return this.line_index;
@@ -1888,6 +1898,8 @@ var FileRenderer = (function() {
             for (i = 0; i < max_idx; i++) {
                 this.collection[i].set_line_offset(max_line - matching_lines[i]);
             }
+
+            this.collection[ curr_index ].focus_line();
         };
 
         this.move_line_up = function() {
@@ -2372,6 +2384,7 @@ ich.grabTemplates();
 $(document).ready(function() {
     fetch_branch_list();
     setup_global_drop();
+    $(document).scrollTo( { top: 0, left: 0 } );
 });
 
 //////////////////////////////////////////////////////////////////////////
