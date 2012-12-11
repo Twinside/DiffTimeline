@@ -1,6 +1,11 @@
+ifeq ($(shell uname),WindowsNT)
+	SHELL:=cmd
+else
+endif
+
 all: build
 
-build:
+build: composed.js
 	runhaskell Setup.hs build
 
 blame_tests:
@@ -37,15 +42,39 @@ place:
 unixplace:
 	cp dist/build/difftimeline/difftimeline ~/.cabal/bin/
 
-check:
+composed.js: static-content/difftimeline.js static-content/tinysyntaxhighlighter.js
 	java -jar compiler.jar \
 		 --warning_level VERBOSE \
 		 --js_output_file composed.js \
 		 --jscomp_warning=checkTypes \
 		 --externs test/externs/jquery-1.7.js \
+		 --externs test/externs/jquery.ext.js \
 		 --externs test/externs/icanhaz.extern.js \
 		 --externs test/externs/difftimeline.extern.js \
 		 --summary_detail_level 3 \
 		 --js static-content/difftimeline.js \
 		 --js static-content/tinysyntaxhighlighter.js
+
+#--compilation_level ADVANCED_OPTIMIZATIONS \
+
+JS_FILE_NAMES:= \
+	global_constants.js \
+	breadcrumb.js \
+	resultset.js \
+	project.js \
+	diffmanipulator.js \
+	commit.js \
+	commitrenderer.js \
+	fileblob.js \
+	filerenderer.js \
+	commitcomparer.js \
+	filecomparer.js \
+	blameshower.js \
+	init.js \
+	keybindings.js
+
+JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
+
+static-content/difftimeline.js: $(JS_FILES)
+	cat $(JS_FILES) > $@
 

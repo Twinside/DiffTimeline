@@ -6,6 +6,9 @@ import Data.FileEmbed
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8 )
 
+composedEmbedded :: (FilePath, T.Text)
+composedEmbedded = ("composed.js", decodeUtf8 $(embedFile "composed.js"))
+
 basePageEmbedded :: (FilePath, T.Text)
 basePageEmbedded = ("base_page.html", decodeUtf8 $(embedFile "static-content/base_page.html"))
 
@@ -32,9 +35,6 @@ jqueryScrollToEmbedded = ("jquery-scrollTo.js", $(embedFile "static-content/jque
 
 jqueryUiEmbedded :: (FilePath, B.ByteString)
 jqueryUiEmbedded = ("jquery-ui-1.8.21.custom.min.js", $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js"))
-
-screenCssEmbedded :: (FilePath, B.ByteString)
-screenCssEmbedded = ("screen.css", $(embedFile "static-content/screen.css"))
 
 syntaxhighlihgtCss :: (FilePath, B.ByteString)
 syntaxhighlihgtCss = ("syntax-highlight.css", $(embedFile "static-content/syntax-highlight.css"))

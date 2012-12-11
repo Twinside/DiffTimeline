@@ -74,4 +74,22 @@ ich.prototype.commit_compact = function(arg) {};
  */
 ich.prototype.branch_comparer = function(arg) {};
 
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.compare_files = function(arg) {};
+
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.blamefile = function(arg) {};
+
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.branch_list = function(arg) {};
+
 ich.prototype.grabTemplates = function () {};

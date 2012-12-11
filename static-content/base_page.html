@@ -4,14 +4,12 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <title>DiffTimeline</title>
         <link href="static-content/syntax-highlight.css" type="text/css" rel="stylesheet" />
-        <link href="static-content/screen.css" type="text/css" rel="stylesheet" />
         <link href="static-content/difftimeline.css" type="text/css" rel="stylesheet" />
         <script language="javascript" type="text/javascript" src="static-content/jquery.min.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/jquery-ui.min.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/jquery-hotkeys.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/jquery-scrollTo.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/ICanHaz.min.js"></script>
-        <script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>
 
         <script id="commit_file" type="text/html">
             <div class="file_{{kind}}">
@@ -141,7 +139,7 @@
                 </tr>
                 <tr>
                     <td><pre class="line_number_column"></pre></td>
-                    <td><pre class="syntax_highlighted"></pre></td>
+                    <td class="syntax_cell"><pre class="syntax_highlighted"></pre></td>
                 </tr>
             </table>
         </script>
@@ -287,7 +285,9 @@
                 </div>
             </div>
         </script>
+        <script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/difftimeline.js"></script>
+        <!--<script language="javascript" type="text/javascript" src="static-content/composed.js"></script>-->
     </head>
     <body onUnload="leave_server()">
         <div class="horizontal_toolbar">
