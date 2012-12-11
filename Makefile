@@ -5,8 +5,14 @@ endif
 
 all: build
 
-build: composed.js
+build: composed.js Difftimeline/Foundation.hs
 	runhaskell Setup.hs build
+
+# Modify the file date to let the build system detect
+# modification and reparse the routes using template
+# haskell.
+Difftimeline/Foundation.hs: config/routes
+	touch Difftimeline/Foundation.hs
 
 blame_tests:
 	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf -cpp -Wall test/blame_test.hs
