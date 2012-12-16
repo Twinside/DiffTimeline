@@ -6,6 +6,7 @@ Difftimeline.app
 .bundle
 .DS_STORE
 static-content/tmp
+static-content/difftimeline.js
 *.o
 *.hi
 dist

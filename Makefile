@@ -1,3 +1,8 @@
+ifeq ($(shell uname),WindowsNT)
+	SHELL:=cmd
+else
+endif
+
 all: build
 
 build: composed.js
@@ -51,3 +56,25 @@ composed.js: static-content/difftimeline.js static-content/tinysyntaxhighlighter
 		 --js static-content/tinysyntaxhighlighter.js
 
 #--compilation_level ADVANCED_OPTIMIZATIONS \
+
+JS_FILE_NAMES:= \
+	global_constants.js \
+	breadcrumb.js \
+	resultset.js \
+	project.js \
+	diffmanipulator.js \
+	commit.js \
+	commitrenderer.js \
+	fileblob.js \
+	filerenderer.js \
+	commitcomparer.js \
+	filecomparer.js \
+	blameshower.js \
+	init.js \
+	keybindings.js
+
+JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
+
+static-content/difftimeline.js: $(JS_FILES)
+	cat $(JS_FILES) > $@
+
