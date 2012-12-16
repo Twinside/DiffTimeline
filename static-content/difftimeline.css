@@ -1,14 +1,27 @@
+*
+{
+    font-size: 100.01%;
+    margin: 0;
+    padding: 0;
+    border:0;
+}
+
+html
+{  
+    font-size: 100.01%;
+}
+
 body
 {
     background-color: #2C2D33;
     color: white;
+    font-size: 75%;
+    font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
-.align_padder
+table
 {
-    margin: 0px 0px 0px 0px;
-    padding: 0px 0px 0px 0px;
-    height: 0px;
+    margin-bottom:1.4em;
 }
 
 /** Position of various elements of the application.
@@ -67,7 +80,7 @@ body
 pre
 {
     font-family: Consolas, Inconsolata, Monospace;
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 
 .diff_deletion
@@ -264,6 +277,7 @@ pre
 
 .commitmsg h4
 {
+    font-size: 1.2em;
     font-weight: bold;
     margin: 15px;
     color: white;
@@ -523,10 +537,6 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
-
-    font-size: 14px;
-    font-weight: bold;
-    color: #DDD;
 }
 
 .tree_modification > .commit_diff_symbol:before {
@@ -543,10 +553,6 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
-
-    font-size: 14px;
-    font-weight: bold;
-    color: #DDD;
 }
 
 .tree_addition > .commit_diff_symbol:before {
@@ -563,10 +569,6 @@ pre
     padding: 5px 5px 5px 5px;
     margin-top: 5px;
     margin-bottom: 5px;
-
-    font-size: 14px;
-    font-weight: bold;
-    color: #DDD;
 }
 
 .tree_deletion > .commit_diff_symbol:before {
@@ -760,6 +762,10 @@ pre
 .file_widget {
     cursor: default;
 
+    font-size: 14px;
+    font-weight: bold;
+    color: #DDD;
+
     border: 1px solid #3C3D43;
     border-radius: 4px;
 
@@ -825,14 +831,41 @@ pre
     content: "To ";
 }
 
+hr
+{
+    background:#ddd;
+    color:#ddd;
+    clear:both;
+    float:none;
+    width:100%;
+    height:1px;
+    margin:0 0 17px;
+    border:none;
+}
+
 table.file_display {
-    padding: 0px;
     margin: 0px;
+    margin-top: 10px;
+    border-width: 0px;
+    border-collapse: collapse;
+}
+
+.syntax_cell {
+    width: 100%;
+}
+
+.align_padder
+{
+    margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    height: 0px;
+    background-color: transparent;
 }
 
 table.file_display td {
     padding: 0px;
     margin: 0px;
+    background-color: transparent;
 }
 
 table.file_display pre.line_number_column {

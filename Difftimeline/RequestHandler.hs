@@ -32,7 +32,6 @@ module Difftimeline.RequestHandler( getRootR
                                   -- ** CSS
                                   , getDifftimelineCss
                                   , getSyntax_highlight
-                                  , getScreen
                                   ) where
 
 import Difftimeline.Import
@@ -88,9 +87,8 @@ fetchStatic outputType (path, str) = do
            then return . outputType . toContent =<< liftIO (B.readFile devName)
            else return . outputType $ toContent str
 
-getDifftimelineCss, getSyntax_highlight, getScreen :: Handler RepCss
+getDifftimelineCss, getSyntax_highlight :: Handler RepCss
 getDifftimelineCss = fetchStatic RepCss diffTimelineCssEmbedded
-getScreen =  fetchStatic RepCss screenCssEmbedded
 getSyntax_highlight = fetchStatic RepCss syntaxhighlihgtCss
 
 getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, getJqueryUI,

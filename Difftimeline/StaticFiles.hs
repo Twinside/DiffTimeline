@@ -36,9 +36,6 @@ jqueryScrollToEmbedded = ("jquery-scrollTo.js", $(embedFile "static-content/jque
 jqueryUiEmbedded :: (FilePath, B.ByteString)
 jqueryUiEmbedded = ("jquery-ui-1.8.21.custom.min.js", $(embedFile "static-content/jquery-ui-1.8.21.custom.min.js"))
 
-screenCssEmbedded :: (FilePath, B.ByteString)
-screenCssEmbedded = ("screen.css", $(embedFile "static-content/screen.css"))
-
 syntaxhighlihgtCss :: (FilePath, B.ByteString)
 syntaxhighlihgtCss = ("syntax-highlight.css", $(embedFile "static-content/syntax-highlight.css"))
 

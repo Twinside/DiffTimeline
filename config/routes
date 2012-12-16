@@ -23,7 +23,6 @@
 /static-content/difftimeline.css             DifftimelineCss         GET
 /static-content/difftimeline.js              DifftimelineJs          GET
 /static-content/favicon.ico                  Favicon                 GET
-/static-content/screen.css                   Screen                  GET
 
 /static-content/jquery.min.js                Jquery                  GET
 /static-content/jquery-ui.min.js             JqueryUI                GET
