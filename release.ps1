@@ -1,5 +1,5 @@
 $OS = 'win32'
-$version = "1.0b1"
+$version = "1.0b2"
 
 #./prepare.ps1
 
