@@ -13,4 +13,6 @@ dist
 cabal-dev
 static/tmp
 difftimeline
+composed.js
 *.bz2
+
