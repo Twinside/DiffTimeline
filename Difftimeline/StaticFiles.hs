@@ -6,6 +6,9 @@ import Data.FileEmbed
 import qualified Data.Text as T
 import Data.Text.Encoding( decodeUtf8 )
 
+composedEmbedded :: (FilePath, T.Text)
+composedEmbedded = ("composed.js", decodeUtf8 $(embedFile "composed.js"))
+
 basePageEmbedded :: (FilePath, T.Text)
 basePageEmbedded = ("base_page.html", decodeUtf8 $(embedFile "static-content/base_page.html"))
 

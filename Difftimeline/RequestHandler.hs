@@ -27,6 +27,7 @@ module Difftimeline.RequestHandler( getRootR
                                   , getTinysyntaxhighlighter
                                   , getJqueryHotKeys
                                   , getJqueryScrollTo
+                                  , getComposed
 
                                   -- ** CSS
                                   , getDifftimelineCss
@@ -93,15 +94,17 @@ getScreen =  fetchStatic RepCss screenCssEmbedded
 getSyntax_highlight = fetchStatic RepCss syntaxhighlihgtCss
 
 getICanHaz_min,  getDifftimelineJs, getFavicon, getJquery, getJqueryUI,
-    getTinysyntaxhighlighter, getJqueryHotKeys, getJqueryScrollTo :: Handler RepPlain
-getICanHaz_min = fetchStatic RepPlain icanHazEmbedded 
-getDifftimelineJs = fetchStatic RepPlain diffTimlineJsEmbedded 
+    getTinysyntaxhighlighter, getJqueryHotKeys, getJqueryScrollTo,
+    getComposed :: Handler RepPlain
+getICanHaz_min = fetchStatic RepPlain icanHazEmbedded
+getDifftimelineJs = fetchStatic RepPlain diffTimlineJsEmbedded
 getFavicon = fetchStatic RepPlain faviconEmbed
-getJquery = fetchStatic RepPlain jqueryEmbedded 
-getJqueryUI = fetchStatic RepPlain jqueryUiEmbedded 
-getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs 
+getJquery = fetchStatic RepPlain jqueryEmbedded
+getJqueryUI = fetchStatic RepPlain jqueryUiEmbedded
+getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs
 getJqueryHotKeys = fetchStatic RepPlain jqueryHotkeysEmbedded
 getJqueryScrollTo = fetchStatic RepPlain jqueryScrollToEmbedded
+getComposed = fetchStatic RepPlain composedEmbedded
 
 getBlameFromRoot :: String -> [Text] -> Handler RepJson
 getBlameFromRoot rootCommit filePathes = withRepository extractor

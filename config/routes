@@ -18,6 +18,7 @@
 
 /difftimeline.extern.js		        JSONExternR		GET
 
+/static-content/composed.js                  Composed                GET
 /static-content/ICanHaz.min.js               ICanHaz_min             GET
 /static-content/difftimeline.css             DifftimelineCss         GET
 /static-content/difftimeline.js              DifftimelineJs          GET

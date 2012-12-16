@@ -1,6 +1,6 @@
 all: build
 
-build:
+build: composed.js
 	runhaskell Setup.hs build
 
 blame_tests:
@@ -37,15 +37,17 @@ place:
 unixplace:
 	cp dist/build/difftimeline/difftimeline ~/.cabal/bin/
 
-check:
+composed.js: static-content/difftimeline.js static-content/tinysyntaxhighlighter.js
 	java -jar compiler.jar \
 		 --warning_level VERBOSE \
 		 --js_output_file composed.js \
 		 --jscomp_warning=checkTypes \
 		 --externs test/externs/jquery-1.7.js \
+		 --externs test/externs/jquery.ext.js \
 		 --externs test/externs/icanhaz.extern.js \
 		 --externs test/externs/difftimeline.extern.js \
 		 --summary_detail_level 3 \
 		 --js static-content/difftimeline.js \
 		 --js static-content/tinysyntaxhighlighter.js
 
+#--compilation_level ADVANCED_OPTIMIZATIONS \

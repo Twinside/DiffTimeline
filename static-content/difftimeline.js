@@ -42,7 +42,7 @@ function make_draggable_elems(node) {
         helper: 'clone',
         appendTo: 'body',
         start: function(event, ui) { $(this).css("z-index", 15); },
-        zIndex: 300,
+        zIndex: 300
     });
 
     $('.branch_widget', node).draggable({
@@ -116,7 +116,8 @@ ResultSet.prototype.create_all_dom = function() {};
 ResultSet.prototype.render_all = function() {};
 
 ResultSet.prototype.send_message = function( msg ) {};
-ResultSet.prototype.fetch_previous = function() {};
+/** @param {number} id */
+ResultSet.prototype.fetch_previous = function( id ) {};
 
 /** @enum {number} */
 Project.ViewMode = {
@@ -164,7 +165,7 @@ Project.GuiMessage = {
 
 var blame_gradient = {
     beg: { r: 0x0, g:0x0, b:0x0},
-    end: { r: 0x80, g:0x80, b:0x80},
+    end: { r: 0x80, g:0x80, b:0x80}
 };
 
 var color_lerp = function ( c1, c2, v ) {
@@ -465,6 +466,25 @@ Project.state = (function () {
         }
     };
 })();
+
+/** Export for closure compiler */
+window['Project'] = Project;
+window['Project']['state'] = Project.state;
+window['Project']['state']['switch_file'] = Project.state.switch_file;
+window['Project']['state']['switch_blame'] = Project.state.switch_blame;
+window['Project']['state']['switch_commit'] = Project.state.switch_blame;
+window['Project']['state']['send_state_message'] = Project.state.send_state_message;
+window['Project']['state']['get_previous'] = Project.state.get_previous;
+window['Project']['state']['toggle_diff_full'] = Project.state.toggle_diff_full;
+window['Project']['state']['increase_context_size'] = Project.state.increase_context_size;
+window['Project']['state']['decrease_context_size'] = Project.state.decrease_context_size;
+window['Project']['state']['start_file'] = Project.state.start_file;
+window['Project']['state']['start_commit'] = Project.state.start_commit;
+window['Project']['state']['start_blame'] = Project.state.start_blame;
+
+window['Project']['GuiMessage'] = Project.GuiMessage;
+window['Project']['GuiMessage']['FETCH_TREE'] = Project.GuiMessage.FETCH_TREE;
+window['Project']['GuiMessage']['FETCH_DETAIL'] = Project.GuiMessage.FETCH_DETAIL;
 
 /**
  * @param {Element} node
@@ -887,7 +907,7 @@ var DiffManipulator = (function () {
 
     /**
      * @param {number} line
-     * @param {DiffCommand} diff
+     * @param {Array.<DiffCommand>} diffs
      * @return {number}
      */
     var to_prev_diff = function(line, diffs) {
@@ -925,7 +945,7 @@ var DiffManipulator = (function () {
 
     /**
      * @param {number} line
-     * @param {DiffCommand} diff
+     * @param {Array.<DiffCommand>} diffs
      * @return {number}
      */
     var to_next_diff = function(line, diffs) {
@@ -995,21 +1015,22 @@ var html_encodize = function(snipp) {
 ////////////////////////////////////////////////////////////
 ////  Commit
 ////////////////////////////////////////////////////////////
-/**
- * @param {Ref} key
- * @param {CommitDetail} data
- * @constructor
- */
-var Commit = function(key, data) {
+var Commit =
+    /**
+     * @param {Ref} key
+     * @param {CommitDetail} data
+     * @constructor
+     */
+             function(key, data) {
     "use strict";
 
     this.key = key === null_ref ? display_null_ref : key;
     this.is_key_real = key !== null_ref;
-    this.commit_date = timestamp_to_string(data.timestamp);
-    this.parents_sha = data.parents_sha;
-    this.file_changes = data.file_changes;
-    this.author = data.author
-    this.message = data.message;
+    this.commit_date = timestamp_to_string(data['timestamp']);
+    this.parents_sha = data['parents_sha'];
+    this.file_changes = data['file_changes'];
+    this.author = data['author'];
+    this.message = data['message'];
 
     var i;
     var tooltips = [];
@@ -1021,7 +1042,7 @@ var Commit = function(key, data) {
 
     Project.state.set_previous_button_count(this.parents_sha.length, tooltips);
 
-    var messages_lines = data.message.split('\n');
+    var messages_lines = data['message'].split('\n');
     var first_non_null = 0;
 
     while (messages_lines[first_non_null] === '')
@@ -1035,7 +1056,7 @@ var Commit = function(key, data) {
                                              messages_lines.length).join('\n')).replace(/\n/g, '<br/>');
     
     this.split_message =
-        (html_encodize(data.message)).replace(/\n/g, '<br/>');
+        (html_encodize(data['message'])).replace(/\n/g, '<br/>');
     this.tree_fetched = false;
     this.tree_opened = false;
     this.last_view_mode = Project.state.active_view_mode();
@@ -1044,7 +1065,7 @@ var Commit = function(key, data) {
 
     if (data.hasOwnProperty('file_changes')) {
         this.fully_fetched = true;
-        this.file_changes = data.file_changes;
+        this.file_changes = data['file_changes'];
     } else {
         this.fully_fetched = false;
         this.file_changes = [];
@@ -1579,6 +1600,10 @@ var FileBlob = function (data) {
 
     this.set_line = function(line) {
         this.line_index = line;
+
+        var numbers = $('.syntax_line_number', this.orig_node);
+        $('.highlighted_line', this.orig_node).removeClass('highlighted_line');
+        $(numbers[this.line_index]).addClass('highlighted_line');
     }
 
     this.set_line_offset = function( offset ) {
@@ -1743,15 +1768,24 @@ var FileBlob = function (data) {
         render_node.appendTo($('table td:last', this.orig_node));
     }
 
+    /** @type {number} */
     this.line_index = 0;
 
-    this.focus_line = function() {
+    this.focus_line = 
+        /** @param {number} speed */
+                      function(speed) {
+        if (this.line_index === 0) {
+            $(document).scrollTo(this.orig_node, speed,
+                        {offset: Project.state.chrome_scroll_offset()});
+            return;
+        }
+
         var numbers = $('.syntax_line_number', this.orig_node);
         var offsets = Project.state.chrome_scroll_offset();
         offsets.left -= 30;
         offsets.top -= 200;
 
-        $(document).scrollTo(numbers[this.line_index], 5, {offset: offsets });
+        $(document).scrollTo(numbers[this.line_index], speed, {offset: offsets });
     };
 
     this.move_line_up = function () {
@@ -1862,8 +1896,7 @@ var FileRenderer = (function() {
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
             $(new_focused_node).addClass(global_focus);
-            this.collection[this.focused_index].focus_line();
-            //$(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+            this.collection[this.focused_index].focus_line(200);
         };
 
         this.move_right = function() {
@@ -1875,8 +1908,7 @@ var FileRenderer = (function() {
 
             var new_focused_node = this.collection[this.focused_index].orig_node;
             $(new_focused_node).addClass(global_focus);
-            this.collection[this.focused_index].focus_line();
-            //$(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
+            this.collection[this.focused_index].focus_line(200);
         };
 
         this.synchronize_lines = function( targetted_line ) {
@@ -1907,7 +1939,7 @@ var FileRenderer = (function() {
                 blob.set_line(matching_lines[i]);
             }
 
-            this.collection[ curr_index ].focus_line();
+            this.collection[ curr_index ].focus_line(5);
         };
 
         this.move_line_up = function() {
@@ -2195,7 +2227,7 @@ var BlameShower = (function() {
         var i = 0;
 
         var splitedMessageLines = [];
-        for (var i = 0; i < messageLines.length; i++) {
+        for (i = 0; i < messageLines.length; i++) {
             var sub = messageLines[i].match(/.{1,30}/g);
 
             if (!sub) continue;
@@ -2438,3 +2470,4 @@ $(document).bind('keydown', 'ctrl+right', function() {
     breadcrumb.go_forward();
 });
 
+window['leave_server'] = leave_server;
