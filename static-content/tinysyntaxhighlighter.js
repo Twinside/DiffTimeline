@@ -893,7 +893,7 @@ var TinySyntaxHighlighter = (function () {
                                              ,'inherit', 'initializer', 'land', 'lazy'
                                              ,'let', 'match', 'method', 'mutable', 'new'
                                              ,'of', 'parser', 'private', 'raise', 'rec', 'end'
-                                             ,'done', 'open', 'val',
+                                             ,'done', 'open', 'val', 'begin',
                                              ,'try', 'type', 'virtual', 'when', 'while', 'with'] }
             , { kind:'syntax_bool'     , words:["true", "false"] }
             , { kind:'syntax_operator', words:['asr', 'lnot', 'lor', 'lsl', 'lsr'
