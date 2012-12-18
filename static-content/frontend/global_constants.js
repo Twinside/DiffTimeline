@@ -100,3 +100,5 @@ function show_error( data ) {
 function leave_server()
     { $.ajax( {url:"/quit", async:false} ); }
 
+function nop() {}
+

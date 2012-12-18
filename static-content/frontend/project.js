@@ -41,7 +41,8 @@ Project.GuiMessage = {
     MOVE_FIRST:   6,
     MOVE_LAST:    7,
 
-    MOVE_INNER:   8
+    MOVE_INNER:      8,
+    COMMAND_REQUEST: 9
 }
 
 /**

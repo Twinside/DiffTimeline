@@ -24,6 +24,20 @@ table
     margin-bottom:1.4em;
 }
 
+/****************/
+/* COMMAND LINE */
+/****************/
+div.command_line
+{
+    position: fixed;
+    left: 500px;
+    top: 500px;
+    background-color: white;
+    z-index: 999;
+    color: red;
+    visibility: hidden;
+}
+
 /** Position of various elements of the application.
  */
 .horizontal_toolbar

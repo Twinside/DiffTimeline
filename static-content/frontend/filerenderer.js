@@ -138,6 +138,37 @@ var FileRenderer = (function() {
             this.synchronize_lines(curr.move_line_down());
         };
 
+        this.command_request = function() {
+            var command = $('.command_line');
+            var input = $('input', command);
+            var form = $('form', command);
+
+            command.css("visibility", "visible");
+
+            var this_obj = this;
+            form.submit(function () {
+                var val = $(input).val();
+
+                if (val[0] === ':')
+                    val = val.slice(1, val.length);
+
+                // line number jumping
+                if ( val.match(/^[0-9]+$/) ) {
+                    var line = parseInt(val) - 1;
+                    var curr = this_obj.collection[this_obj.focused_index];
+                    this_obj.synchronize_lines(curr.set_line(line));
+                }
+
+                input.blur();
+                command.css("visibility", "hidden");
+                    
+                return false;
+            });
+            input.focus();
+            input.val('');
+            return false;
+        }
+
         this.send_message = function( msg ) {
             if (msg.action === Project.GuiMessage.FETCH_DETAIL)
                 return this.fetch_details(msg.key);
@@ -149,6 +180,8 @@ var FileRenderer = (function() {
                 return this.move_line_down();
             else if (msg.action === Project.GuiMessage.MOVE_UP)
                 return this.move_line_up();
+            else if (msg.action === Project.GuiMessage.COMMAND_REQUEST)
+                return this.command_request();
         };
 
         this.fetch_previous = function(id) {
