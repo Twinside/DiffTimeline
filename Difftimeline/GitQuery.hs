@@ -282,7 +282,10 @@ brancheslist repo = do
                             , remoteBranches = branches })
     oldTagInfo <- trace "[8 ] Gathering tag (if possible)" $ getTagNames repo >>= mapM fetchTag 
 
-    let remotes = [RemoteBranches (T.pack n)
+    let remoteNotEmpty (RemoteBranches _ lst) = not $ null lst
+
+        remotes =
+                  [RemoteBranches (T.pack n)
                       [BranchInfo (T.pack s) r | (r, s) <- lst]
                         | RefRemote n lst <- allBranches ]
                   ++
@@ -296,7 +299,7 @@ brancheslist repo = do
         remoteName = "local",
         remoteBranches = branchInfo ++ oldBranchInfo ++ tagInfo ++ oldTagInfo
     }
-    pure . trace ("[10] OK.") $ localBranch : remotesOldStyle ++ remotes
+    pure . filter remoteNotEmpty . trace ("[10] OK.") $ localBranch : remotesOldStyle ++ remotes
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
