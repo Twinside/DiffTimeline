@@ -242,6 +242,10 @@ FileBlob.prototype.render = function(next_diff) {
     render_node.appendTo($('table td:last', this.orig_node));
 };
 
+FileBlob.prototype.offset_line = function(offset) {
+    return this.set_line(this.line_index + offset);
+};
+
 FileBlob.prototype.move_line_up = function () {
     if (this.line_index === 0)
         return this.line_index;

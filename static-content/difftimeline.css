@@ -19,6 +19,9 @@ body
     font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
 
+li ul, li ol {margin:0;}
+ul, ol {margin:0 1.5em 1.5em 0;padding-left:1.5em;}
+
 table
 {
     margin-bottom:1.4em;
@@ -30,12 +33,39 @@ table
 div.command_line
 {
     position: fixed;
-    left: 500px;
-    top: 500px;
-    background-color: white;
+    left: 200px;
+    top: 200px;
+    background-color: #666B96;
+    width: 600px;
     z-index: 999;
-    color: red;
+    color: #CCD1FF;
     visibility: hidden;
+}
+
+div.command_line ul
+{
+    font-size: 14px;
+}
+
+div.command_line input[type=text],
+div.command_line input[type=number]
+{
+    border: 5px solid white; 
+    -webkit-box-shadow: 
+      inset 0 0 8px  rgba(0,0,0,0.1),
+            0 0 16px rgba(0,0,0,0.1); 
+    -moz-box-shadow: 
+      inset 0 0 8px  rgba(0,0,0,0.1),
+            0 0 16px rgba(0,0,0,0.1); 
+    box-shadow: 
+      inset 0 0 8px  rgba(0,0,0,0.1),
+            0 0 16px rgba(0,0,0,0.1); 
+
+    font-size: 22px;
+    padding: 5px;
+    background: rgba(255,255,255,0.5);
+    width: 96.8%;
+    margin-right: 15px;
 }
 
 /** Position of various elements of the application.

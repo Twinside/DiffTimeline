@@ -158,9 +158,15 @@ var FileRenderer = (function() {
                     var curr = this_obj.collection[this_obj.focused_index];
                     this_obj.synchronize_lines(curr.set_line(line));
                 }
+                else if ( val.match(/^[+-][0-9]+$/) ) {
+                    var offset = parseInt(val);
+                    var curr = this_obj.collection[this_obj.focused_index];
+                    this_obj.synchronize_lines(curr.offset_line(offset));
+                }
 
                 input.blur();
                 command.css("visibility", "hidden");
+                form.unbind('submit');
                     
                 return false;
             });
