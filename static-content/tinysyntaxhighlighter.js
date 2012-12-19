@@ -356,6 +356,7 @@ var TinySyntaxHighlighter = (function () {
                     addText(line.slice(currentIndex, currentIndex + consumed_chars));
                     consumed = true;
                     currentIndex += consumed_chars;
+                    current_region = r;
                     break;
                 }
             }
