@@ -91,6 +91,32 @@ var CommitRenderer = (function() {
             $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
         };
 
+        this.command_request = function() {
+            var command = $('.command_line_file');
+            var input = $('input', command);
+            var form = $('form', command);
+
+            command.css("visibility", "visible");
+
+            var this_obj = this;
+            form.submit(function () {
+                var val = $(input).val();
+
+                if (val[0] === ':')
+                    val = val.slice(1, val.length);
+
+
+                input.blur();
+                command.css("visibility", "hidden");
+                form.unbind('submit');
+                    
+                return false;
+            });
+
+            input.focus();
+            input.val('');
+            return false;
+        }
 
         this.send_message = function( msg ) {
             if (msg.action === Project.GuiMessage.FETCH_TREE)
@@ -107,6 +133,8 @@ var CommitRenderer = (function() {
                 this.focused_index = 1;
                 return this.move_right();
             }
+            else if (msg.action === Project.GuiMessage.COMMAND_REQUEST)
+                return this.command_request();
             else
                 return this.collection[this.focused_index].send_message(msg);
         };

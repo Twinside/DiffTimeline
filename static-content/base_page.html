@@ -145,7 +145,7 @@
         </script>
 
         <script id="blame_range" type="text/html">
-            <div class="blame_range"onclick="Project.state.switch_commit('{{tag.key}}')"><pre>{{tag.key}} {{{padd_string}}}</pre></div>
+            <div class="blame_range" onclick="Project.state.switch_commit('{{tag.key}}')"><pre>{{tag.key}} {{{padd_string}}}</pre></div>
         </script>
 
         <script id="blamefile" type="text/html">
@@ -340,6 +340,12 @@
                     </tr>
                 </table>
             </form>
+        </div>
+        <div class="command_line_file">
+            <form id="command" action="javascript:nop()" autocomplete="off">
+                <input type="number" name="line_number" min="1" max="99999" value="" />
+            </form>
+            <div class="match_list"></div>
         </div>
         <div class="command_line">
             <ul>

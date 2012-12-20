@@ -30,7 +30,8 @@ table
 /****************/
 /* COMMAND LINE */
 /****************/
-div.command_line
+div.command_line,
+div.command_line_file
 {
     position: fixed;
     left: 200px;
