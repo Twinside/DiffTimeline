@@ -142,6 +142,7 @@ var CommitRenderer = (function() {
         this.create_all_dom = function() {
             for ( var i = 0; i < this.collection.length; i++ ) {
                 insert_node(this.collection[i].create_dom());
+                this.collection[i].post_insert();
             }
         };
 

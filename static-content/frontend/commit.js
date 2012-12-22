@@ -292,18 +292,23 @@ Commit.prototype.fetch_tree = function() {
     });
 };
 
+Commit.prototype.post_insert = function() {
+    var view_mode = Project.state.active_view_mode();
+
+    if (view_mode == Project.ViewMode.VIEW_FULL && this.tree_fetched) {
+        var tree_node = $(".commit_tree", this.orig_node);
+        this.render_tree(tree_node[0], 0, "", this.tree);
+        this.tree_opened = false;
+        tree_node.animate({height: 'toggle'});
+    }
+}
+
 Commit.prototype.create_dom = function() {
     var view_mode = Project.state.active_view_mode();
     this.tree_opened = false;
 
     if (view_mode == Project.ViewMode.VIEW_FULL) {
         this.orig_node = ich.commit_detailed(this);
-
-        if (this.tree_fetched) {
-            var tree_node = $(".commit_tree", this.orig_node);
-            this.render_tree(tree_node[0], 0, "", this.tree);
-            tree_node.animate({height: 0});
-        }
     }
     else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
         this.orig_node = ich.commit_compact(this);
