@@ -11,6 +11,12 @@
         <script language="javascript" type="text/javascript" src="static-content/jquery-scrollTo.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/ICanHaz.min.js"></script>
 
+        <script id="file_search_result" type="text/html">
+            <div class="file_search_result">
+                {{full_path}}
+            </div>
+        </script>
+
         <script id="commit_file" type="text/html">
             <div class="file_{{kind}}">
                 <span class="commit_diff_symbol"
@@ -342,8 +348,11 @@
             </form>
         </div>
         <div class="command_line_file">
+            <ul>
+                <li><code>:<i>filename</i></code> Jump to file from current commit.</li>
+            </ul>
             <form id="command" action="javascript:nop()" autocomplete="off">
-                <input type="number" name="line_number" min="1" max="99999" value="" />
+                <input type="text" name="line_number" min="1" max="99999" value="" />
             </form>
             <div class="match_list"></div>
         </div>
@@ -354,7 +363,7 @@
                 <li><code>:-<i>number</i></code> go to current line -<i>number</i></li>
             </ul>
             <form id="command" action="javascript:nop()" autocomplete="off">
-                <input type="number" name="line_number" min="1" max="99999" value="" />
+                <input type="text" name="line_number" min="1" max="99999" value="" />
             </form>
         </div>
         <div id="container" class="container" />

@@ -92,4 +92,10 @@ ich.prototype.blamefile = function(arg) {};
  */
 ich.prototype.branch_list = function(arg) {};
 
+/**
+ * @param {json} arg
+ * @return {jQuery}
+ */
+ich.prototype.file_search_result = function(arg) {};
+
 ich.prototype.grabTemplates = function () {};

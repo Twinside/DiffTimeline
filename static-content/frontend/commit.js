@@ -253,7 +253,7 @@ Commit.prototype.render_tree = function(node, depth, tree_path, elem) {
     return new_node;
 }
 
-Commit.prototype.fetch_tree = function() {
+Commit.prototype.fetch_tree_raw = function(callback) {
     var tree_node = $(".commit_tree", this.orig_node);
     var indicator = $(".btn_indicator", this.orig_node);
 
@@ -283,13 +283,52 @@ Commit.prototype.fetch_tree = function() {
             tree_node.animate({height: 'toggle'});
             this_obj.tree = data;
             this_obj.tree_fetched = true;
-            this_obj.tree_opened = true;
             remove_children(tree_node[0]);
             this_obj.render_tree(tree_node[0], 0, "", data);
-            tree_node.animate({height: 'toggle'});
-            indicator.html("&#x25b2;");
+            callback();
         }
     });
+};
+
+Commit.prototype.fetch_tree = function() {
+    this.fetch_tree_raw(function() {
+        this_obj.tree_opened = true;
+        tree_node.animate({height: 'toggle'});
+        indicator.html("&#x25b2;");
+    });
+};
+
+Commit.prototype.find_matching_file_list = function(pattern) {
+    var ret_list = [];
+    var recurse = function(elem) {
+        if (elem.hasOwnProperty('children') && elem.children.length > 0)
+        {
+            for ( var i = 0; i < elem.children.length; i++ )
+                recurse(elem.children[i]);
+        } else {
+            if ( pattern.test(elem.full_path) )
+                ret_list.push(elem);
+        }
+    }
+
+    recurse(this.tree);
+
+    return ret_list;
+}
+
+/**
+ * @param {String} pattern The file pattern to be searched
+ * @param {function(Array.<String>) : void} callback
+ */
+Commit.prototype.find_matching_files = function(pattern, callback) {
+    if (!this.tree_fetched) {
+        var this_obj = this;
+        this.fetch_tree_raw(function (){
+            callback( this_obj.find_matching_file_list(pattern) );
+        });
+    }
+    else
+        callback( this.find_matching_file_list(pattern) );
 };
 
 Commit.prototype.post_insert = function() {
