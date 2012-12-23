@@ -1,53 +1,46 @@
-/**
- * @namespace
- */
-var breadcrumb = (function() {
-    "use strict";
-
+var BreadCrumb = function() {
     /** @type {number} */
     var count = 0;
 
     /** @type {number} */
     var current_index = 0;
+};
 
-    return {
-        append_breadcrumb:
-		/** @type {function(string) : void} */
-						   function( name ) {
-            if (current_index < count - 1)
-            {
-                $('#breadcrumb > span').slice(current_index + 1).remove();
-                count = current_index + 1;
-            }
+/** @type {function(string) : void} */
+BreadCrumb.prototype.append_breadcrumb = function( name ) {
+    if (this.current_index < this.count - 1)
+    {
+        $('#breadcrumb > span').slice(this.current_index + 1).remove();
+        this.count = this.current_index + 1;
+    }
 
-            /** @type {jQuery} */
-            var elem = ich.breadcrumbelem({name:name, id:count});
-            $('#breadcrumb').append(elem);
-            current_index = count++;
-        },
+    /** @type {jQuery} */
+    var elem = ich.breadcrumbelem({name:name, id:this.count});
+    $('#breadcrumb').append(elem);
+    this.current_index = this.count++;
+};
 
-        go_forward: function() {
-            if (current_index === count - 1)
-                return;
+BreadCrumb.prototype.go_forward = function() {
+    if (this.current_index === this.count - 1)
+        return;
 
-            current_index++;
-            Project.state.jump_context(current_index);
-        },
+    this.current_index++;
+    Project.state.jump_context(this.current_index);
+};
 
-        go_backward: function() {
-            if (current_index === 0)
-                return;
+BreadCrumb.prototype.go_backward = function() {
+    if (this.current_index === 0)
+        return;
 
-            current_index--;
-            Project.state.jump_context(current_index);
-        },
+    this.current_index--;
+    Project.state.jump_context(this.current_index);
+};
 
-        click_index: 
-        /** @type {function(number) : void} */
-					function( idx ) {
-            current_index = idx;
-            Project.state.jump_context(idx);
-        }
-    };
-})();
+/** @type {function(number) : void} */
+BreadCrumb.prototype.click_index = function( idx ) {
+    this.current_index = idx;
+    Project.state.jump_context(idx);
+};
+
+var breadcrumb = new BreadCrumb();
 
