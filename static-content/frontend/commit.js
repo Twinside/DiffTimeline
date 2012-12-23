@@ -291,9 +291,13 @@ Commit.prototype.fetch_tree_raw = function(callback) {
 };
 
 Commit.prototype.fetch_tree = function() {
+    var this_obj = this;
+
     this.fetch_tree_raw(function() {
         this_obj.tree_opened = true;
         tree_node.animate({height: 'toggle'});
+
+        var indicator = $(".btn_indicator", this.orig_node);
         indicator.html("&#x25b2;");
     });
 };

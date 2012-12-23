@@ -1,9 +1,10 @@
+/** @constructor */
 var BreadCrumb = function() {
     /** @type {number} */
-    var count = 0;
+    this.count = 0;
 
     /** @type {number} */
-    var current_index = 0;
+    this.current_index = 0;
 };
 
 /** @type {function(string) : void} */

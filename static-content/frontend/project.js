@@ -169,10 +169,12 @@ Project.state = (function () {
          */
         switch_file: function(file, fkey, start_commit) {
             this.clear_display();
-            var new_state = FileRenderer.create_from_arg(file, fkey, start_commit);
-            states.push( new_state );
-            show_hide_toolbar_elements(new_state.gui_descr);
-            breadcrumb.append_breadcrumb(file);
+            FileRenderer.create_from_arg(file, fkey, start_commit,
+                                         function( new_state ) {
+                states.push( new_state );
+                show_hide_toolbar_elements(new_state.gui_descr);
+                breadcrumb.append_breadcrumb(file);
+            });
         },
 
         switch_commit_comp: function( b1, b2 ) {
