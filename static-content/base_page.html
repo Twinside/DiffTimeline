@@ -11,21 +11,35 @@
         <script language="javascript" type="text/javascript" src="static-content/jquery-scrollTo.js"></script>
         <script language="javascript" type="text/javascript" src="static-content/ICanHaz.min.js"></script>
 
+        <script id="file_widget" type="text/html">
+            <span class="filename file_widget">
+                {{name}}
+                <span class="path">{{full_path}}</span>
+                <span class="key">{{key}}</span>
+            </span>
+        </script>
+
+        <script id="full_file_widget" type="text/html">
+            <span class="filename file_widget">
+                {{full_path}}
+                <span class="path">{{full_path}}</span>
+                <span class="key">{{key}}</span>
+            </span>
+        </script>
+
         <script id="file_search_result" type="text/html">
             <div class="file_search_result">
-                {{full_path}}
+                {{>full_file_widget}}
             </div>
         </script>
+
 
         <script id="commit_file" type="text/html">
             <div class="file_{{kind}}">
                 <span class="commit_diff_symbol"
                       onclick="Project.state.switch_file('{{name}}', '{{hash}}','{{key}}')"></span>
-                <span class="filename file_widget">
-                    {{name}}
-                    <span class="path">{{name}}</span>
-                    <span class="key">{{key}}</span>
-                </span>
+
+                {{>file_widget}}
             </div>
         </script>
 
@@ -33,11 +47,7 @@
             <div class="file_modification">
                 <span class="commit_diff_symbol"
 					  onclick="Project.state.switch_file('{{name}}', '{{hash}}', '{{key}}')">~</span>
-                <span class="filename file_widget">
-                    {{name}}
-                    <span class="path">{{name}}</span>
-                    <span class="key">{{key}}</span>
-                </span>
+                {{>file_widget}}
                 {{^binary}}
                     <span onclick="Project.state.switch_blame('{{key}}', '{{name}}')"
                           class="blame_button">Blame</span>
@@ -53,11 +63,8 @@
             <div class="tree_{{kind}}">
                 <span class="commit_diff_symbol"
                       onclick="Project.state.switch_file('{{full_path}}', '{{hash}}', '{{key}}')"></span>
-                <span class="file_widget">
-                    {{name}}
-                    <span class="path">{{full_path}}</span>
-                    <span class="key">{{key}}</span>
-                </span>
+
+                {{>file_widget}}
                 <span onclick="Project.state.switch_blame('{{key}}', '{{full_path}}')"
                       class="blame_button">Blame</span>
             </div>

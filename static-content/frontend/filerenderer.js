@@ -127,6 +127,17 @@ FileRendererBase.prototype.move_line_down = function() {
     this.synchronize_lines(curr.move_line_down());
 };
 
+FileRendererBase.prototype.clear_command = function() {
+    var command = $('.command_line');
+    var input = $('input', command);
+    var form = $('form', command);
+
+    input.blur();
+    command.css("visibility", "hidden");
+    form.unbind('submit');
+    input.unbind('keyup');
+}
+
 FileRendererBase.prototype.command_request = function() {
     var command = $('.command_line');
     var input = $('input', command);
@@ -135,6 +146,16 @@ FileRendererBase.prototype.command_request = function() {
     command.css("visibility", "visible");
 
     var this_obj = this;
+    input.keyup(function (e) {
+        // detect the escape key
+        if (e.keyCode == 27) {
+            this_obj.clear_command();
+            return true;
+        }
+
+        return false;
+    });
+
     form.submit(function () {
         var val = $(input).val();
 
@@ -153,12 +174,10 @@ FileRendererBase.prototype.command_request = function() {
             this_obj.synchronize_lines(curr.offset_line(offset));
         }
 
-        input.blur();
-        command.css("visibility", "hidden");
-        form.unbind('submit');
-            
+        this_obj.clear_command();
         return false;
     });
+
     input.focus();
     input.val('');
     return false;

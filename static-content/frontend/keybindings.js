@@ -34,6 +34,10 @@ $(document).bind('keydown', ':', function() {
     Project.state.send_state_message({action: Project.GuiMessage.COMMAND_REQUEST});
 });
 
+$(document).bind('keyup', 'esc', function() {
+    Project.state.send_state_message({action: Project.GuiMessage.ESCAPE});
+});
+
 $(document).bind('keydown', 'ctrl+left', function() {
     breadcrumb.go_backward();
 });

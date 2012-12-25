@@ -3,6 +3,7 @@
  * @implements {ResultSet}
  */
 var CommitRendererBase = function() {
+    this.current_mode = this.normal_mode;
     this.keys = {};
     this.initial_view_mode = Project.state.active_view_mode();
     this.focused_index = 0;
@@ -88,6 +89,19 @@ CommitRendererBase.prototype.move_right = function() {
     $(document).scrollTo(new_focused_node, 200, {offset: Project.state.chrome_scroll_offset()});
 };
 
+CommitRendererBase.prototype.clear_command = function () {
+    var command = $('.command_line_file');
+    var input = $('input', command);
+    var form = $('form', command);
+
+    input.blur();
+    command.css('visibility', 'hidden');
+    form.unbind('submit');
+    input.unbind('keyup');
+
+    this.current_mode = this.normal_mode;
+};
+
 CommitRendererBase.prototype.command_request = function() {
     var command = $('.command_line_file');
     var input = $('input', command);
@@ -100,7 +114,13 @@ CommitRendererBase.prototype.command_request = function() {
     command.css("visibility", "visible");
 
     var this_obj = this;
-    input.keyup(function() {
+    input.keyup(function(e) {
+        // detect the escape key
+        if (e.keyCode == 27) {
+            this_obj.clear_command();
+            return true;
+        }
+
         var val = $(input).val();
 
         if (val[0] === ':')
@@ -119,17 +139,15 @@ CommitRendererBase.prototype.command_request = function() {
                 var new_node = ich.file_search_result(lst[i]);
                 if (i === selection_index)
                     new_node.addClass('focused_commit');
+                make_draggable_elems(new_node);
                 file_list.append(new_node);
             }
         });
     });
 
     form.submit(function () {
-        input.blur();
-        command.css('visibility', 'hidden');
-        form.unbind('submit');
-        input.unbind('keyup');
-            
+        this_obj.clear_command();
+
         var elem = result_list[selection_index];
         Project.state.switch_file(elem.full_path, elem.hash, elem.key);
 
@@ -141,7 +159,13 @@ CommitRendererBase.prototype.command_request = function() {
     return false;
 };
 
-CommitRendererBase.prototype.send_message = function( msg ) {
+CommitRendererBase.prototype.command_mode = function( msg ) {
+    if (msg.action === Project.GuiMessage.ESCAPE) {
+        this.clear_command();
+    }
+};
+
+CommitRendererBase.prototype.normal_mode = function( msg ) {
     if (msg.action === Project.GuiMessage.FETCH_TREE)
         return this.fetch_tree(msg.key);
     else if (msg.action === Project.GuiMessage.MOVE_LEFT)
@@ -153,13 +177,20 @@ CommitRendererBase.prototype.send_message = function( msg ) {
         return this.move_left();
     }
     else if (msg.action === Project.GuiMessage.MOVE_LAST) {
+        this.mode = this.command_mode;
         this.focused_index = 1;
         return this.move_right();
     }
-    else if (msg.action === Project.GuiMessage.COMMAND_REQUEST)
+    else if (msg.action === Project.GuiMessage.COMMAND_REQUEST) {
+        this.current_mode = this.command_mode;
         return this.command_request();
+    }
     else
         return this.collection[this.focused_index].send_message(msg);
+};
+
+CommitRendererBase.prototype.send_message = function( msg ) {
+    this.current_mode(msg);
 };
 
 CommitRendererBase.prototype.create_all_dom = function() {
