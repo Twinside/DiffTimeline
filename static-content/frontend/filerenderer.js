@@ -22,7 +22,7 @@ var FileRendererBase = function(init_data) {
     return this;
 };
 
-fetch_file = function(file, commit, filekey, f) {
+var fetch_file = function(file, commit, filekey, f) {
     var request = '/ask_parent/' + commit;
 
     if (file[0] == '/') request += file;
@@ -248,7 +248,7 @@ FileRendererBase.prototype.gui_descr =
     , context_size: true, syntax_toggle: false };
 
 
-FileRenderer = {
+var FileRenderer = {
     create_from_data: function(init_data) { 
         return new FileRendererBase(init_data);
     },

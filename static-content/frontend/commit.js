@@ -295,6 +295,8 @@ Commit.prototype.fetch_tree = function() {
 
     this.fetch_tree_raw(function() {
         this_obj.tree_opened = true;
+
+        var tree_node = $(".commit_tree", this.orig_node);
         tree_node.animate({height: 'toggle'});
 
         var indicator = $(".btn_indicator", this.orig_node);
