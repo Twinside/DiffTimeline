@@ -6,7 +6,15 @@ $(document).bind('keydown', 'j', function(){
     Project.state.send_state_message({action: Project.GuiMessage.MOVE_DOWN});
 });
 
+$(document).bind('keyup', 'down', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_DOWN});
+});
+
 $(document).bind('keydown', 'k', function(){
+    Project.state.send_state_message({action: Project.GuiMessage.MOVE_UP});
+});
+
+$(document).bind('keyup', 'up', function(){
     Project.state.send_state_message({action: Project.GuiMessage.MOVE_UP});
 });
 

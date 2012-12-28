@@ -102,22 +102,37 @@ CommitRendererBase.prototype.clear_command = function () {
     this.current_mode = this.normal_mode;
 };
 
+CommitRendererBase.prototype.move_command_selection = function(offset) {
+    var new_val = this.selection_index + offset;
+    this.selection_index = Math.max(0, Math.min(new_val, this.result_list.length - 1));
+
+    var results = $('.file_search_result', this.orig_node);
+    results.removeClass('focused_commit');
+    $(results[this.selection_index]).addClass('focused_commit');
+};
+
 CommitRendererBase.prototype.command_request = function() {
     var command = $('.command_line_file');
     var input = $('input', command);
     var form = $('form', command);
     var file_list = $('.match_list', command);
-    var selection_index = 0;
-    var result_list = [];
 
     $('> *', file_list).remove();
     command.css("visibility", "visible");
 
+    this.result_list = [];
+    this.selection_index = 0;
     var this_obj = this;
     input.keyup(function(e) {
         // detect the escape key
-        if (e.keyCode == 27) {
+        if (e.keyCode === 27) {
             this_obj.clear_command();
+            return true;
+        } else if (e.keyCode === 38) { // up
+            this_obj.move_command_selection(-1);
+            return true;
+        } else if (e.keyCode === 40) { // down
+            this_obj.move_command_selection(1);
             return true;
         }
 
@@ -131,13 +146,13 @@ CommitRendererBase.prototype.command_request = function() {
         var curr_commit = this_obj.collection[this_obj.collection.length - 1];
         curr_commit.find_matching_files(val, function(lst) {
             var maxi = Math.min(10, lst.length);
-            result_list = lst;
-            selection_index = 0;
+            this_obj.result_list = lst;
+            this_obj.selection_index = 0;
             $('> *', file_list).remove();
 
             for ( var i = 0; i < maxi; i++ ) {
                 var new_node = ich.file_search_result(lst[i]);
-                if (i === selection_index)
+                if (i === this_obj.selection_index)
                     new_node.addClass('focused_commit');
                 make_draggable_elems(new_node);
                 file_list.append(new_node);
@@ -148,9 +163,10 @@ CommitRendererBase.prototype.command_request = function() {
     form.submit(function () {
         this_obj.clear_command();
 
-        var elem = result_list[selection_index];
+        var elem = this_obj.result_list[this_obj.selection_index];
         Project.state.switch_file(elem.full_path, elem.hash, elem.key);
 
+        this_obj.result_list = [];
         return false;
     });
 
@@ -160,9 +176,12 @@ CommitRendererBase.prototype.command_request = function() {
 };
 
 CommitRendererBase.prototype.command_mode = function( msg ) {
-    if (msg.action === Project.GuiMessage.ESCAPE) {
+    if (msg.action === Project.GuiMessage.ESCAPE)
         this.clear_command();
-    }
+    else if (msg.action === Project.GuiMessage.MOVE_UP)
+        this.move_command_selection(-1);
+    else if (msg.action === Project.GuiMessage.MOVE_DOWN)
+        this.move_command_selection(1);
 };
 
 CommitRendererBase.prototype.normal_mode = function( msg ) {
