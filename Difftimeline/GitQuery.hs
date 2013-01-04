@@ -96,8 +96,6 @@ import Data.Vector.Algorithms.Intro( sort )
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
 
-import Debug.Trace
-
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
@@ -267,20 +265,20 @@ brancheslist repo = do
         fetchRemoteBranch remote b =
             sequence [BranchInfo (T.pack $ remote </> b) <$> readRemoteBranch repo remote b]
 
-        fetchTag b = trace ("[9 ] fetching tag " ++ b) $ BranchInfo (T.pack b) <$> readTag repo b
-    branchNames <- (trace "[1 ] Fetching local branch names") $ getBranchNames repo
-    oldBranchInfo <- (trace "[2 ] Fetching local branch values") $ concat <$> mapM fetchBranch branchNames
+        fetchTag b = BranchInfo (T.pack b) <$> readTag repo b
+    branchNames <- getBranchNames repo
+    oldBranchInfo <- concat <$> mapM fetchBranch branchNames
 
-    allBranches <- (\a -> trace ("[3 ] Gather all branches (packed-ref)" {-++ show a -}) a) <$> readAllRemoteBranches repo
-    remoteList <- (trace "[4 ] Gather all remotes (old way)") $ getRemoteNames repo
+    allBranches <- readAllRemoteBranches repo
+    remoteList <- getRemoteNames repo
     remotesOldStyle <- forM remoteList (\remote -> do
-        branchesName <- trace ("[5 ] branches for remote" ++ remote) $ E.catch (getRemoteBranchNames repo remote)
+        branchesName <- E.catch (getRemoteBranchNames repo remote)
                                 (\(_ :: IOError) -> pure [])
-        branches <- concat <$> E.catch (mapM (\b -> trace ("[6 ] fetching branch " ++ b) $ fetchRemoteBranch remote b) branchesName)
-                                       (\(_ :: IOError) -> trace ("/!\\ ERROR") $ pure [])
-        trace ("[7 ] Got branches for remote " ++ remote) $ pure RemoteBranches { remoteName = T.pack remote
+        branches <- concat <$> E.catch (mapM (\b -> fetchRemoteBranch remote b) branchesName)
+                                       (\(_ :: IOError) -> pure [])
+        pure RemoteBranches { remoteName = T.pack remote
                             , remoteBranches = branches })
-    oldTagInfo <- trace "[8 ] Gathering tag (if possible)" $ getTagNames repo >>= mapM fetchTag 
+    oldTagInfo <- getTagNames repo >>= mapM fetchTag 
 
     let remoteNotEmpty (RemoteBranches _ lst) = not $ null lst
 
@@ -299,7 +297,7 @@ brancheslist repo = do
         remoteName = "local",
         remoteBranches = branchInfo ++ oldBranchInfo ++ tagInfo ++ oldTagInfo
     }
-    pure . filter remoteNotEmpty . trace ("[10] OK.") $ localBranch : remotesOldStyle ++ remotes
+    pure . filter remoteNotEmpty $ localBranch : remotesOldStyle ++ remotes
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
