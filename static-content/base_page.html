@@ -283,10 +283,13 @@
             <div class="branch_list">
                 <div class="toggler"><div>&#x25bc; Branches</div></div>
                 <div class="list">
+                    <form class="branch_filtering_form" action="javascript:nop()" autocomplete="off">
+                        <input type="text" name="txtBranchFilter" />
+                    </form>
                     {{#ref_list}}
                         <h4>{{name}} branches</h4>
                         {{#branches}}
-                            <div>
+                            <div class='global_branch'>
                                 <div class="branch_switcher" onclick="Project.state.switch_commit('{{key}}')"
                                     alt="switch to branch view for branch {{name}}">=&gt;</div>
                                 <div class="branch_widget">

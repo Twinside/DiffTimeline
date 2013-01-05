@@ -77,6 +77,7 @@ JS_FILE_NAMES:= \
 	filecomparer.js \
 	blameshower.js \
 	init.js \
+	branch_list.js \
 	keybindings.js
 
 JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))

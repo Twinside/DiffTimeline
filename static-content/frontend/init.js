@@ -1,23 +1,3 @@
-function fetch_branch_list() {
-    $.ajax({
-        url:'/branches_list', dataType: 'json',
-        data: {},
-        error: function() {
-            show_error({error: 'Communication error with server while fetching branches'}); },
-        success: function(data) {
-            if (data['error']) { 
-                show_error( data );
-                return;
-            }
-
-            var new_node = ich.branch_list({ref_list: data});
-            $('body').append(new_node);
-            make_draggable_elems(new_node);
-            setup_branch_toggle();
-        }
-    });
-}
-
 
 function setup_global_drop()
 {
@@ -43,27 +23,12 @@ function setup_global_drop()
     });
 }
 
-function setup_branch_toggle() {  
-    $('.branch_list .list').animate({width: 'toggle'}, 0);
-
-    var is_opened = false;
-
-    $('.branch_list .toggler').click( function( event ){
-        $('.branch_list .list').animate({width: 'toggle'}, 100);
-        if (is_opened) {
-            $('.branch_list .toggler div').html('&#x25bc; Branches');
-        } else {
-            $('.branch_list .toggler div').html('&#x25b2 Branches');
-        }
-
-        is_opened = !is_opened;
-    })
-}
-
 ich.grabTemplates();
 
+var branch_list;
+
 $(document).ready(function() {
-    fetch_branch_list();
+    branch_list = new BranchLister();
     setup_global_drop();
     $(document).scrollTo( { top: 0, left: 0 } );
 });
