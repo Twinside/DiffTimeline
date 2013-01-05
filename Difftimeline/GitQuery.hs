@@ -83,6 +83,7 @@ import Data.Git( GitObject( .. )
                , TreeEntry
                , revFromString
                , resolveRevision
+               , getGitSvnBranchNames, readGitSvnBranch 
                )
 
 import Control.Monad.Trans.Class( lift )
@@ -279,16 +280,15 @@ brancheslist repo = do
         pure RemoteBranches { remoteName = T.pack remote
                             , remoteBranches = branches })
     oldTagInfo <- getTagNames repo >>= mapM fetchTag 
-
-    let remoteNotEmpty (RemoteBranches _ lst) = not $ null lst
-
-        remotes =
-                  [RemoteBranches (T.pack n)
+    gitSvnRefs <- getGitSvnBranchNames repo
+                    >>= mapM (\a -> (, T.pack a) <$> readGitSvnBranch repo a)
+    let remotes = [RemoteBranches (T.pack n)
                       [BranchInfo (T.pack s) r | (r, s) <- lst]
                         | RefRemote n lst <- allBranches ]
                   ++
                     [RemoteBranches (T.pack "/others/")
-                        [BranchInfo (T.pack s) r | RefOther r s <- allBranches ]
+                       ([BranchInfo (T.pack s) r | RefOther r s <- allBranches ] ++
+                        [BranchInfo s r          | (r, s) <- gitSvnRefs ])
                     ]
         tagInfo = [BranchInfo (T.pack s) r | RefTag r s <- allBranches]
         branchInfo = [BranchInfo (T.pack s) r | RefLocal r s <- allBranches]
@@ -297,7 +297,7 @@ brancheslist repo = do
         remoteName = "local",
         remoteBranches = branchInfo ++ oldBranchInfo ++ tagInfo ++ oldTagInfo
     }
-    pure . filter remoteNotEmpty $ localBranch : remotesOldStyle ++ remotes
+    pure $ localBranch : remotesOldStyle ++ remotes
 
 diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
