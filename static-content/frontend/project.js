@@ -159,10 +159,11 @@ Project.state = (function () {
          */
         switch_blame: function(start_commit, file) {
             this.clear_display();
-            var new_state = BlameShower.create_from_arg(start_commit, file);
-            states.push( new_state );
-            show_hide_toolbar_elements(new_state.gui_descr);
-            breadcrumb.append_breadcrumb("Blame (" + file + ")");
+            BlameShower.create_from_arg(start_commit, file, function( new_state ) {
+                states.push( new_state );
+                show_hide_toolbar_elements(new_state.gui_descr);
+                breadcrumb.append_breadcrumb("Blame (" + file + ")");
+            });
         },
 
         /**
