@@ -621,6 +621,10 @@ data FileComparison = FileComparison
 data FileReference = LocalRef FilePath
                    | RepoRef String FilePath
 
+pathOfRef :: FileReference -> FilePath
+pathOfRef (LocalRef p) = p
+pathOfRef (RepoRef _ p) = p
+
 fetchFileReference :: Git -> FileReference
                    -> ErrorT String IO (T.Text, Ref)
 fetchFileReference _ (LocalRef path) =
@@ -646,20 +650,43 @@ compareFiles repo ref1 ref2 = runErrorT $ do
         , comparisonDiff = computeTextDiff blobContent1 blobContent2
         }
 
-findParentFile :: Git -> String -> FilePath -> IO (Either String ParentFile)
-findParentFile repository commitStrSha path = runErrorT inner
-  where currentCommit = fromHexString commitStrSha
+findParentFile :: Git -> FileReference -> IO (Either String ParentFile)
+findParentFile repository originalRef = runErrorT inner
+  where path = pathOfRef originalRef
         bytePath = map BC.pack $ splitDirectories path
 
-        inner = do
+        fetchCurrentRef (RepoRef commitStrSha _) = do
+            let currentCommit = fromHexString commitStrSha
             (_, currentFileRef) <- fetchFileRefInCommit repository currentCommit bytePath
+            Blob nextFile <- accessBlob "can't find file content" repository currentFileRef
             (firstNfo, firstRef, betweenCommits) <-
                     findFirstCommit repository bytePath currentFileRef currentCommit
+
             let previousRef = case commitParents firstNfo of
                     [] -> currentCommit
                     (r:_) -> r
 
-            Blob nextFile <- accessBlob "can't find file content" repository currentFileRef
+            return (nextFile, firstNfo, firstRef, betweenCommits,
+                    previousRef, currentFileRef)
+
+        fetchCurrentRef (LocalRef _) = do
+            file <- 
+                catchError (liftIO . L.readFile $ gitRepoPath repository ++ "/../" ++ path)
+                           (\_ -> fail $ "Impossible to read file " ++ path)
+            time <- lift $ truncate <$> getPOSIXTime 
+            headRef  <- errorIO "Can't read HEAD" $ getHead repository
+            let dummyAuthor = CommitAuthor "" "" time time
+            return (file, CommitInfo { commitTree = nullRef
+                                     , commitParents = [headRef]
+                                     , commitAuthor = dummyAuthor
+                                     , commitCommitter = dummyAuthor
+                                     , commitMessage = "" }, nullRef, [], headRef, nullRef)
+
+        inner = do
+            (nextFile, firstNfo, firstRef, betweenCommits,
+                previousRef, currentFileRef) <- fetchCurrentRef originalRef
+
+
             thisFile <-
                 catchError (snd <$> fetchBlobInCommit repository previousRef bytePath)
                            (\_ -> return L.empty)

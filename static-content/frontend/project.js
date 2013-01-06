@@ -171,6 +171,10 @@ Project.state = (function () {
          */
         switch_file: function(file, fkey, start_commit) {
             this.clear_display();
+
+            if (start_commit == display_null_ref)
+                start_commit = working_dir_request_token;
+
             FileRenderer.create_from_arg(file, fkey, start_commit,
                                          function( new_state ) {
                 states.push( new_state );

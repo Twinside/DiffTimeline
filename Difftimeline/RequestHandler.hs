@@ -117,10 +117,12 @@ getBlameR rootCommit filePathes = withRepository extractor
 
 getFileParentR :: String -> [Text] -> Handler RepJson
 getFileParentR initialCommit filePathes = do
-    let file = T.unpack $ T.intercalate (T.pack "/") filePathes
     app <- getYesod
     let repository = getRepository app
-    rez <- liftIO $ findParentFile repository initialCommit file
+        file = T.unpack $ T.intercalate (T.pack "/") filePathes
+        ref | initialCommit == workingDirRequestToken = LocalRef file
+            | otherwise = RepoRef initialCommit file
+    rez <- liftIO $ findParentFile repository ref
     case rez of
        Left err -> jsonToRepJson $ object ["error" .= err]
        Right info -> jsonToRepJson $ toJSON info
