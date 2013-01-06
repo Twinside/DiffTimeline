@@ -164,12 +164,12 @@ FileRendererBase.prototype.command_request = function() {
 
         // line number jumping
         if ( val.match(/^[0-9]+$/) ) {
-            var line = parseInt(val) - 1;
+            var line = parseInt(val, 10) - 1;
             var curr = this_obj.collection[this_obj.focused_index];
             this_obj.synchronize_lines(curr.set_line(line));
         }
         else if ( val.match(/^[+-][0-9]+$/) ) {
-            var offset = parseInt(val);
+            var offset = parseInt(val, 10);
             var curr = this_obj.collection[this_obj.focused_index];
             this_obj.synchronize_lines(curr.offset_line(offset));
         }

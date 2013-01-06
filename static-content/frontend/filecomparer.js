@@ -87,7 +87,7 @@ FileComparer.prototype.create_all_dom = function() {
             var other_id = 1 - n;
 
             $(number_columns[i]).click(function(event) {
-                var line = parseInt(event.originalEvent.target.textContent) - 1;
+                var line = parseInt(event.originalEvent.target.textContent, 10) - 1;
                 var next_line = (translaters[side_id])(line);
                 var line_diff = Math.abs(line - next_line);
 
