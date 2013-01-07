@@ -47,9 +47,9 @@ BranchLister.prototype.install_search_hook = function () {
                 var el = group.branches[i];
 
                 if (pattern.test(el.name)) {
-                    $(branch_view[i]).show();
+                    $(branch_view[counter]).show();
                 } else {
-                    $(branch_view[i]).hide();
+                    $(branch_view[counter]).hide();
                 }
 
                 counter++;
