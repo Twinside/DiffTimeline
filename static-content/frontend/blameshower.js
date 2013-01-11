@@ -3,18 +3,19 @@ var BlameShower = function(data) {
     this.data = data;
     this.line_index = 0;
     this.aligner = new FileAlign();
+    this.line_index = 0;
 
     var ranges = this.data.ranges;
 
     for (var i = 0; i < ranges.length; i++) {
-        ranges[i].padd_string = this.returnGenerator(ranges[i]);
+        ranges[i].padd_string = this.split_cut_lines(ranges[i]);
     }
 
     this.create_all_dom();
     this.render_all();
 }
 
-BlameShower.prototype.returnGenerator = function(range) {
+BlameShower.prototype.split_cut_lines = function(range) {
     var n = range.size - 1;
     var ret = '';
     var messageLines = range.tag.message.split('\n');
@@ -112,6 +113,16 @@ BlameShower.prototype.move_line_up = function() {
     return this.line_index;
 };
 
+BlameShower.prototype.check_line = function(line) {
+    if (line < 0) return 0;
+
+    var numbers = $('.syntax_line_number');
+    if (line >= numbers.length)
+        return numbers.length - 1;
+
+    return line;
+}
+
 BlameShower.prototype.send_message = function( msg ) {
     if (msg.action === Project.GuiMessage.MOVE_DOWN)
         return this.move_line_down();
@@ -121,13 +132,13 @@ BlameShower.prototype.send_message = function( msg ) {
         var this_obj = this;
 
         var abs = function (line) {
-            this_obj.align_abs(line);
-            this_obj.line_index = line;
+            this_obj.line_index = this_obj.check_line(line);
+            this_obj.align_abs(this_obj.line_index);
         };
 
         var rel = function (offset) {
-            var line = this_obj.line_index + offset;
-            this_obj.align_abs(this_obj.line_index + offset);
+            var line = this_obj.check_line(this_obj.line_index + offset);
+            this_obj.align_abs(line);
             this_obj.line_index = line;
         };
 
