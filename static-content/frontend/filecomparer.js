@@ -140,8 +140,8 @@ FileComparer.prototype.send_message = function( msg ) {
         };
 
         var rel = function (offset) {
-            var line = this.line_index + offset;
-            this_obj.align_abs(0, this.line_index + offset);
+            var line = this_obj.line_index + offset;
+            this_obj.align_abs(0, this_obj.line_index + offset);
             this_obj.line_index = line;
         };
 

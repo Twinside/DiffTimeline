@@ -1,6 +1,8 @@
 /** @constructor */
 var BlameShower = function(data) {
     this.data = data;
+    this.line_index = 0;
+    this.aligner = new FileAlign();
 
     var ranges = this.data.ranges;
 
@@ -83,7 +85,54 @@ BlameShower.prototype.create_all_dom = function() {
     $('.container').append(this.orig_node);
 };
 
+BlameShower.prototype.align_abs = function(line) {
+    var this_obj = this;
+
+    var numbers = $('.line_number_column .syntax_line_number');
+    var number = numbers[line];
+    var offset = Project.state.chrome_scroll_offset();
+    offset.top -= 30;
+    offset.left -= 200;
+    $(document).scrollTo(number, 20,
+                         {offset: offset});
+
+    $('.highlighted_line', numbers).removeClass('highlighted_line');
+    $(number).addClass('highlighted_line');
+};
+
+BlameShower.prototype.move_line_down = function() {
+    this.line_index = FileAlign.move_line_down(this.line_index, $('.line_number_column')[0]);
+    this.align_abs(this.line_index);
+    return this.line_index;
+};
+
+BlameShower.prototype.move_line_up = function() {
+    this.line_index = FileAlign.move_line_up(this.line_index, $('.line_number_column')[0]);
+    this.align_abs(this.line_index);
+    return this.line_index;
+};
+
 BlameShower.prototype.send_message = function( msg ) {
+    if (msg.action === Project.GuiMessage.MOVE_DOWN)
+        return this.move_line_down();
+    else if (msg.action === Project.GuiMessage.MOVE_UP)
+        return this.move_line_up();
+    if (msg.action === Project.GuiMessage.COMMAND_REQUEST) {
+        var this_obj = this;
+
+        var abs = function (line) {
+            this_obj.align_abs(line);
+            this_obj.line_index = line;
+        };
+
+        var rel = function (offset) {
+            var line = this_obj.line_index + offset;
+            this_obj.align_abs(this_obj.line_index + offset);
+            this_obj.line_index = line;
+        };
+
+        return this.aligner.command_request(abs, rel);
+    }
 };
 
 BlameShower.prototype.gui_descr =
