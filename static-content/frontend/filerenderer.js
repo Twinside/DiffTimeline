@@ -16,6 +16,7 @@ var FileRendererBase = function(init_data) {
 
     var new_node = init_file.create_dom();
     this.insert_node( new_node );
+    this.aligner = new FileAlign();
     $(new_node).addClass(global_focus);
     init_file.render([]);
 
@@ -127,62 +128,6 @@ FileRendererBase.prototype.move_line_down = function() {
     this.synchronize_lines(curr.move_line_down());
 };
 
-FileRendererBase.prototype.clear_command = function() {
-    var command = $('.command_line');
-    var input = $('input', command);
-    var form = $('form', command);
-
-    input.blur();
-    command.css("visibility", "hidden");
-    form.unbind('submit');
-    input.unbind('keyup');
-}
-
-FileRendererBase.prototype.command_request = function() {
-    var command = $('.command_line');
-    var input = $('input', command);
-    var form = $('form', command);
-
-    command.css("visibility", "visible");
-
-    var this_obj = this;
-    input.keyup(function (e) {
-        // detect the escape key
-        if (e.keyCode == 27) {
-            this_obj.clear_command();
-            return true;
-        }
-
-        return false;
-    });
-
-    form.submit(function () {
-        var val = $(input).val();
-
-        if (val[0] === ':')
-            val = val.slice(1, val.length);
-
-        // line number jumping
-        if ( val.match(/^[0-9]+$/) ) {
-            var line = parseInt(val, 10) - 1;
-            var curr = this_obj.collection[this_obj.focused_index];
-            this_obj.synchronize_lines(curr.set_line(line));
-        }
-        else if ( val.match(/^[+-][0-9]+$/) ) {
-            var offset = parseInt(val, 10);
-            var curr = this_obj.collection[this_obj.focused_index];
-            this_obj.synchronize_lines(curr.offset_line(offset));
-        }
-
-        this_obj.clear_command();
-        return false;
-    });
-
-    input.focus();
-    input.val('');
-    return false;
-}
-
 FileRendererBase.prototype.send_message = function( msg ) {
     if (msg.action === Project.GuiMessage.FETCH_DETAIL)
         return this.fetch_details(msg.key);
@@ -194,8 +139,21 @@ FileRendererBase.prototype.send_message = function( msg ) {
         return this.move_line_down();
     else if (msg.action === Project.GuiMessage.MOVE_UP)
         return this.move_line_up();
-    else if (msg.action === Project.GuiMessage.COMMAND_REQUEST)
-        return this.command_request();
+    else if (msg.action === Project.GuiMessage.COMMAND_REQUEST) {
+        var this_obj = this;
+
+        var abs = function (line) {
+            var curr = this_obj.collection[this_obj.focused_index];
+            this_obj.synchronize_lines(curr.set_line(line));
+        };
+
+        var rel = function (offset) {
+            var curr = this_obj.collection[this_obj.focused_index];
+            this_obj.synchronize_lines(curr.offset_line(offset));
+        };
+
+        return this.aligner.command_request(abs, rel);
+    }
 };
 
 FileRendererBase.prototype.fetch_previous = function(id) {

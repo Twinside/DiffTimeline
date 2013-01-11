@@ -8,6 +8,8 @@ var FileComparer = function(key1, file1, key2, file2) {
     this.key2 = key2;
     this.file2 = file2;
     this.refresh_diff();
+    this.aligner = new FileAlign();
+    this.line_index = 0;
 }
 
 FileComparer.prototype.fetch_previous = function(id) {
@@ -66,53 +68,86 @@ FileComparer.prototype.refresh_diff = function() {
     });
 }
 
-FileComparer.prototype.create_all_dom = function() {
-    var created = ich.compare_files(this);
-    $('.container').append(created);
-
-
-    var padders = $('.container .file_content .align_padder pre');
-    
+FileComparer.prototype.align_abs = function(side_id, line) {
     var this_obj = this;
-    var number_columns = $('.line_number_column', created);
 
     var translaters = [
         function (line) { return DiffManipulator.toNextDiff(line, this_obj.data.diff); },
         function (line) { return DiffManipulator.toPrevDiff(line, this_obj.data.diff); }
     ];
 
-    for (var i = 0; i < number_columns.length; i++) {
-        (function(n) {
-            var side_id = n;
-            var other_id = 1 - n;
+    var padders = $('.container .file_content .align_padder pre');
 
-            $(number_columns[i]).click(function(event) {
-                var line = parseInt(event.originalEvent.target.textContent, 10) - 1;
-                var next_line = (translaters[side_id])(line);
-                var line_diff = Math.abs(line - next_line);
+    var other_id = 1 - side_id;
+    var next_line = (translaters[side_id])(line);
+    var line_diff = Math.abs(line - next_line);
 
-                var string_padder = '';
-
-                if (line_diff > 0) {
-                    string_padder = '\n ';
-                    for (var i = 1; i < line_diff; i++) {
-                        string_padder += '\n ';
-                    }
-                }
-
-                if (next_line >= line) {
-                    $(padders[side_id]).text(string_padder);
-                    $(padders[other_id]).text('');
-                } else {
-                    $(padders[side_id]).text('');
-                    $(padders[other_id]).text(string_padder);
-                }
-            });
-        })( i );
+    
+    if (next_line >= line) {
+        $(padders[side_id]).text(this.aligner.create_padding(line_diff));
+        $(padders[other_id]).text('');
+    } else {
+        $(padders[side_id]).text('');
+        $(padders[other_id]).text(this.aligner.create_padding(line_diff));
     }
+
+    var columns = $('.line_number_column');
+    var tmp = $('.syntax_line_number', columns[side_id]);
+    var number = tmp[line];
+    $(document).scrollTo(number, 20,
+                         {offset: Project.state.chrome_scroll_offset()});
+
+    $('.highlighted_line', columns).removeClass('highlighted_line');
+    $(number).addClass('highlighted_line');
+    $($('.syntax_line_number', columns[other_id])[next_line]).addClass('highlighted_line');
 };
 
-FileComparer.prototype.send_message = function( msg ) {};
+FileComparer.prototype.create_all_dom = function() {
+    var created = ich.compare_files(this);
+    $('.container').append(created);
+
+    var this_obj = this;
+
+    this.aligner.make_number_clickable(created, function(side_id, line) {
+        this_obj.align_abs(side_id, line);
+    });
+};
+
+FileComparer.prototype.move_line_down = function() {
+    this.line_index = FileAlign.move_line_down(this.line_index, $('.line_number_column')[0]);
+    this.align_abs(0, this.line_index);
+    return this.line_index;
+};
+
+FileComparer.prototype.move_line_up = function() {
+    this.line_index = FileAlign.move_line_up(this.line_index, $('.line_number_column')[0]);
+    this.align_abs(0, this.line_index);
+    return this.line_index;
+};
+
+FileComparer.prototype.send_message = function( msg ) {
+
+    if (msg.action === Project.GuiMessage.MOVE_DOWN)
+        return this.move_line_down();
+    else if (msg.action === Project.GuiMessage.MOVE_UP)
+        return this.move_line_up();
+    if (msg.action === Project.GuiMessage.COMMAND_REQUEST) {
+        var this_obj = this;
+
+        var abs = function (line) {
+            this_obj.align_abs(0, line);
+            this_obj.line_index = line;
+        };
+
+        var rel = function (offset) {
+            var line = this.line_index + offset;
+            this_obj.align_abs(0, this.line_index + offset);
+            this_obj.line_index = line;
+        };
+
+        return this.aligner.command_request(abs, rel);
+    }
+};
 
 FileComparer.prototype.gui_descr =
         { compact_view: true, fetch_previous: false

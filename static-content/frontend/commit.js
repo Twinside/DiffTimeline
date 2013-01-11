@@ -370,6 +370,8 @@ Commit.prototype.render_full = function() {
         var e = this.file_changes[change];
         var kind = e['kind'];
         e.key = this.key;
+        /* displayed path is full path */
+        e.full_path = e.name;
 
         var new_node = ( kind_formater.hasOwnProperty(kind)
                        ? kind_formater[kind](e)

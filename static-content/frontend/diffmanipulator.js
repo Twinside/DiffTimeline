@@ -85,6 +85,7 @@ var DiffManipulator = (function () {
             number_node.appendChild(node);
         };
 
+        remove_children(number_node);
         remove_children(node);
         for (var i = 0; i < diff_count; i++) {
             while (current_line < diff[i].beg) {

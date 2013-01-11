@@ -113,6 +113,7 @@ FileBlob.prototype.create_dom_details = function(node) {
     {
         var e = this.details[i];
         e.key = this.key;
+        e.full_path = e.name;
         detail_node.append(ich.commit_file(e));
     }
 
@@ -247,25 +248,12 @@ FileBlob.prototype.offset_line = function(offset) {
 };
 
 FileBlob.prototype.move_line_up = function () {
-    if (this.line_index === 0)
-        return this.line_index;
-
-    var numbers = $('.syntax_line_number', this.orig_node);
-    $(numbers[this.line_index]).removeClass('highlighted_line');
-    this.line_index = this.line_index - 1;
-    $(numbers[this.line_index]).addClass('highlighted_line');
+    this.line_index = FileAlign.move_line_up(this.line_index, this.orig_node);
     return this.line_index;
 };
 
 FileBlob.prototype.move_line_down = function() {
-    var numbers = $('.syntax_line_number', this.orig_node);
-    if (this.line_index === numbers.length)
-        return this.line_index;
-
-    $(numbers[this.line_index]).removeClass('highlighted_line');
-    this.line_index = this.line_index + 1;
-    $(numbers[this.line_index]).addClass('highlighted_line');
-
+    this.line_index = FileAlign.move_line_down(this.line_index, this.orig_node);
     return this.line_index;
 }
 

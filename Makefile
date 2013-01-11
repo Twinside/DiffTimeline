@@ -65,6 +65,7 @@ composed.js: static-content/difftimeline.js static-content/tinysyntaxhighlighter
 
 JS_FILE_NAMES:= \
 	global_constants.js \
+	linealign.js \
 	breadcrumb.js \
 	resultset.js \
 	project.js \
