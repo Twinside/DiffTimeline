@@ -50,6 +50,18 @@ $(document).bind('keydown', 'ctrl+left', function() {
     breadcrumb.go_backward();
 });
 
+$(document).bind('keyup', '1', function() {
+    Project.state.send_state_message({action: Project.GuiMessage.SELECT_AS_LEFT});
+});
+
+$(document).bind('keyup', '2', function() {
+    Project.state.send_state_message({action: Project.GuiMessage.SELECT_AS_RIGHT});
+});
+
+$(document).bind('keyup', 'b', function() {
+    Project.state.send_state_message({action: Project.GuiMessage.SWITCH_BLAME});
+});
+
 $(document).bind('keydown', 'ctrl+right', function() {
     breadcrumb.go_forward();
 });

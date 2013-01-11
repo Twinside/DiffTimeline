@@ -43,7 +43,10 @@ Project.GuiMessage = {
 
     MOVE_INNER:      8,
     COMMAND_REQUEST: 9,
-    ESCAPE:          10
+    ESCAPE:          10,
+    SELECT_AS_LEFT:  11,
+    SELECT_AS_RIGHT: 12,
+    SWITCH_BLAME:    13
 }
 
 /**
@@ -290,6 +293,13 @@ Project.state = (function () {
             states.push( new_state );
             show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb(file_obj.filename);
+        },
+
+        update_diff: function() {
+            var zone_a = $('.global_compare_recipient_a');
+            var zone_b = $('.global_compare_recipient_b');
+
+            Project.state.check_comparison(zone_a, zone_b);
         },
 
         check_comparison: function(node_a, node_b) {

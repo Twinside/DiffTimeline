@@ -26,6 +26,8 @@ var FileBlob = function (data) {
 
     /** @type {string} */
     this.file = data.filename;
+    this.name = data.filename;
+    this.full_path = '/' + data.filename;
 
     this.binary = data.binary;
     this.diff = data.diff;
@@ -64,6 +66,24 @@ var FileBlob = function (data) {
     this.line_index = 0;
 
     return this;
+};
+
+FileBlob.prototype.select_as_left = function() {
+    var zone_a = $('.global_compare_recipient_a');
+    remove_children(zone_a[0]);
+    $(zone_a).append(ich.file_widget(this));
+    Project.state.update_diff();
+}
+
+FileBlob.prototype.select_as_right = function() {
+    var zone_b = $('.global_compare_recipient_b');
+    remove_children(zone_b[0]);
+    $(zone_b).append(ich.file_widget(this));
+    Project.state.update_diff();
+}
+
+FileBlob.prototype.switch_blame = function () {
+    Project.state.switch_blame(this.key, this.file);
 };
 
 FileBlob.prototype.set_line = function(line) {

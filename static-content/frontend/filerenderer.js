@@ -154,6 +154,12 @@ FileRendererBase.prototype.send_message = function( msg ) {
 
         return this.aligner.command_request(abs, rel);
     }
+    else if (msg.action === Project.GuiMessage.SELECT_AS_LEFT)
+        this.collection[this.focused_index].select_as_left();
+    else if (msg.action === Project.GuiMessage.SELECT_AS_RIGHT)
+        this.collection[this.focused_index].select_as_right();
+    else if (msg.action === Project.GuiMessage.SWITCH_BLAME)
+        this.collection[this.focused_index].switch_blame();
 };
 
 FileRendererBase.prototype.fetch_previous = function(id) {
