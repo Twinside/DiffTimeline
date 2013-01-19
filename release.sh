@@ -2,7 +2,7 @@
 
 # Configuration
 OS=`uname`
-VERSION="1.0b2"
+VERSION="1.0b3"
 
 # First little cleanup
 rm -Rf cabal-dev
