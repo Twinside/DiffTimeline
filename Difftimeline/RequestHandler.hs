@@ -182,8 +182,11 @@ getInitialCommit = do
   app <- getYesod
   let repository = getRepository app
       ignoreSet = getIgnoreSet app
-  Just headRef <- liftIO $ getHead repository
-  diffRez <- liftIO . runErrorT $ workingDirectoryChanges' repository ignoreSet 3 headRef 
+
+  diffRez <- liftIO . runErrorT $ do
+      headRef <- errorIO "Problem reading HEAD ref" $ getHead repository
+      workingDirectoryChanges' repository ignoreSet 3 headRef 
+
   return . RepPlain . toContent $ case diffRez of
     Left err ->
         renderJs [julius| alert("Error #{err}"); |]
@@ -264,9 +267,12 @@ getInitialBranch b1 b2 = do
 getInitialBlame :: String -> Handler RepPlain
 getInitialBlame file = do
   repository <- getRepository <$> getYesod
-  Just headRef <- liftIO $ getHead repository
-  blameRez <- liftIO $ blameFile repository (show headRef) file
+  blameRez <- liftIO . runErrorT $ do
+      headRef <- errorIO "can't read HEAD ref" $ getHead repository
+      liftIO $ blameFile repository (show headRef) file
+
   return . RepPlain . toContent $ case blameRez of
+
     Left err ->
         renderJs [julius| alert("Error #{err}"); |]
 

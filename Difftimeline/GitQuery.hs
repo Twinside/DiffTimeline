@@ -35,6 +35,8 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             -- * Manipulation functions
                             , flattenTreeDiff
                             , filterCommitTreeDiff
+
+                            , errorIO
                             ) where
 
 import Prelude
