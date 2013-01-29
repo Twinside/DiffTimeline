@@ -163,6 +163,12 @@ pre
     display: block;
 }
 
+.diff_context
+{
+    width: 100px;
+    display: block;
+}
+
 .diff_addition .sub {
     background-color: #474;
 }
@@ -907,7 +913,8 @@ table.file_display {
 }
 
 .syntax_cell {
-    width: 100%;
+    /* why? */
+    width: 95%;
 }
 
 .align_padder
