@@ -5,7 +5,7 @@ endif
 
 all: build
 
-build: composed.js Difftimeline/Foundation.hs
+build: composed.js static-content/third_party.js Difftimeline/Foundation.hs
 	runhaskell Setup.hs build
 
 # Modify the file date to let the build system detect
@@ -40,6 +40,8 @@ prepare:
 	cabal-dev add-source hit-simple/hit-simple-0.3.tar.gz
 	cd ClosureExternalProducer; make pack
 	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
+	make composed.js
+	make statc-content/thirt_party.js
 	cabal-dev install
 
 place:
@@ -81,8 +83,19 @@ JS_FILE_NAMES:= \
 	branch_list.js \
 	keybindings.js
 
+JS_THIRD_PARTY_NAMES:= \
+	jquery-1.7.2.min.js \
+	jquery-ui-1.8.21.custom.min.js \
+	jquery-hotkeys.js \
+	jquery-scrollTo.js \
+	ICanHaz.min.js
+
 JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
+JS_THIRD_PARTY_FILES:=$(addprefix static-content/,$(JS_THIRD_PARTY_NAMES))
 
 static-content/difftimeline.js: $(JS_FILES)
 	cat $(JS_FILES) > $@
+
+static-content/third_party.js: $(JS_THIRD_PARTY_FILES)
+	cat $(JS_THIRD_PARTY_FILES) > $@
 
