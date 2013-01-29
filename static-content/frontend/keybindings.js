@@ -42,6 +42,10 @@ $(document).bind('keydown', ':', function() {
     Project.state.send_state_message({action: Project.GuiMessage.COMMAND_REQUEST});
 });
 
+$(document).bind('keydown', 's', function() {
+    Project.state.send_state_message({action: Project.GuiMessage.COMMAND_REQUEST});
+});
+
 $(document).bind('keyup', 'esc', function() {
     Project.state.send_state_message({action: Project.GuiMessage.ESCAPE});
 });

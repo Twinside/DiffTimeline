@@ -49,7 +49,14 @@ FileAlign.prototype.command_request = function(absolute_callback, relative_callb
     command.css("visibility", "visible");
 
     var this_obj = this;
+    var is_first = true;
     input.keyup(function (e) {
+        if (is_first) {
+            $(input).val('');
+            is_first = false;
+            return;
+        }
+
         // detect the escape key
         if (e.keyCode == 27) {
             this_obj.clear_command();
@@ -80,7 +87,6 @@ FileAlign.prototype.command_request = function(absolute_callback, relative_callb
     });
 
     input.focus();
-    input.val('');
     return false;
 };
 

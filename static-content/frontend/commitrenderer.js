@@ -123,7 +123,15 @@ CommitRendererBase.prototype.command_request = function() {
     this.result_list = [];
     this.selection_index = 0;
     var this_obj = this;
+    var is_first = true;
+
     input.keyup(function(e) {
+        if (is_first) {
+            $(input).val('');
+            is_first = false;
+            return;
+        }
+
         // detect the escape key
         if (e.keyCode === 27) {
             this_obj.clear_command();
@@ -170,8 +178,7 @@ CommitRendererBase.prototype.command_request = function() {
         return false;
     });
 
-    input.focus();
-    input.val('');
+    $(input).focus();
     return false;
 };
 
