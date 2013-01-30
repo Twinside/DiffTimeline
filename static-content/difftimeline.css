@@ -138,6 +138,10 @@ pre
     font-family: Consolas, Inconsolata, Monospace;
     font-size: 0.9em;
 }
+/*.file_modification > div*/
+/*{*/
+    /*background-color: #1f2223;*/
+/*}*/
 
 .diff_deletion
 {
@@ -165,7 +169,7 @@ pre
 
 .diff_context
 {
-    width: 100px;
+    width: 100%;
     display: block;
 }
 
@@ -905,17 +909,22 @@ hr
     border:none;
 }
 
+.commit_content
+{
+    width: 100%;
+    border-spacing: 5px;
+    border-collapse: separate;
+}
+
 table.file_display {
     margin: 0px;
     margin-top: 10px;
     border-width: 0px;
     border-collapse: collapse;
+    width: 100%;
 }
 
-.syntax_cell {
-    /* why? */
-    width: 95%;
-}
+.syntax_cell { width: 100%; }
 
 .align_padder
 {

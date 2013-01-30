@@ -114,9 +114,9 @@
                     {{/is_key_real}}
                     <div class="commit_tree">
                     </div>
-                    <div class="commit_detail">
-                    </div>
                 </div>
+                <table class="commit_content">
+                </table>
             </div>
         </script>
         <script id="breadcrumbelem" type="text/html">
@@ -181,9 +181,13 @@
                         </div>
                     </div>
 
-                    <div class="file_content">
-                        {{>file_table}}
-                    </div>
+                    <table class="file_content">
+                        <tr>
+                            <td>
+                                {{>file_table}}
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
             <div class="commit">
@@ -196,9 +200,13 @@
                         </div>
                     </div>
 
-                    <div class="file_content">
-                        {{>file_table}}
-                    </div>
+                    <table class="file_content">
+                        <tr>
+                            <td>
+                                {{>file_table}}
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
         </script>
@@ -224,9 +232,13 @@
                     <div class="commit_detail"></div>
                 </div>
 
-                <div class="file_content">
-                    {{>file_table}}
-                </div>
+                <table class="commit_content">
+                    <tr>
+                        <td>
+                            {{>file_table}}
+                        </td>
+                    </tr>
+                </table>
             </div>
         </script>
 
@@ -252,9 +264,13 @@
                     <div class="commit_detail"></div>
                 </div>
 
-                <div class="file_content">
-                    {{>file_table}}
-                </div>
+                <table class="commit_content">
+                    <tr>
+                        <td>
+                            {{>file_table}}
+                        </td>
+                    </tr>
+                </table>
             </div>
         </script>
         <script id="branch_widget" type="text/html">

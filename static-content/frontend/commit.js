@@ -365,6 +365,7 @@ Commit.prototype.create_dom = function() {
 Commit.prototype.render_full = function() {
     this.diff_nodes = [];
     this.focused_diff = 0;
+    var table = $('.commit_content', this.orig_node);
 
     for ( var change in this.file_changes ) {
         var e = this.file_changes[change];
@@ -377,7 +378,7 @@ Commit.prototype.render_full = function() {
                        ? kind_formater[kind](e)
                        : ich.commit_file(e) );
 
-        this.orig_node.append( new_node );
+        table.append( new_node );
         this.diff_nodes.push( new_node );
     }
 
