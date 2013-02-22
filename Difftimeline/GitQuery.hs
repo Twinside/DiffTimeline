@@ -100,9 +100,6 @@ import Data.Vector.Algorithms.Intro( sort )
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
 
-import Debug.Trace
-import Text.Printf
-
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
 
@@ -369,9 +366,10 @@ diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
                      -> ErrorT String IO (CommitInfo, CommitTreeDiff)
 diffWorkingDirectory repository ignoreSet contextSize ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    let maxStamp = authorTimestamp $ commitAuthor thisCommit
+    let authorStamp = authorTimestamp $ commitAuthor thisCommit
         commitStamp = authorTimestamp $ commitCommitter thisCommit
-        utcTime = (trace (printf "author:%d commit:%d" maxStamp commitStamp)) $ posixSecondsToUTCTime $ realToFrac maxStamp
+        maxStamp = min commitStamp authorStamp
+        utcTime = posixSecondsToUTCTime $ realToFrac maxStamp
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
     (,) thisCommit <$> inner utcTime (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 
   where getObj reason = errorIO reason . accessObject repository
@@ -392,7 +390,7 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
             where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
                   sortFolder = sortBy (\(_,a) (_,b) -> compare a b)
 
-        inner maxTime flatname name (Blob c1) r1 = do
+        inner _ flatname name (Blob c1) r1 = do
             file2 <- liftIO $ L.readFile flatname
             pure $! fileComparer name c1 r1 file2
         inner _ _ _ _ _ = throwError "Wrong git object kind"
@@ -424,7 +422,7 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
             | lName == rName = do
                 -- We try to prune scanning if possible
                 modificationTime <- liftIO $ getModificationTime flatname
-                maySubL <- trace (printf "max:%s other:%s" (show maxTime) (show modificationTime)) $ liftIO $ accessObject repository lRef
+                maySubL <- liftIO $ accessObject repository lRef
 
                 case (modificationTime > maxTime, maySubL) of
                   -- This case should happen in presence of submodules.
