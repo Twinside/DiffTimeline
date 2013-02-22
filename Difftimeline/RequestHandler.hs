@@ -1,4 +1,5 @@
 {-# LANGUAGE OverlappingInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.RequestHandler( getRootR
                                   , getQuitR
 
@@ -36,7 +37,6 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
 import Control.Monad.Error( runErrorT )
-import Text.Julius( julius, renderJavascriptUrl, JavascriptUrl  )
 
 import Yesod.Json( jsonToRepJson )
 import System.Directory( doesFileExist )
@@ -46,7 +46,6 @@ import Data.Git( Git, getHead, fromHexString )
 import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
 
 import Text.Language.Closure( renderClosureEnvironment )
-import qualified Data.Text.Lazy.Internal as TLI
 import Difftimeline.Externs
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
@@ -165,9 +164,6 @@ getCommitListR count commitSha = withRepository extractor
     where extractor repository =
               commitList repository count $ fromHexString commitSha 
 
-renderJs :: JavascriptUrl url -> TLI.Text
-renderJs = renderJavascriptUrl (\_ _ -> undefined)
-
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   app <- getYesod
@@ -179,16 +175,13 @@ getInitialCommit = do
       workingDirectoryChanges' repository ignoreSet 3 headRef 
 
   return . RepPlain . toContent $ case diffRez of
-    Left err ->
-        renderJs [julius| alert("Error #{err}"); |]
-
+    Left err ->  "alert(\"Error " <> LC.pack err <> "\");"
     Right rez ->
-        renderJs [julius|
-            var first_state = #{renderJson rez};
-            Project.state.start_commit( first_state ); |]
+            "var first_state = " <> renderJson rez <> ";\n" <>
+            "Project.state.start_commit( first_state );\n"
 
-renderJson :: (ToJSON a) => a -> T.Text
-renderJson = decodeUtf8 . BC.concat . LC.toChunks . encode . toJSON
+renderJson :: (ToJSON a) => a -> LC.ByteString
+renderJson = encode . toJSON
 
 getInitialFile :: FilePath -> Handler RepPlain
 getInitialFile filename = do
@@ -196,14 +189,10 @@ getInitialFile filename = do
     let splitedFilename = map BC.pack $ splitDirectories filename
     answer <- liftIO $ basePage repository splitedFilename
     let rendered = case answer of
-            Left err ->
-                renderJs [julius| alert("Error #{err}"); |]
-
+            Left err -> "alert(\"Error " <> LC.pack err <> "\");"
             Right initialAnswer ->
-            	let renderedAnswer = renderJson initialAnswer
-				in renderJs [julius|
-                        var first_state = #{renderedAnswer};
-                        Project.state.start_file( first_state ); |]
+                "var first_state = " <> renderJson initialAnswer <> ";\n" <>
+                "Project.state.start_file( first_state );"
 
     return . RepPlain $ toContent rendered
 
@@ -247,13 +236,10 @@ getInitialBranch b1 b2 = do
   repository <- getRepository <$> getYesod
   diffRez <- liftIO $ compareBranches repository 3 b1 b2
   return . RepPlain . toContent $ case diffRez of
-    Left err ->
-        renderJs [julius| alert("Error #{err}"); |]
-
+    Left err -> "alert(\"Error " <> LC.pack err <> "\");"
     Right rez ->
-        renderJs [julius|
-            var first_state = #{renderJson rez};
-            Project.state.start_commit( first_state ); |]
+        "var first_state = " <> renderJson rez <> ";\n" <>
+        "Project.state.start_commit( first_state );\n"
 
 getInitialBlame :: String -> Handler RepPlain
 getInitialBlame file = do
@@ -263,14 +249,10 @@ getInitialBlame file = do
       liftIO $ blameFile repository (show headRef) file
 
   return . RepPlain . toContent $ case blameRez of
-
-    Left err ->
-        renderJs [julius| alert("Error #{err}"); |]
-
+    Left err -> "alert(\"Error " <> LC.pack err <> "\");"
     Right rez ->
-        renderJs [julius|
-            var first_state = #{renderJson rez};
-            Project.state.start_blame( first_state ); |]
+        "var first_state = \"" <> renderJson rez <> "\";\n" <>
+        "Project.state.start_blame( first_state );"
 
 getInitialInfoR :: Handler RepPlain
 getInitialInfoR = do

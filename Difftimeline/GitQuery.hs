@@ -58,9 +58,10 @@ import qualified Data.Text.IO as TIO
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
 
-import Data.Time.Clock.POSIX( getPOSIXTime )
+import Data.Time.Clock( UTCTime )
+import Data.Time.Clock.POSIX( getPOSIXTime, posixSecondsToUTCTime )
 
-import System.Directory( getDirectoryContents, doesFileExist  )
+import System.Directory( getDirectoryContents, doesFileExist, getModificationTime )
 import Data.Git( GitObject( .. )
                , CommitAuthor( .. )
                , CommitInfo( .. )
@@ -98,6 +99,9 @@ import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
+
+import Debug.Trace
+import Text.Printf
 
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
@@ -365,8 +369,11 @@ diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
                      -> ErrorT String IO (CommitInfo, CommitTreeDiff)
 diffWorkingDirectory repository ignoreSet contextSize ref = do
     (Commit thisCommit) <- accessCommit "Error can't file commit" repository ref
+    let maxStamp = authorTimestamp $ commitAuthor thisCommit
+        commitStamp = authorTimestamp $ commitCommitter thisCommit
+        utcTime = (trace (printf "author:%d commit:%d" maxStamp commitStamp)) $ posixSecondsToUTCTime $ realToFrac maxStamp
     thisTree <- getObj "Error can't access commit tree" $ commitTree thisCommit
-    (,) thisCommit <$> inner (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 
+    (,) thisCommit <$> inner utcTime (gitRepoPath repository ++ "/..") "" thisTree (commitTree thisCommit) 
   where getObj reason = errorIO reason . accessObject repository
 
         fileComparer name bin1 r1 bin2
@@ -379,16 +386,16 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
                           txtLeft = decodeUtf8 $ strictify bin1
                           txtRight = decodeUtf8 $ strictify bin2
 
-        inner flatname name (Tree left) r = do
+        inner maxTime flatname name (Tree left) r = do
           right <- liftIO $ fetchDirectoryInfo flatname
-          TreeElement (T.pack name) r <$> diffTree flatname name sortedLeft (sortFolder right)
+          TreeElement (T.pack name) r <$> diffTree maxTime flatname name sortedLeft (sortFolder right)
             where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
                   sortFolder = sortBy (\(_,a) (_,b) -> compare a b)
 
-        inner flatname name (Blob c1) r1 = do
+        inner maxTime flatname name (Blob c1) r1 = do
             file2 <- liftIO $ L.readFile flatname
             pure $! fileComparer name c1 r1 file2
-        inner _ _ _ _ = throwError "Wrong git object kind"
+        inner _ _ _ _ _ = throwError "Wrong git object kind"
 
         maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
                    -> ErrorT String IO CommitTreeDiff
@@ -399,39 +406,41 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
                Nothing -> return $ f (T.pack name) r
                Just el  -> batchSubTree repository f name r el
 
-        diffTree :: String -> String -> [TreeEntry] -> [(SubKind, BC.ByteString)]
+        diffTree :: UTCTime -> String -> String -> [TreeEntry] -> [(SubKind, BC.ByteString)]
                  -> ErrorT String IO [CommitTreeDiff]
-        diffTree _ _name   []     [] = return []
-        diffTree _ name    [] rights = pure
+        diffTree _ _ _name   []     [] = return []
+        diffTree _ _ name    [] rights = pure
             [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
                                                   , let fullName = name </> BC.unpack fname 
                                                         fullNameCheck = name <///> BC.unpack fname
                                                   , not $ isPathIgnored ignoreSet fullNameCheck]
 
-        diffTree _flatname name lefts     [] = sequence
+        diffTree _ _flatname name lefts     [] = sequence
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                               , let fullName = name </> BC.unpack item ]
-        diffTree flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
+        diffTree maxTime flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
             | rName `elem` [".", "..", ".git"]
-                || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree flatname name lefts rs
+                || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree maxTime flatname name lefts rs
             | lName == rName = do
-                maySubL <- liftIO $ accessObject repository lRef
+                -- We try to prune scanning if possible
+                modificationTime <- liftIO $ getModificationTime flatname
+                maySubL <- trace (printf "max:%s other:%s" (show maxTime) (show modificationTime)) $ liftIO $ accessObject repository lRef
 
-                case maySubL of
+                case (modificationTime > maxTime, maySubL) of
                   -- This case should happen in presence of submodules.
-                  Nothing -> (thisElem :) <$> diffTree flatname name ls rs
+                  (_, Nothing) -> (thisElem :) <$> diffTree maxTime flatname name ls rs
                         where thisElem = NeutralElement (decodeUtf8 lName) lRef
 
-                  Just subL ->
-                        (((:) <$> inner (flatname </> BC.unpack lName) (BC.unpack lName) subL lRef)
-                                `catchError` (\_ -> return id)) <*> diffTree flatname name ls rs
+                  (_, Just subL) ->
+                        (((:) <$> inner maxTime (flatname </> BC.unpack lName) (BC.unpack lName) subL lRef)
+                                `catchError` (\_ -> return id)) <*> diffTree maxTime flatname name ls rs
 
             | lName < rName =
                 (:) <$> maySubTree DelElement (BC.unpack lName) lRef
-                    <*> diffTree flatname name ls rights
+                    <*> diffTree maxTime flatname name ls rights
 
             | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> 
-                              diffTree flatname name lefts rs
+                              diffTree maxTime flatname name lefts rs
 
 -- | Compare two commits
 createCommitDiff :: Git
