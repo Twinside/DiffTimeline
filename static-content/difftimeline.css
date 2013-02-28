@@ -970,3 +970,40 @@ table.file_display pre.line_number_column {
     margin-left: 1px;
     width: 250px;
 }
+
+/***************************************************************/
+/***   Hotkeys definition                                    ***/
+/***************************************************************/
+.hotkey_list
+{
+    position: fixed;
+    left: 200px;
+    top: 200px;
+    background: #444444;
+    display: none;
+}
+
+.hotkey_list tr,
+.hotkey_list td
+{
+    padding: 5px;
+    margin: 3px;
+}
+
+.shortcut_key
+{
+    border-radius: 3px;
+    padding: 3px;
+    margin: 3px;
+    font-weight: bold;
+    background: rgb(30, 30, 30);
+}
+
+.keyboard_shower
+{
+    padding: 2px;
+    border-radius: 2px;
+    margin-left: 20px;
+    border: 1px solid white;
+    background: rgb(70, 70, 100);
+}

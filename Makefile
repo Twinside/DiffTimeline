@@ -79,9 +79,9 @@ JS_FILE_NAMES:= \
 	commitcomparer.js \
 	filecomparer.js \
 	blameshower.js \
-	init.js \
 	branch_list.js \
-	keybindings.js
+	keybindings.js \
+	init.js
 
 JS_THIRD_PARTY_NAMES:= \
 	jquery-1.7.2.min.js \

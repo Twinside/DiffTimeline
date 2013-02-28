@@ -290,6 +290,26 @@
                 <div class="tooltip">{{tooltip}}</div>
             </div>
         </script>
+
+        <script id="key_help" type="text/html">
+            <div class="hotkey_list">
+                <table>
+                {{#keys}}
+                    <tr>
+                        <td>
+                            {{#key}}
+                                <span class="shortcut_key">
+                                    {{.}}
+                                </span>&nbsp;
+                            {{/key}}
+                        </td>
+                        <td>{{comment}}</td>
+                    </tr>
+                {{/keys}}
+            </table>
+            </div>
+        </script>
+
         <script id="branch_list" type="text/html">
             <div class="branch_list">
                 <div class="toggler"><div>&#x25bc; Branches</div></div>
@@ -328,7 +348,9 @@
                             <div class="diff_deletion">&nbsp;&nbsp;</div></div></td><td>Added then removed</td>
                         <td><div class="diff_deletion">
                             <div class="diff_addition">&nbsp;&nbsp;</div></div></td><td>Removed then added</td>
-
+                        <td>                    
+                            <div class="keyboard_shower">? Keyboard shortcuts</div>
+                        </td>
                     </tr>
                 </table>
                 <div>

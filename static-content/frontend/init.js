@@ -31,5 +31,11 @@ $(document).ready(function() {
     branch_list = new BranchLister();
     setup_global_drop();
     $(document).scrollTo( { top: 0, left: 0 } );
+    $('body').append(ich.key_help({ keys: keys }));
+
+    $(".keyboard_shower").hover(
+        function () { $(".hotkey_list").fadeIn(100); },
+        function () { $(".hotkey_list").hide(); }
+    );
 });
 
