@@ -1,7 +1,7 @@
 $OS = 'win32'
-$version = "1.0b3"
+$version = "1.0"
 
-#./prepare.ps1
+./prepare.ps1
 
 strip dist/build/difftimeline/difftimeline.exe
 
