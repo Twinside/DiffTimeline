@@ -2,7 +2,7 @@
 Difftimeline
 ============
 
-[Documentation and presentation](http://twinside.github.com/DiffTimeline More info)
+[Documentation and presentation](http://twinside.github.com/DiffTimeline)
 
 Modification
 ------------
