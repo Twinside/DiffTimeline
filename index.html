@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset='utf-8' />
+        <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+        <meta name="description" content="Difftimeline : See VCS diff in a wonderful timeline" />
+
+        <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+        <title>Difftimeline</title>
+    </head>
+
+    <body>
+
+        <!-- HEADER -->
+        <div id="header_wrap" class="outer">
+            <header class="inner">
+            <!--<a id="forkme_banner" href="https://github.com/Twinside/DiffTimeline">View on GitHub</a>-->
+
+            <h1 id="project_title">Difftimeline</h1>
+            <h2 id="project_tagline">See your Git repository in a new way</h2>
+
+            <section id="downloads">
+                <a class="zip_download_link"
+                    href="binaries/difftimeline-1.0-win32.zip">
+                    <br/>&nbsp;&nbsp;Windows
+                </a>
+                <a class="tar_download_link"
+                    href="binaries/difftimeline-1.0-Linux.tar.bz2">
+                    <br/>&nbsp;&nbsp;&nbsp;Linux
+                </a>
+                <a class="tar_download_link"
+                    href="binaries/difftimeline-1.0-Linux-x64.tar.bz2">
+                    <br/>&nbsp;&nbsp;Linux x64
+                </a>
+                <!--
+               <a class="osx_download_link"
+                    href="binaries/difftimeline-1.0.osx.tar.bz2">
+                    <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;OSx
+                </a>
+                -->
+            </section>
+            </header>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div id="main_content_wrap" class="outer">
+            <section id="main_content" class="inner">
+            <h1>Difftimeline</h1>
+
+            <p>
+                <iframe width="420" height="315" src="http://www.youtube.com/embed/TsTKaBtUG_M" frameborder="0" allowfullscreen></iframe>
+            </p>
+            <p>
+                Let's start easy, within a terminal in your project using git, type :
+            </p>
+
+            <pre><code>$ difftimeline</code></pre>
+
+            <p><img src="images/tutorial/first.png" alt="First page"></p>
+
+            <p>You can see the diff of the working directory from the HEAD. If you
+            click the huge button <code>&lt;</code>, you can fetch previous commit from the
+            current head</p>
+
+            <p><img src="images/tutorial/fetch_previous_commit.png" alt="Fetching previous commits"></p>
+
+            <p>If you click the button above <code>&lt;</code> you can switch back and forth to the
+            "compact" view.</p>
+
+            <p><img src="images/tutorial/compact_commit.png" alt="Compact commit view"></p>
+
+            <h2>Navigating files</h2>
+
+            <p>Clicking on the <code>Tree</code> panel will show you all the files contained
+            in the commit and let you browse them.</p>
+
+            <p><img src="images/tutorial/commit_tree.png" alt="Commit tree"></p>
+
+            <p>You can click on any to follow the history of a specific file, let's follow the <code>static-content/difftimeline.css</code></p>
+
+            <p><img src="images/tutorial/file_diff.png" alt="File diff"></p>
+
+            <p>You can see every modification of a file between two commits. In the commit description, each round represent a commit whom have not modified the file. If you click on any round, you will jump to the commit description. You can also use the compact mode</p>
+
+            <p><img src="images/tutorial/file_diff_compact.png" alt="File diff"></p>
+
+            <p>To directly see modifications for a file, you can use <code>$ difftimeline filename</code> at the command line.</p>
+
+            <h2>Comparing Things together</h2>
+
+            <p>
+                Whenever you see something like :
+                <ul>
+                    <li><img src="images/tutorial/branch_tag.png" class="real" alt="Branch tag"/></li>
+                    <li><img src="images/tutorial/commit_tag.png" class="real" alt="Commit tag"/></li>
+                    <li><img src="images/tutorial/file_tag.png" class="real" alt="File tag"/></li>
+                </ul>
+                you can drag them to the comparing zone :
+            </p>
+
+            <p>
+                <img src="images/tutorial/comparing_zone.png" class="Comparison drop zone"/>
+            </p>
+
+            <p>
+                And then, see the results, you can compare commit together,
+                commit with branches, branches with commit and any file with
+                any other file. The panel you can see on the right of the
+                previous screenshot is the <i>Branch Panel</i>, it list the
+                branch present in the git repository.
+            </p>
+
+            <p>
+                <img src="images/tutorial/branch_compare_result.png" alt="Branch comparaison">
+            </p>
+
+            <h2>Blame</h2>
+            <p>
+                If you click on a blame button, present in file view or tree view, you can
+                see the blame on a file starting on the current commit.
+            </p>
+            <img src="images/tutorial/blame_view.png" alt="Blame view"/>
+            <p>
+                You can then click on any blame information to jump to the commit view.
+            </p>
+
+            <h2>Keyboard shortcuts</h2>
+            <p>
+                Right now the current keyboard shortcuts are implemented in Difftimeline :
+
+                <ul>
+                    <li><code>h</code> : Move to previous element</li>
+                    <li><code>j</code> : Move to element below (in commit view)</li>
+                    <li><code>k</code> : Move to element above (in commit view)</li>
+                    <li><code>l</code> : Move to next element</li>
+                    <li><code>0</code> : Move to the first element</li>
+                    <li><code>Shift+4</code> : Move to the last element</li>
+                    <li><code>Ctrl+Left</code> : Move to the previous breadcrumb element</li>
+                    <li><code>Ctrl+Right</code> : Move to the next breadcrumb element</li>
+                </ul>
+            </p>
+            <h2>Bugs</h2>
+            <p>
+                Found bugs? please fill a ticket in <a href="https://github.com/Twinside/Difftimeline-bugtrack/issues">Difftimeline-bugtrack</a>
+            </p>
+            </section>
+        </div>
+
+        <!-- FOOTER  -->
+        <div id="footer_wrap" class="outer">
+            <footer class="inner">
+            <p class="copyright">Difftimeline maintained by <a href="https://github.com/Twinside">Twinside</a></p>
+            <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+            </footer>
+        </div>
+
+
+
+    </body>
+</html>
