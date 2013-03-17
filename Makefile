@@ -5,8 +5,10 @@ endif
 
 all: build
 
-build: composed.js static-content/third_party.js Difftimeline/Foundation.hs
+build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
 	runhaskell Setup.hs build
+
+pre: composed.js static-content/third_party.js Difftimeline/Foundation.hs
 
 # Modify the file date to let the build system detect
 # modification and reparse the routes using template
