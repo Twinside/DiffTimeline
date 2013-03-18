@@ -84,8 +84,8 @@ JS_FILE_NAMES:= \
 	init.js
 
 JS_THIRD_PARTY_NAMES:= \
-	jquery-1.7.2.min.js \
-	jquery-ui-1.8.21.custom.min.js \
+	jquery-1.9.1.min.js \
+	jquery-ui-1.10.2.custom.min.js \
 	jquery-hotkeys.js \
 	jquery-scrollTo.js \
 	ICanHaz.min.js

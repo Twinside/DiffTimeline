@@ -114,7 +114,7 @@ div.command_line_file input[type=text]
 /* Other elements */
 .commit
 {
-    display: inline-block;
+    display: table;
     position: relative;
     float:    left;
     margin:   10px;
@@ -315,6 +315,7 @@ pre
 
 .commitinfo
 {
+    display: table-row;
     border: 1px solid #cccccc;
     margin-bottom: 10px;
 }
