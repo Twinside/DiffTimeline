@@ -814,6 +814,25 @@ var TinySyntaxHighlighter = (function () {
     };
 
     /** @type {LangDef} */
+    var graphvizDef = {
+        begin:null_region, end:null_region,
+
+        parsers:[ generic_parsers.monoline_comment('#')
+                , generic_parsers.double_quote_string
+                , generic_parsers.simple_quote_string
+                , generic_parsers.integer
+                , generic_parsers.c_like_identifier
+                ],
+            
+        keywords: expand_keyword_groups(
+            [ { kind:'syntax_operator' , words:["->"] }
+            , { kind:'syntax_statement', words:["node","digraph", "subgraph", "edge"]}
+            ]),
+
+        regions:[]
+    }
+
+    /** @type {LangDef} */
     var pythonDef = {
         begin:null_region, end:null_region,
 
@@ -1132,6 +1151,8 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.xml$/     , xmlDef),
         assoc(/\.html?$/   , xmlDef),
         assoc(/\.vcxproj$/ , xmlDef),
+        assoc(/\.gz$/      , graphvizDef),
+        assoc(/\.dot$/     , graphvizDef),
         assoc(/[mM]akefile$/, makefileDef)
     ];
 
