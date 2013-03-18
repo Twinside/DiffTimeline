@@ -1,5 +1,4 @@
 
-
 How to hack without an Haskell Compiler
 =======================================
 Difftimeline being really splited in two parts, the haskell server and the
@@ -19,6 +18,7 @@ How to build Difftimeline
  * Clone the repository
  * `git submodule init && git submodule update`
  * Install the latest [Haskell Platform](http://hackage.haskell.org/platform/ Haskell Platform download link)
+ * `make pre`
  * Install the cabal-dev `cabal install cabal-dev` utility
  * In the main folder call `make prepare`
    * require zlib & gmp static libs 

@@ -353,6 +353,7 @@ var TinySyntaxHighlighter = (function () {
                 if (consumed_chars > 0)
                 {
                     this.activeStack.push(r);
+                    flushText();
                     addText(line.slice(currentIndex, currentIndex + consumed_chars));
                     consumed = true;
                     currentIndex += consumed_chars;
