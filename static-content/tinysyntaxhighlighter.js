@@ -1058,6 +1058,35 @@ var TinySyntaxHighlighter = (function () {
     };
 
     /** @type {LangDef} */
+    var modelicaDef = {
+        begin:null_region, end:null_region,
+
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
+                 , regions:[], parsers:[], keywords:[] }],
+
+        parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.c_like_preproc
+                , generic_parsers.double_quote_string
+                , generic_parsers.integer
+                , generic_parsers.monoline_comment('//')
+                ],
+            
+        keywords:expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ['if', 'else', 'then', 'elseif', 'when', 'elsewhen'] }
+            , { kind:'syntax_statement', words: ['pre', 'edge', 'initial'] }
+            , { kind:'syntax_label', words:[] }
+            , { kind:'syntax_repeat', words:[] }
+            , { kind:'syntax_structure', words: ['model', 'record', 'end', 'equation'] }
+            , { kind:'syntax_storage_class'
+              , words: ['external', 'connector', 'input', 'output' ] }
+            , { kind:'syntax_type'
+              , words:['Integer', 'Real', 'Boolean']
+              }
+            ])
+    };
+    /** @type {LangDef} */
     var cDef = {
         begin:null_region, end:null_region,
 
@@ -1141,6 +1170,7 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.mli$/     , ocamlDef),
         assoc(/\.mll$/     , ocamlDef),
         assoc(/\.mly$/     , ocamlDef),
+        assoc(/\.mo$/      , modelicaDef),
         assoc(/\.php3$/    , phpDef),
         assoc(/\.hs$/      , haskellDef),
         assoc(/\.css$/     , cssDef),
@@ -1170,6 +1200,26 @@ var TinySyntaxHighlighter = (function () {
         return new create_empty_highlighter(with_line_number);
     }
 
+    function highlight_node(with_line_number, filename, node)
+    {
+        var highlighter =
+            instantiate_from_filename(with_line_number, filename);
+
+        var text = node.textContent;
+        var lines = text.split('\n');
+
+        node.textContent = "";
+
+        for (var i = 0; i < lines.length; i++)
+        {
+            var line = highlighter.colorLine(lines[i]);
+            for (var j = 0; j < line.length; j++)
+                node.appendChild(line[j]);
+
+            node.appendChild(document.createTextNode('\n'));
+        }
+    }
+
     return {
         c_highlighter: function (with_line_number)
             { return new create_highlighter( with_line_number, cDef ); },
@@ -1189,7 +1239,9 @@ var TinySyntaxHighlighter = (function () {
         empty_highlighter: function(with_line_number)
             { return new create_empty_highlighter(with_line_number); },
 
-        from_filename: instantiate_from_filename
+        from_filename: instantiate_from_filename,
+
+        highlight_node: highlight_node
     };
 })();
 
