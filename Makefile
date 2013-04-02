@@ -3,6 +3,12 @@ ifeq ($(shell uname),WindowsNT)
 else
 endif
 
+ifeq ($(shell uname),Darwin)
+	CABAL_FLAG:=-f Dynlink
+else
+	CABAL_FLAG:=
+endif
+
 all: build
 
 build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
@@ -44,7 +50,7 @@ prepare:
 	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
 	make composed.js
 	make static-content/third_party.js
-	cabal-dev install
+	cabal-dev install $(CABAL_FLAG)
 
 place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/
