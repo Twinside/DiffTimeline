@@ -43,7 +43,7 @@ prepare:
 	cd ClosureExternalProducer; make pack
 	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
 	make composed.js
-	make statc-content/thirt_party.js
+	make static-content/third_party.js
 	cabal-dev install
 
 place:
