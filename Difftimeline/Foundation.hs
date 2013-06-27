@@ -7,13 +7,11 @@ module Difftimeline.Foundation
     , Handler
     , Widget
     , module Yesod.Core
-    , liftIO
     ) where
 
 import Prelude
 import Yesod.Core -- hiding (Route)
 import Yesod.Default.Config
-import Control.Monad.IO.Class (liftIO)
 import Data.Git( Git )
 import Difftimeline.GitIgnore( IgnoredSet )
 
@@ -64,7 +62,7 @@ mkYesodData "DiffTimeline" $(parseRoutesFile "config/routes")
 instance Yesod DiffTimeline where
     approot = ApprootMaster $ appRoot . settings
 
-    defaultLayout _ = return . RepHtml $ toContent ("" :: String)
+    {-defaultLayout _ = return . Html . toHtml (return ())-}
 
     shouldLog _ _ _ = True
 

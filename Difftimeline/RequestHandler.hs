@@ -38,12 +38,11 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
 import Control.Monad.Error( runErrorT )
 
-import Yesod.Json( jsonToRepJson )
 import System.Directory( doesFileExist )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
 import Data.Git( Git, getHead, fromHexString )
-import Data.Aeson( ToJSON, toJSON, object, (.=), encode )
+import Data.Aeson( encode )
 
 import Text.Language.Closure( renderClosureEnvironment )
 import Difftimeline.Externs
@@ -54,6 +53,22 @@ import Difftimeline.Diff( invertWay )
 
 -- import Yesod.Logger
 
+newtype RepCss = RepCss Content
+
+instance ToContent RepCss where
+    toContent (RepCss c) = c
+
+instance ToTypedContent RepCss where
+    toTypedContent (RepCss c) = toTypedContent (typeCss, c)
+
+newtype RepRawHtml = RepRawHtml Content
+
+instance ToContent RepRawHtml where
+    toContent (RepRawHtml c) = c
+
+instance ToTypedContent RepRawHtml where
+    toTypedContent (RepRawHtml c) = toTypedContent (typeHtml, c)
+
 -- This is a handler function for the GET request method on the RootR
 -- resource pattern. All of your resource patterns are defined in
 -- config/routes
@@ -61,12 +76,8 @@ import Difftimeline.Diff( invertWay )
 -- The majority of the code you will write in Yesod lives in these handler
 -- functions. You can spread them across multiple files if you are so
 -- inclined, or create a single monolithic file.
-getRootR :: Handler RepHtml
-getRootR = fetchStatic RepHtml basePageEmbedded 
-
-newtype RepCss = RepCss Content
-instance HasReps RepCss where
-    chooseRep (RepCss c) _ = return (typeCss, c)
+getRootR :: Handler RepRawHtml
+getRootR = fetchStatic RepRawHtml basePageEmbedded 
 
 fetchStatic :: (ToContent txt)
             => (Content -> a) -> (FilePath, txt)
@@ -114,8 +125,8 @@ getFileParentR initialCommit filePathes = do
             | otherwise = RepoRef initialCommit file
     rez <- liftIO $ findParentFile repository ref
     case rez of
-       Left err -> jsonToRepJson $ object ["error" .= err]
-       Right info -> jsonToRepJson $ toJSON info
+       Left err -> pure . repJson $ object ["error" .= err]
+       Right info -> pure . repJson $ toJSON info
 
 withRepository :: (ToJSON a)
                => (Git -> IO (Either String a)) -> Handler RepJson
@@ -124,8 +135,8 @@ withRepository act = do
     let repository = getRepository app
     rez <- liftIO $ act repository
     case rez of
-        Left err -> jsonToRepJson $ object ["error" .= err]
-        Right info -> jsonToRepJson $ toJSON info
+        Left err -> pure . repJson $ object ["error" .= err]
+        Right info -> pure . repJson $ toJSON info
 
 withRepositoryAndIgnore :: (ToJSON a)
                         => (Git -> IgnoredSet -> IO (Either String a)) -> Handler RepJson
@@ -135,8 +146,8 @@ withRepositoryAndIgnore act = do
         ignoreSet = getIgnoreSet app
     rez <- liftIO $ act repository ignoreSet
     case rez of
-        Left err -> jsonToRepJson $ object ["error" .= err]
-        Right info -> jsonToRepJson $ toJSON info
+        Left err -> pure . repJson $ object ["error" .= err]
+        Right info -> pure . repJson $ toJSON info
 
 
 getCommitOverviewR :: String -> Handler RepJson
@@ -265,6 +276,6 @@ getInitialInfoR = do
 
 getQuitR :: Handler RepJson
 getQuitR = do
-    _ <- jsonToRepJson $ object ["ok" .= True]
+    _ <- returnJson $ object ["ok" .= True]
     liftIO exitSuccess
 
