@@ -17,10 +17,11 @@ Flag Dynlink
     Default: False
 
 executable         difftimeline
-    if flag(Dynlink)
-        ghc-options: -Wall -threaded -O2 -optl-pthread
-    else
-        ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread
+    --if flag(Dynlink)
+        --ghc-options: -Wall -threaded -O2 -optl-pthread
+    --else
+    ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread
+    --ghc-options: -optl-static -static -Wall -threaded -prof -optl-pthread -osuf=p_o
 
     main-is:       main.hs
 
@@ -61,4 +62,5 @@ executable         difftimeline
                  , time                          >= 1.2        && < 1.5
 
                  , ClosureExternalProducer       >= 0.1        && < 0.2
+                 , tls-extra >= 0.6
 

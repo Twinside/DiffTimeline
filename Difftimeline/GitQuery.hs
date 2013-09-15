@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Difftimeline.GitQuery( CommitTreeDiff( .. )
-                            , CommitDetail( .. )
+                            , CommitDetail
                             , CommitPath( .. )
                             , ParentFile( .. )
                             , CommitOverview( .. )
@@ -21,6 +21,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , workingDirectoryChanges'
                             , findFirstCommit
                             , findParentFile
+                            , fetchCommitOverview
                             , basePage
                             , decodeUtf8
                             , commitList
@@ -41,7 +42,7 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
 
 import Prelude
 
-import Data.List( sortBy, foldl', find  )
+import Data.List( sortBy, foldl', find, nubBy )
 import Data.Monoid( mempty, mappend )
 import System.FilePath( splitDirectories  )
 import Control.Applicative
@@ -154,15 +155,7 @@ filterCommitTreeDiff f = inner
                 [TreeElement n r $ concatMap inner sub]
           inner _ = []
 
-data CommitDetail = CommitDetail
-    { commitDetailMessage :: T.Text
-    , commitDetailParents :: [CommitOverview]
-    , commitDetailKey     :: Ref
-    , commitDetailTimestamp :: Int
-    , commitDetailTimezone  :: Int
-    , commitDetailAuthor  :: T.Text
-    , commitDetailChanges :: [CommitTreeDiff]
-    }
+type CommitDetail = [CommitTreeDiff]
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
@@ -236,20 +229,13 @@ compareBranches :: Git -> Int -> String -> String
                 -> IO (Either String CommitDetail)
 compareBranches repo contextSize b1 b2 = runErrorT $
     detailer <$> diffBranches repo contextSize b1 b2
-  where detailer diff = CommitDetail
-            { commitDetailMessage = T.pack $ "Comparing " ++ b1 ++ " and " ++ b2
-            , commitDetailParents = []
-            , commitDetailKey     = nullRef
-            , commitDetailAuthor  = ""
-            , commitDetailTimestamp = 0
-            , commitDetailTimezone  = 0
-            , commitDetailChanges = filterCommitModifications
-                                  $ flattenTreeDiff diff
-            }
+  where detailer diff =
+            filterCommitModifications $ flattenTreeDiff diff
 
 data BranchInfo = BranchInfo
-    { branchName :: T.Text
-    , branchRef  :: Ref
+    { branchName   :: T.Text
+    , branchRef    :: Ref
+    , branchRemote :: T.Text
     }
     deriving Show
 
@@ -280,25 +266,36 @@ brancheslist repo = do
                                 (\(_ :: IOError) -> pure [])
         branches <- concat <$> E.catch (mapM (\b -> fetchRemoteBranch remote b) branchesName)
                                        (\(_ :: IOError) -> pure [])
-        pure RemoteBranches { remoteName = T.pack remote
-                            , remoteBranches = branches })
+        let remoteText = T.pack remote
+        pure RemoteBranches { remoteName = remoteText
+                            , remoteBranches = map (\f -> f remoteText) branches
+                            })
     oldTagInfo <- getTagNames repo >>= mapM fetchTag 
     gitSvnRefs <- getGitSvnBranchNames repo
                     >>= mapM (\a -> (, T.pack a) <$> readGitSvnBranch repo a)
-    let remotes = [RemoteBranches (T.pack n)
-                      [BranchInfo (T.pack s) r | (r, s) <- lst]
-                        | RefRemote n lst <- allBranches ]
+    let remotes = [RemoteBranches remoteText
+                      [BranchInfo (T.pack s) r remoteText | (r, s) <- lst]
+                        | RefRemote n lst <- allBranches
+                        , let remoteText = T.pack n
+                        ]
                   ++
                     [RemoteBranches (T.pack "/others/")
-                       ([BranchInfo (T.pack s) r | RefOther r s <- allBranches ] ++
-                        [BranchInfo s r          | (r, s) <- gitSvnRefs ])
+                       ([BranchInfo (T.pack s) r otherText | RefOther r s <- allBranches ] ++
+                        [BranchInfo s r  otherText | (r, s) <- gitSvnRefs ])
                     ]
-        tagInfo = [BranchInfo (T.pack s) r | RefTag r s <- allBranches]
-        branchInfo = [BranchInfo (T.pack s) r | RefLocal r s <- allBranches]
+        otherText = T.pack "/others"
+        localText = T.pack "local"
+        tagInfo = [BranchInfo (T.pack s) r localText
+                                | RefTag r s <- allBranches]
+        branchInfo = [BranchInfo (T.pack s) r localText
+                                | RefLocal r s <- allBranches]
 
-    let localBranch = RemoteBranches {
+    let cleaner BranchInfo { branchName = b1 }
+                BranchInfo { branchName = b2 } = b1 == b2
+        localBranch = RemoteBranches {
         remoteName = "local",
-        remoteBranches = branchInfo ++ oldBranchInfo ++ tagInfo ++ oldTagInfo
+        remoteBranches = nubBy cleaner $ branchInfo ++ tagInfo 
+                        ++ map (\v -> v localText) (oldBranchInfo ++ oldTagInfo)
     }
     pure $ localBranch : remotesOldStyle ++ remotes
 
@@ -340,23 +337,11 @@ workingDirectoryChanges repository ignoreSet contextSize ref = runErrorT $ do
     resolved <- revisionToRef repository ref
     workingDirectoryChanges' repository ignoreSet contextSize resolved
 
-workingDirectoryChanges'  :: Git -> IgnoredSet -> Int -> Ref -> ErrorT String IO CommitDetail
+workingDirectoryChanges' :: Git -> IgnoredSet -> Int -> Ref
+                         -> ErrorT String IO CommitDetail
 workingDirectoryChanges' repository ignoreSet contextSize ref = do
-   time <- lift $ truncate <$> getPOSIXTime 
-   parentDetail <- fetchCommitOverview repository ref
-   detailer parentDetail time
-            <$> diffWorkingDirectory repository ignoreSet contextSize ref
-    where detailer parentInfo time (_, diff) =
-            CommitDetail {
-                  commitDetailMessage = "Working directory"
-                , commitDetailParents = [parentInfo]
-                , commitDetailKey     = nullRef
-                , commitDetailAuthor  = ""
-                , commitDetailTimestamp = time
-                , commitDetailTimezone  = 0
-                , commitDetailChanges = filterCommitModifications
-                                      $ flattenTreeDiff diff
-                }
+    filterCommitModifications . flattenTreeDiff . snd <$> 
+            diffWorkingDirectory repository ignoreSet contextSize ref
 
 (<///>) :: FilePath -> FilePath -> FilePath
 "" <///> a = a
@@ -411,14 +396,15 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
             [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
                                                   , let fullName = name </> BC.unpack fname 
                                                         fullNameCheck = name <///> BC.unpack fname
-                                                  , not $ isPathIgnored ignoreSet fullNameCheck]
+                                                  , not $ isPathIgnored ignoreSet fullNameCheck
+                                                  ]
 
         diffTree _ _flatname name lefts     [] = sequence
             [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                               , let fullName = name </> BC.unpack item ]
         diffTree maxTime flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
             | rName `elem` [".", "..", ".git"]
-                || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree maxTime flatname name lefts rs
+                 || isPathIgnored ignoreSet (name <///> BC.unpack rName)  = diffTree maxTime flatname name lefts rs
             | lName == rName = do
                 -- We try to prune scanning if possible
                 modificationTime <- liftIO $ getModificationTime flatname
@@ -536,19 +522,9 @@ diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
 diffCommit repository contextSize deep ref = runErrorT $ do
    (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = firstParentRef thisCommit
-   parentsInfo <- mapM (fetchCommitOverview repository) $ commitParents thisCommit
-   detailer parentsInfo <$> createCommitDiff  repository contextSize deep prevRef ref 
-    where detailer parents (thisCommit, diff) = 
-            let author = commitAuthor thisCommit
-            in CommitDetail {
-                  commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
-                , commitDetailParents = parents
-                , commitDetailKey     = ref
-                , commitDetailAuthor  = decodeUtf8 $ authorName author
-                , commitDetailTimestamp = authorTimestamp author
-                , commitDetailTimezone  = authorTimezone author
-                , commitDetailChanges = filterCommitModifications $ flattenTreeDiff diff
-                }
+   filterCommitModifications . flattenTreeDiff . snd 
+        <$> createCommitDiff  repository contextSize deep prevRef ref 
+                
 
 
 -- | Given a file and a reference commit, compute the difference with

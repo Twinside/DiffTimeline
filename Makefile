@@ -12,7 +12,7 @@ endif
 all: build
 
 build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
-	runhaskell Setup.hs build
+	cabal build
 
 pre: composed.js static-content/third_party.js Difftimeline/Foundation.hs
 
@@ -32,7 +32,7 @@ ghci:
 	ghci -package-conf=cabal-dev/packages-7.4.1.conf
 
 conf:
-	cabal-dev install
+	cabal configure
 
 all:
 	yesod --dev devel
@@ -50,7 +50,7 @@ prepare:
 	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
 	make composed.js
 	make static-content/third_party.js
-	cabal-dev install $(CABAL_FLAG)
+	cabal-dev install -j8 --enable-executable-profiling --enable-library-profiling $(CABAL_FLAG)
 
 place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/

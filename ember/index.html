@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Ember Starter Kit</title>
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link href="css/bootstrap.css" rel="stylesheet" media="screen">
+  <link href="css/bootstrap-responsive.css" rel="stylesheet">
+</head>
+<body>
+
+  <script type="text/x-handlebars">
+    <h2>Difftimeline'</h2>
+
+    {{outlet}}
+  </script>
+
+  <script type="text/x-handlebars" data-template-name="index">
+    OOk
+    <ul>
+    {{#each item in model}}
+      <li>{{item}}</li>
+    {{/each}}
+    </ul>
+    <nav>
+    {{#link-to 'commit' 'd690c8baae28cfe22681b26f5be99bc1ac9cd664'}}About{{/link-to}}
+    </nav>
+  </script>
+
+    <!--{{#link-to 'remotes'}}Remotes and branches{{/link-to}}<br/>-->
+
+
+  <!-- {{view Bootstrap.Badge type="success" contentBinding="id"}} -->
+  <!-- {{#link-to 'commit/details' p.id}}Details{{/link-to}} -->
+  <script type="text/x-handlebars" data-template-name="commit">
+    Commit
+    <div>
+        <div>
+            <div class="commitmsg">
+                <span>{{id}}</span><br/>
+                <span>{{timestamp}}</span><br/>
+                <span>{{message}}</span>
+            </div>
+            {{#each p in parents}}
+                Parent
+                {{#link-to 'commit' p.id}}{{p.id}}{{/link-to}}
+                {{p.message}} <br/>
+            {{/each}}
+
+            {{#link-to 'commit.diff' id parents.[0].id}}Detail{{/link-to}}
+            <br/>
+            {{parents.0.id}}
+        </div>
+
+        {{outlet}}
+    </div>
+  </script>
+
+  <script type="text/x-handlebars" data-template-name="diff_commit">
+    commit Details
+    {{model.a}}
+  </script>
+
+  <script src="js/libs/jquery-1.9.1.js"></script>
+  <script src="js/libs/handlebars-1.0.0.js"></script>
+  <script src="js/libs/ember-1.0.0.js"></script>
+  <script src="js/libs/ember-data.js"></script>
+  <script src="js/bootstrap.js"></script>
+  <script src="js/ember-bootstrap.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

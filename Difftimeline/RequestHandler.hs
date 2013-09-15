@@ -1,18 +1,16 @@
 {-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.RequestHandler( getRootR
-                                  , getQuitR
 
                                   -- * Dynamic JSON
-                                  , getInitialInfoR
                                   , getFileComparisonR
                                   , getBranchComparisonR
+                                  , getRemotesR
                                   , getBranchesR
-                                  , getCommitListR
-                                  , getJSONExternR
                                   , getCommitTreeR
                                   , getCommitR
                                   , getCommitOverviewR
+                                  , getCommitOverviewListR 
                                   , getFileParentR
                                   , getBlameR
                                   , getBlameFromRoot
@@ -34,18 +32,19 @@ module Difftimeline.RequestHandler( getRootR
 import Difftimeline.Import
 import qualified Data.ByteString as B
 import qualified Data.Text as T
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy.Char8 as LC
+{-import qualified Data.ByteString.Char8 as BC-}
+{-import qualified Data.ByteString.Lazy.Char8 as LC-}
 import Control.Monad.Error( runErrorT )
 
 import System.Directory( doesFileExist )
-import System.Exit( exitSuccess )
-import System.FilePath( splitDirectories  )
-import Data.Git( Git, getHead, fromHexString )
-import Data.Aeson( encode )
+{-import System.FilePath( splitDirectories  )-}
+import Data.Git( Git
+               {-, getHead-}
+               , fromHexString
+               , fromHexText )
+{-import Data.Aeson( encode )-}
 
-import Text.Language.Closure( renderClosureEnvironment )
-import Difftimeline.Externs
+import Difftimeline.Externs()
 import Difftimeline.GitQuery
 import Difftimeline.StaticFiles
 import Difftimeline.GitIgnore( IgnoredSet )
@@ -118,6 +117,7 @@ getBlameR rootCommit filePathes = withRepository extractor
 
 getFileParentR :: String -> [Text] -> Handler RepJson
 getFileParentR initialCommit filePathes = do
+    addHeader "Access-Control-Allow-Origin" "*"
     app <- getYesod
     let repository = getRepository app
         file = T.unpack $ T.intercalate (T.pack "/") filePathes
@@ -131,6 +131,7 @@ getFileParentR initialCommit filePathes = do
 withRepository :: (ToJSON a)
                => (Git -> IO (Either String a)) -> Handler RepJson
 withRepository act = do
+    addHeader "Access-Control-Allow-Origin" "*"
     app <- getYesod
     let repository = getRepository app
     rez <- liftIO $ act repository
@@ -139,8 +140,10 @@ withRepository act = do
         Right info -> pure . repJson $ toJSON info
 
 withRepositoryAndIgnore :: (ToJSON a)
-                        => (Git -> IgnoredSet -> IO (Either String a)) -> Handler RepJson
+                        => (Git -> IgnoredSet -> IO (Either String a))
+                        -> Handler RepJson
 withRepositoryAndIgnore act = do
+    addHeader "Access-Control-Allow-Origin" "*"
     app <- getYesod
     let repository = getRepository app
         ignoreSet = getIgnoreSet app
@@ -152,9 +155,19 @@ withRepositoryAndIgnore act = do
 
 getCommitOverviewR :: String -> Handler RepJson
 getCommitOverviewR commitSha = withRepository extractor
-    where extractor repository = do
-              rez <- diffCommit repository 0 False $ fromHexString commitSha
-              return $ commitDetailChanges <$> rez
+    where ref = fromHexString commitSha
+          extractor repository = runErrorT $ do
+              c <- fetchCommitOverview repository ref
+              return $ object [ "commits" .= [toJSON c] ]
+
+getCommitOverviewListR :: Handler RepJson
+getCommitOverviewListR = do
+  commitShas <- lookupGetParams "ids[]"
+  withRepository $ \repository -> runErrorT $ do
+      subs <- mapM (fetchCommitOverview repository . fromHexText) commitShas
+      return $ object ["commits" .= subs]
+          
+  
 
 getCommitR :: String -> Handler RepJson
 getCommitR commitSha = withRepository extractor
@@ -166,18 +179,12 @@ getCommitTreeR commitSha = withRepository extractor
     where extractor repository =
               diffCommitTree repository $ fromHexString commitSha
 
-getJSONExternR :: Handler RepPlain
-getJSONExternR = return . RepPlain . toContent
-			   $ renderClosureEnvironment difftimelineEnv 
 
-getCommitListR :: Int -> String -> Handler RepJson
-getCommitListR count commitSha = withRepository extractor
-    where extractor repository =
-              commitList repository count $ fromHexString commitSha 
-
+{-
 getInitialCommit :: Handler RepPlain
 getInitialCommit = do
   app <- getYesod
+  addHeader "Access-Control-Allow-Origin" "*"
   let repository = getRepository app
       ignoreSet = getIgnoreSet app
 
@@ -199,6 +206,7 @@ getInitialFile filename = do
     repository <- getRepository <$> getYesod
     let splitedFilename = map BC.pack $ splitDirectories filename
     answer <- liftIO $ basePage repository splitedFilename
+    addHeader "Access-Control-Allow-Origin" "*"
     let rendered = case answer of
             Left err -> "alert(\"Error " <> LC.pack err <> "\");"
             Right initialAnswer ->
@@ -206,11 +214,19 @@ getInitialFile filename = do
                 "Project.state.start_file( first_state );"
 
     return . RepPlain $ toContent rendered
+-}
 
+getRemotesR  :: Handler RepJson
+getRemotesR = withRepository extractor
+  where extractor repo = do
+            branches <- brancheslist repo
+            return . Right $ object [ "remotes" .= branches ]
 
 getBranchesR :: Handler RepJson
 getBranchesR = withRepository extractor
-  where extractor repo = Right <$> brancheslist repo
+  where extractor repo = do
+            branches <- brancheslist repo
+            return . Right $ object ["branches" .= branches]
 
 workingDirRequestToken :: String
 workingDirRequestToken = "__WORKING_DIR__"
@@ -225,11 +241,9 @@ getBranchComparisonR b1 b2
         where extractor repo ignored = workingDirectoryChanges repo ignored 3 b1
 getBranchComparisonR b1 b2 
     | b1 == workingDirRequestToken = withRepositoryAndIgnore extractor
-        where inverter c =
-                c { commitDetailChanges = invertWay <$> commitDetailChanges c }
-              extractor repo ignored = do
+        where extractor repo ignored = do
                 changes <- workingDirectoryChanges repo ignored 3 b2
-                return $ inverter <$> changes
+                return $ map invertWay <$> changes
 getBranchComparisonR b1 b2 = withRepository extractor
   where extractor repo = compareBranches repo 3 b1 b2
 
@@ -241,41 +255,4 @@ getFileComparisonR key1 file1 key2 file2 = withRepository extractor
                   | otherwise = RepoRef k f
 
         file = T.unpack $ T.intercalate (T.pack "/") file2
-
-getInitialBranch :: String -> String -> Handler RepPlain
-getInitialBranch b1 b2 = do
-  repository <- getRepository <$> getYesod
-  diffRez <- liftIO $ compareBranches repository 3 b1 b2
-  return . RepPlain . toContent $ case diffRez of
-    Left err -> "alert(\"Error " <> LC.pack err <> "\");"
-    Right rez ->
-        "var first_state = " <> renderJson rez <> ";\n" <>
-        "Project.state.start_commit( first_state );\n"
-
-getInitialBlame :: String -> Handler RepPlain
-getInitialBlame file = do
-  repository <- getRepository <$> getYesod
-  blameRez <- liftIO . runErrorT $ do
-      headRef <- errorIO "can't read HEAD ref" $ getHead repository
-      liftIO $ blameFile repository (show headRef) file
-
-  return . RepPlain . toContent $ case blameRez of
-    Left err -> "alert(\"Error " <> LC.pack err <> "\");"
-    Right rez ->
-        "var first_state = \"" <> renderJson rez <> "\";\n" <>
-        "Project.state.start_blame( first_state );"
-
-getInitialInfoR :: Handler RepPlain
-getInitialInfoR = do
-    app <- getYesod
-    case initialCommand app of
-        DiffWorking -> getInitialCommit
-        DiffFile fname -> getInitialFile fname
-        DiffBlame fname -> getInitialBlame fname
-        DiffCompare b1 b2 -> getInitialBranch b1 b2
-
-getQuitR :: Handler RepJson
-getQuitR = do
-    _ <- returnJson $ object ["ok" .= True]
-    liftIO exitSuccess
 

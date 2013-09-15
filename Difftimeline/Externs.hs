@@ -1,16 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Difftimeline.Externs( ErrorReturn( .. ), difftimelineEnv ) where
+module Difftimeline.Externs( ErrorReturn( .. ) ) where
 
 import Prelude
 
 import Data.Git
+import Data.Aeson( ToJSON(..), object, (.=) )
 import qualified Data.Text as T
 import Difftimeline.GitQuery
 import Difftimeline.Diff
-import Text.Language.Closure
 import qualified Data.Vector as V
 
 data ErrorReturn = ErrorReturn
@@ -53,84 +52,62 @@ treeDiffChildren :: CommitTreeDiff -> [CommitTreeDiff]
 treeDiffChildren (TreeElement _ _ lst) = lst
 treeDiffChildren _ = []
 
-instance ClosureDescriptable ErrorReturn Serializable where
-    typename _ = "ErrorReturn"
-    toClosureDesc _ = record [ "error" .: errorMessage ]
+instance ToJSON ErrorReturn where
+    toJSON v = object [ "error" .= errorMessage v ]
 
-instance ClosureDescriptable Ref Serializable where
-    typename _ = "Ref"
-    toClosureDesc _ = value (decodeUtf8 . toHex)
+instance ToJSON Ref where
+    toJSON = toJSON . decodeUtf8 . toHex
 
-instance ClosureDescriptable CommitTreeDiff Serializable where
-    typename _ = "CommitTreeDiff"
-    toClosureDesc _ = record
-        [ "kind"     .: treeDiffToKind
-        , "name"     .: treeDiffToName
-        , "hash"     .: treeDiffToRef
-        , "binary"   .: treeDiffIsBinary
-        , "children" .: treeDiffChildren
-        , "diff"     .: (map DiffWithContext . treeDiffToDiffs)
+instance ToJSON CommitTreeDiff where
+    toJSON v = object
+        [ "kind"     .= treeDiffToKind v
+        , "name"     .= treeDiffToName v
+        , "hash"     .= treeDiffToRef v
+        , "binary"   .= treeDiffIsBinary v
+        , "children" .= treeDiffChildren v
+        , "diff"     .= map DiffWithContext (treeDiffToDiffs v)
         ]
 
-instance ClosureDescriptable CommitDetail Serializable where
-    typename _ = "CommitDetail"
-    toClosureDesc _ = record
-        [ "message"      .: commitDetailMessage
-        , "parents_sha"  .: commitDetailParents
-        , "key"          .: commitDetailKey
-        , "author"       .: commitDetailAuthor
-        , "file_changes" .: commitDetailChanges
-        , "timestamp"    .: commitDetailTimestamp
-        , "timezone"     .: commitDetailTimezone
-        ]
-
-instance ClosureDescriptable CommitPath Serializable where
-    typename _ = "CommitPath"
-    toClosureDesc _  = record
-             [ "commit"        .: pathCommitRef
-             , "parent_commit" .: pathParentRef
-             , "message"       .: pathMessage
-             , "author"        .: pathAuthor
-             , "timestamp"     .: pathTimestamp
-             , "timezone"      .: pathTimezone
+instance ToJSON CommitPath where
+    toJSON v  = object
+             [ "commit"        .= pathCommitRef v
+             , "parent_commit" .= pathParentRef v
+             , "message"       .= pathMessage v
+             , "author"        .= pathAuthor v
+             , "timestamp"     .= pathTimestamp v
+             , "timezone"      .= pathTimezone v
              ]
 
-instance ClosureDescriptable CommitOverview Serializable where
-    typename _ = "CommitOverview"
-    toClosureDesc _ = record
-        [ "parent_commit" .: commitOverviewParent
-        , "message"       .: commitOverviewMessage
-        , "key"           .: commitOverviewRef
-        , "author"        .: commitOverviewAuthor
-        , "timestamp"     .: commitOverviewTimestamp
+instance ToJSON CommitOverview where
+    toJSON v = object
+        [ "parents"       .= commitOverviewParent v
+        , "message"       .= commitOverviewMessage v
+        , "id"            .= commitOverviewRef v
+        , "author"        .= commitOverviewAuthor v
+        , "timestamp"     .= commitOverviewTimestamp v
         ]
 
-instance ClosureDescriptable DiffAction Serializable where
-    typename _ = "DiffAction"
-    toClosureDesc _ =
-        enum [DiffAddition, DiffDeletion, DiffNeutral] show wayText
-            where wayText DiffAddition = "+" :: T.Text
-                  wayText DiffDeletion = "-"
-                  wayText DiffNeutral  = "="
+instance ToJSON DiffAction where
+    toJSON = toJSON . wayText
+        where wayText DiffAddition = "+" :: T.Text
+              wayText DiffDeletion = "-"
+              wayText DiffNeutral  = "="
 
-instance ClosureDescriptable SubModification Serializable where
-    typename _ = "SubModification"
-    toClosureDesc _ = record [ "beg" .: beg, "end" .: end ]
-        where beg (SubModification b _) = b
-              end (SubModification _ e) = e
+instance ToJSON SubModification where
+    toJSON (SubModification b e) =
+        object [ "beg" .= b, "end" .= e ]
 
 newtype DiffWithContext =
         DiffWithContext (DiffCommand, V.Vector T.Text)
 
-instance ClosureDescriptable DiffWithContext Serializable where
-    typename _ = "DiffWithContext"
-    toClosureDesc _ = record
-             [ "way"      .: wayExtract
-             , "orig_idx" .: orig
-             , "dest_idx" .: dest
-             , "size"     .: size
-             , "sub"      .: sub
-             , "data"     .: dataExtract
+instance ToJSON DiffWithContext where
+    toJSON v = object
+             [ "way"      .= wayExtract v
+             , "orig_idx" .= orig v
+             , "dest_idx" .= dest v
+             , "size"     .= size v
+             , "sub"      .= sub v
+             , "data"     .= dataExtract v
              ]
         where dataExtract (DiffWithContext (_, d)) = d
 
@@ -149,14 +126,13 @@ instance ClosureDescriptable DiffWithContext Serializable where
               sub (DiffWithContext (DiffRefined _ _ _ _ l, _)) = l
               sub _ = []
 
-instance ClosureDescriptable DiffCommand Serializable where
-    typename _ = "DiffCommand"
-    toClosureDesc _ = record
-             [ "way"      .: wayExtract
-             , "orig_idx" .: orig
-             , "dest_idx" .: dest
-             , "size"     .: size
-             , "sub"      .: sub
+instance ToJSON DiffCommand where
+    toJSON v = object
+             [ "way"      .= wayExtract v
+             , "orig_idx" .= orig v
+             , "dest_idx" .= dest v
+             , "size"     .= size v
+             , "sub"      .= sub v
              ]
         where wayExtract (DiffCommand way _ _ _) = way
               wayExtract (DiffRefined way _ _ _ _) = way
@@ -173,83 +149,62 @@ instance ClosureDescriptable DiffCommand Serializable where
               sub (DiffRefined _ _ _ _ l) = l
               sub _ = []
 
-instance ClosureDescriptable BranchInfo Serializable where
-    typename _ = "BranchInfo"
-    toClosureDesc _ =
-        record ["name" .: branchName
-               ,"key"  .: branchRef
+instance ToJSON BranchInfo where
+    toJSON v =
+        object ["name" .= branchName v
+               ,"key"  .= branchRef v
                ]
 
-instance ClosureDescriptable RemoteBranches Serializable where
-    typename _ = "RemoteBranches"
-    toClosureDesc _ =
-        record ["name"     .: remoteName
-               ,"branches" .: remoteBranches
+instance ToJSON RemoteBranches where
+    toJSON v =
+        object [ "id" .= remoteName v
+               , "branches" .= pack
+               ]
+       where pack = map embedded . zip [0..] $ remoteBranches v
+             embedded (i, b) =
+                object ["name" .= branchName b
+                       ,"key"  .= branchRef b
+                       ,"id"   .= (i :: Int)
+                       ]
+instance (ToJSON tag) => ToJSON (BlameRangeSource tag) where
+    toJSON v =
+        object [ "idx"      .= sourceLineIndex v
+               , "size"     .= sourceSize v
+               , "orig_idx" .= sourceOriginalIndex v
+               , "tag"      .= sourceTag v
                ]
 
-instance (ClosureDescriptable tag Serializable)
-       => ClosureDescriptable (BlameRangeSource tag) Serializable where
-    typename _ = "BlameRangeSource"
-    toClosureDesc _ =
-        record [ "idx"      .: sourceLineIndex
-               , "size"     .: sourceSize
-               , "orig_idx" .: sourceOriginalIndex
-               , "tag"      .: sourceTag
+instance ToJSON BlameInfo where
+    toJSON v =
+        object ["data"     .= blameData v
+               ,"ranges"   .= blameRanges v
+               ,"filename" .= blameFilename v
+               ,"earliest" .= blameEarlyStamp v
+               ,"latest"   .= blameLatestStamp v
                ]
 
-instance ClosureDescriptable BlameInfo Serializable where
-    typename _ = "BlameInfo"
-    toClosureDesc _ =
-        record ["data"     .: blameData
-               ,"ranges"   .: blameRanges
-               ,"filename" .: blameFilename
-               ,"earliest" .: blameEarlyStamp
-               ,"latest"   .: blameLatestStamp
-               ]
-
-instance ClosureDescriptable FileComparison Serializable where
-    typename _ = "FileComparison"
-    toClosureDesc _ =
-      record [ "data_orig" .: comparisonFile1
-             , "ref_orig"  .: comparisonRef1
-             , "data_dest" .: comparisonFile2
-             , "ref_dest"  .: comparisonRef2
-             , "diff" .: comparisonDiff
+instance ToJSON FileComparison where
+    toJSON v =
+      object [ "data_orig" .= comparisonFile1 v
+             , "ref_orig"  .= comparisonRef1 v
+             , "data_dest" .= comparisonFile2 v
+             , "ref_dest"  .= comparisonRef2 v
+             , "diff" .= comparisonDiff v
              ]
 
-instance ClosureDescriptable ParentFile Serializable where
-    typename _ = "ParentFile"
-    toClosureDesc _ =
-      record ["data"          .: fileData
-             ,"binary"        .: fileDataIsBinary
-             ,"filekey"       .: fileRef
-             ,"filename"      .: fileName
-             ,"parent_commit" .: parentRef
-             ,"message"       .: fileMessage
-             ,"diff"          .: fileDiff
-             ,"path"          .: commitPath
-             ,"key"           .: commitRef
-             ,"author"        .: parentCommitAuthor
-             ,"timestamp"     .: parentCommitTimestamp
-             ,"timezone"      .: parentCommmitTimezone
+instance ToJSON ParentFile where
+    toJSON v =
+      object ["data"          .= fileData v
+             ,"binary"        .= fileDataIsBinary v
+             ,"filekey"       .= fileRef v
+             ,"filename"      .= fileName v
+             ,"parent_commit" .= parentRef v
+             ,"message"       .= fileMessage v
+             ,"diff"          .= fileDiff v
+             ,"path"          .= commitPath v
+             ,"key"           .= commitRef v
+             ,"author"        .= parentCommitAuthor v
+             ,"timestamp"     .= parentCommitTimestamp v
+             ,"timezone"      .= parentCommmitTimezone v
              ]
-
-difftimelineEnv :: ClosTypingEnvironment ()
-difftimelineEnv = do
-    declare (undefined :: ErrorReturn)
-    declare (undefined :: Ref)
-    declare (undefined :: SubModification)
-    declare (undefined :: DiffCommand)
-    declare (undefined :: DiffWithContext)
-    declare (undefined :: CommitTreeDiff)
-    declare (undefined :: CommitDetail)
-    declare (undefined :: DiffAction)
-    declare (undefined :: CommitPath)
-    declare (undefined :: ParentFile)
-    declare (undefined :: CommitOverview)
-    declare (undefined :: BranchInfo)
-    declare (undefined :: RemoteBranches)
-    declare (undefined :: FileComparison)
-    declare (undefined :: BlameRangeSource CommitOverview)
-    declare (undefined :: BlameInfo)
 
