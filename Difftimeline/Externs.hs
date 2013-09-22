@@ -5,6 +5,7 @@ module Difftimeline.Externs( ErrorReturn( .. ) ) where
 
 import Prelude
 
+import Data.Monoid( (<>) )
 import Data.Git
 import Data.Aeson( ToJSON(..), object, (.=) )
 import qualified Data.Text as T
@@ -207,4 +208,15 @@ instance ToJSON ParentFile where
              ,"timestamp"     .= parentCommitTimestamp v
              ,"timezone"      .= parentCommmitTimezone v
              ]
+
+instance ToJSON CommitDiff where
+    toJSON CommitDiff { commitDetailDiffs = details
+                      , commitDetailFrom = from
+                      , commitDetailTo = to
+                      } =
+        object ["tree_diff" .=
+            object [ "id"      .= (show from <> "/" <> show to)
+                   , "details" .= details
+                   ]
+               ]
 

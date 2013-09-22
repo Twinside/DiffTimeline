@@ -2,10 +2,11 @@ App = Ember.Application.create({
     LOG_TRANSITIONS: true,
 });
 
-App.store = DS.Store.extend();
-
-App.CommitDetail = DS.Model.extend({
+DS.RESTAdapter.reopen({
+  host: 'http://127.0.0.1:1818'
 });
+
+App.store = DS.Store.extend();
 
 App.Commit = DS.Model.extend({
     author: DS.attr('string'),
@@ -14,79 +15,22 @@ App.Commit = DS.Model.extend({
     parents: DS.hasMany('commit', {async:true}),
 });
 
-App.Detail = DS.Model.extend({
-    bidule: DS.attr('number')
+App.TreeDiff = DS.Model.extend({
+    details: DS.attr('raw')
 });
 
-App.CommitDiff = DS.Model.extend({
-    bidule: DS.attr('number')
-});
-
-
-/*
-App.Branch = DS.Model.extend({
-    name: DS.attr('string'),
-    ref: DS.attr('commit', {async:true})
-});
-
-App.Remote = DS.Model.extend({
-    branches: DS.hasMany('branch'
-                        //, { embedded: 'always' }
-                        )
-});
-
-App.RemotesSerializer = DS.RESTSerializer.extend({
-  extractSingle: function(store, type, payload, id, requestType) {
-    var branches = payload.remote.branches;
-    var branchesIds = comments.mapProperty('id');
-
-    payload.branches = branches;
-    payload.remote.branches = branchesIds;
-
-    return this._super.apply(this, arguments);
-  }
-});
-
-App.Adapter.map('App.Remote', {
-  branches: { embedded: 'always' }
-});
-// */
-
-/*
-DS.RESTAdapter.registerTransform('remote', {
-  serialize: function(value) {
-    return [value.get('x'), value.get('y')];
-  },
-  deserialize: function(value) {
-    for ( var i = 0; i < value.branch[]; i++ )
-    {
-        //
-    }
-    return Ember.create({ x: value[0], y: value[1] });
-  }
-});
- */
-
-DS.RESTAdapter.reopen({
-  host: 'http://127.0.0.1:1818'
-});
 
 App.Router.map(function() {
-  // put your routes here
   this.resource('commit', { path:'/commit/:id' }, function() { 
-    this.route('diff', { path: '/diff/:from' });
+    this.route('treediff', { path: '/treediff/:to' });
   });
-  //this.resource('diff_commit', { path:'/diff_commit/:base/:result' } );
 
   //this.resource('remotes');
 });
 
 App.IndexRoute = Ember.Route.extend({
-  model: function() {
-    return ['c'];
-  }
+  model: function() { return []; }
 });
-
 
 App.CommitRoute = Ember.Route.extend({
   model: function(params) {
@@ -100,9 +44,13 @@ App.CommitRoute = Ember.Route.extend({
   }
 });
 
-App.CommitDiffRoute = Ember.Route.extend({
+App.CommitTreediffRoute = Ember.Route.extend({
   model: function(params) {
-      return this.store.find('commit.diff', params.result);
+      var upper = this;
+      var commit = this.modelFor('commit');
+      return commit.get('parents').then(function(p) {
+          return upper.store.find('tree_diff', commit.id + '/' + p.content[0].id)
+      });
   },
 
   actions: {
@@ -124,3 +72,44 @@ DS.RESTAdapter.registerTransform("timestamp", {
 });
 // */
 
+
+App.ArrayTransform = DS.Transform.extend({
+    serialize: function(value) { return value; },
+    deserialize: function(value) {
+        return Ember.ArrayProxy.create({ content: Ember.A(value) });
+    },  
+});
+
+App.RawTransform = DS.Transform.extend({
+  deserialize: function(serialized) { return serialized; },
+  serialize: function(deserialized) { return deserialized; }
+});
+
+App.DiffElemView = Ember.View.extend({
+  // templateName: "diff_elem",
+
+  didInsertElement: function() {
+    var name = this.get('filename');
+    var diff = this.get('diff');
+    var highlighter =
+        TinySyntaxHighlighter.from_filename(true, name);
+
+    // dest_idx
+    // orig_idx
+    // way
+    // sub
+    // size
+    var chunks = this.data;
+    var node = document.createElement('div');
+    
+    for (var i = 0; i < diff.length; i++)
+    {
+        var chunk = diff[i];
+
+        for (var c = 0; c < chunk.data.length; c++)
+            highlighter.colorLineInNode(node, chunk.data[c]);
+    }
+
+    this.$().append(node);
+  },
+});

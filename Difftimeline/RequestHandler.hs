@@ -167,7 +167,6 @@ getCommitOverviewListR = do
       subs <- mapM (fetchCommitOverview repository . fromHexText) commitShas
       return $ object ["commits" .= subs]
           
-  
 
 getCommitR :: String -> Handler RepJson
 getCommitR commitSha = withRepository extractor
@@ -241,9 +240,11 @@ getBranchComparisonR b1 b2
         where extractor repo ignored = workingDirectoryChanges repo ignored 3 b1
 getBranchComparisonR b1 b2 
     | b1 == workingDirRequestToken = withRepositoryAndIgnore extractor
-        where extractor repo ignored = do
+        where inverter d =
+                  d { commitDetailDiffs = map invertWay $ commitDetailDiffs d }
+              extractor repo ignored = do
                 changes <- workingDirectoryChanges repo ignored 3 b2
-                return $ map invertWay <$> changes
+                return $ inverter <$> changes
 getBranchComparisonR b1 b2 = withRepository extractor
   where extractor repo = compareBranches repo 3 b1 b2
 

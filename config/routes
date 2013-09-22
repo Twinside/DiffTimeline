@@ -10,7 +10,7 @@
 /commits/#String/blame/*Texts       BlameR            GET
 /commits/#String/file_parent/*Texts FileParentR       GET
 
-/diff_commit/#String/#String        BranchComparisonR GET
+/tree_diffs/#String/#String         BranchComparisonR GET
 
 /remotes                            RemotesR          GET
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Difftimeline.GitQuery( CommitTreeDiff( .. )
-                            , CommitDetail
+                            , CommitDiff( .. )
                             , CommitPath( .. )
                             , ParentFile( .. )
                             , CommitOverview( .. )
@@ -155,7 +155,11 @@ filterCommitTreeDiff f = inner
                 [TreeElement n r $ concatMap inner sub]
           inner _ = []
 
-type CommitDetail = [CommitTreeDiff]
+data CommitDiff = CommitDiff
+    { commitDetailFrom  :: Ref
+    , commitDetailTo    :: Ref
+    , commitDetailDiffs :: [CommitTreeDiff]
+    }
 
 data CommitPath = CommitPath
     { pathCommitRef     :: Ref
@@ -226,11 +230,15 @@ batchSubTree  repository f = aux
           aux _ _ _ = throwError "Wrong git object kind"
 
 compareBranches :: Git -> Int -> String -> String
-                -> IO (Either String CommitDetail)
+                -> IO (Either String CommitDiff)
 compareBranches repo contextSize b1 b2 = runErrorT $
     detailer <$> diffBranches repo contextSize b1 b2
   where detailer diff =
-            filterCommitModifications $ flattenTreeDiff diff
+            diff { commitDetailDiffs =
+                    filterCommitModifications . concatMap flattenTreeDiff $
+                             commitDetailDiffs diff
+                 }
+            
 
 data BranchInfo = BranchInfo
     { branchName   :: T.Text
@@ -299,11 +307,12 @@ brancheslist repo = do
     }
     pure $ localBranch : remotesOldStyle ++ remotes
 
-diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
+diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitDiff
 diffBranches repo contextSize branch1 branch2 = do
     ref1 <- revisionToRef repo branch1
     ref2 <- revisionToRef repo branch2
-    snd <$> createCommitDiff  repo contextSize True ref1 ref2
+    CommitDiff ref1 ref2 . flattenTreeDiff . snd <$>
+            createCommitDiff repo contextSize True ref1 ref2
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
 diffCommitTree repository ref = runErrorT $ do
@@ -332,15 +341,15 @@ revisionToRef repo r =
 
 
 workingDirectoryChanges  :: Git -> IgnoredSet -> Int -> String
-                         -> IO (Either String CommitDetail)
+                         -> IO (Either String CommitDiff)
 workingDirectoryChanges repository ignoreSet contextSize ref = runErrorT $ do
     resolved <- revisionToRef repository ref
     workingDirectoryChanges' repository ignoreSet contextSize resolved
 
 workingDirectoryChanges' :: Git -> IgnoredSet -> Int -> Ref
-                         -> ErrorT String IO CommitDetail
+                         -> ErrorT String IO CommitDiff
 workingDirectoryChanges' repository ignoreSet contextSize ref = do
-    filterCommitModifications . flattenTreeDiff . snd <$> 
+    CommitDiff ref nullRef . filterCommitModifications . flattenTreeDiff . snd <$> 
             diffWorkingDirectory repository ignoreSet contextSize ref
 
 (<///>) :: FilePath -> FilePath -> FilePath
@@ -518,11 +527,11 @@ filterCommitModifications = filter isModification
           isModification (TreeElement {}) = False
 
 -- | For a given commit, compute the diff with it's first parent.
-diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
+diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDiff)
 diffCommit repository contextSize deep ref = runErrorT $ do
    (Commit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = firstParentRef thisCommit
-   filterCommitModifications . flattenTreeDiff . snd 
+   CommitDiff prevRef ref . filterCommitModifications . flattenTreeDiff . snd 
         <$> createCommitDiff  repository contextSize deep prevRef ref 
                 
 

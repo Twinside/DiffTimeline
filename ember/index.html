@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link href="css/bootstrap.css" rel="stylesheet" media="screen">
   <link href="css/bootstrap-responsive.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/syntax-highlight.css">
 </head>
 <body>
 
@@ -18,11 +19,6 @@
 
   <script type="text/x-handlebars" data-template-name="index">
     OOk
-    <ul>
-    {{#each item in model}}
-      <li>{{item}}</li>
-    {{/each}}
-    </ul>
     <nav>
     {{#link-to 'commit' 'd690c8baae28cfe22681b26f5be99bc1ac9cd664'}}About{{/link-to}}
     </nav>
@@ -48,21 +44,29 @@
                 {{p.message}} <br/>
             {{/each}}
 
-            {{#link-to 'commit.diff' id parents.[0].id}}Detail{{/link-to}}
-            <br/>
-            {{parents.0.id}}
+            {{#link-to 'commit.treediff' id}}Detail{{/link-to}}
         </div>
 
         {{outlet}}
     </div>
   </script>
 
-  <script type="text/x-handlebars" data-template-name="diff_commit">
-    commit Details
-    {{model.a}}
+  <script type="text/x-handlebars" data-template-name="commit/treediff">
+Commit Details<br/>
+    {{id}}<br/>
+    {{#each f in details}}
+        <div class="file_diff">
+            <span class="file_name">{{f.name}}</span>
+            {{f.kind}}
+            <br/>
+
+            <pre>{{view App.DiffElemView filenameBinding="f.name" diffBinding="f.diff"}}</pre>
+        </div>
+    {{/each}}
   </script>
 
   <script src="js/libs/jquery-1.9.1.js"></script>
+  <script src="js/tinysyntaxhighlighter.js"></script>
   <script src="js/libs/handlebars-1.0.0.js"></script>
   <script src="js/libs/ember-1.0.0.js"></script>
   <script src="js/libs/ember-data.js"></script>
