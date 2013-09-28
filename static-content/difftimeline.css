@@ -157,6 +157,12 @@ pre
     background-color: #744;
 }
 
+.diff_context
+{
+    width: 100%;
+    display: block;
+}
+
 .diff_addition
 {
     font-family: Consolas, Inconsolata, Monospace;
@@ -164,12 +170,6 @@ pre
     width: 100%;
     margin: 0px;
     padding: 0px;
-    display: block;
-}
-
-.diff_context
-{
-    width: 100%;
     display: block;
 }
 

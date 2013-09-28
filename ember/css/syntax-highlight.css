@@ -27,3 +27,41 @@
 .syntax_function { color: #678cb1; }
 .syntax_type { color: #678cb1; }
 .syntax_module { color: #e0e2e4; }
+
+.diff_deletion
+{
+    background-color: #544;
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
+    display: block;
+}
+
+.diff_deletion .sub {
+    background-color: #744;
+}
+
+.diff_addition
+{
+    font-family: Consolas, Inconsolata, Monospace;
+    background-color: #454;
+    width: 100%;
+    margin: 0px;
+    padding: 0px;
+    display: block;
+}
+
+.diff_addition .sub {
+    background-color: #474;
+}
+
+.diff_deletion .diff_addition
+{
+    background-color: #445;
+}
+
+.diff_addition .diff_deletion
+{
+    background-color: #554;
+}
+

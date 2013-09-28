@@ -18,9 +18,10 @@
   </script>
 
   <script type="text/x-handlebars" data-template-name="index">
-    OOk
     <nav>
-    {{#link-to 'commit' 'd690c8baae28cfe22681b26f5be99bc1ac9cd664'}}About{{/link-to}}
+    {{#link-to 'commit.treediff'
+            'd690c8baae28cfe22681b26f5be99bc1ac9cd664'
+            'd690c8baae28cfe22681b26f5be99bc1ac9cd664'}}commit{{/link-to}}
     </nav>
   </script>
 
@@ -30,8 +31,8 @@
   <!-- {{view Bootstrap.Badge type="success" contentBinding="id"}} -->
   <!-- {{#link-to 'commit/details' p.id}}Details{{/link-to}} -->
   <script type="text/x-handlebars" data-template-name="commit">
-    Commit
     <div>
+        Commit
         <div>
             <div class="commitmsg">
                 <span>{{id}}</span><br/>
@@ -40,19 +41,18 @@
             </div>
             {{#each p in parents}}
                 Parent
-                {{#link-to 'commit' p.id}}{{p.id}}{{/link-to}}
+                <span {{action 'expand' p.id}}>
+                    {{p.id}}
+                </span>
                 {{p.message}} <br/>
             {{/each}}
-
-            {{#link-to 'commit.treediff' id}}Detail{{/link-to}}
         </div>
 
-        {{outlet}}
+        {{outlet detail}}
     </div>
   </script>
 
   <script type="text/x-handlebars" data-template-name="commit/treediff">
-Commit Details<br/>
     {{id}}<br/>
     {{#each f in details}}
         <div class="file_diff">
@@ -60,7 +60,9 @@ Commit Details<br/>
             {{f.kind}}
             <br/>
 
-            <pre>{{view App.DiffElemView filenameBinding="f.name" diffBinding="f.diff"}}</pre>
+            {{view App.DiffElemView
+                filenameBinding="f.name"
+                diffBinding="f.diff"}}
         </div>
     {{/each}}
   </script>

@@ -37,12 +37,28 @@ App.CommitRoute = Ember.Route.extend({
       return this.store.find('commit', params.id);
   },
 
+  /*
+  setupController: function(controller, playlist) {
+    controller.set('model', playlist.get('commit'));
+  }, // */
+  
+
   actions: {
       error: function(reason) {
           alert("COMMIT: " + reason.toString());
+      },
+
+      expand: function(to) {
+          // todo =)
+          // this.pushObject(st);
       }
   }
 });
+
+/*
+App.CommitController = Ember.ArrayController.extend({
+});
+// */
 
 App.CommitTreediffRoute = Ember.Route.extend({
   model: function(params) {
@@ -52,6 +68,11 @@ App.CommitTreediffRoute = Ember.Route.extend({
           return upper.store.find('tree_diff', commit.id + '/' + p.content[0].id)
       });
   },
+
+  renderTemplate: function() {
+    this.render({outlet: 'detail'});
+  },
+
 
   actions: {
       error: function(reason) {
@@ -85,31 +106,137 @@ App.RawTransform = DS.Transform.extend({
   serialize: function(deserialized) { return deserialized; }
 });
 
-App.DiffElemView = Ember.View.extend({
-  // templateName: "diff_elem",
+App.BranchTransform = DS.Transform.extend({
+  deserialize: function(serialized) {
+  }
+});
 
+var commit_renderer = function(filename, diff) {
+    var hl = TinySyntaxHighlighter.from_filename(false, filename);
+
+    /** @type {jQuery} */
+    var rez_node = document.createElement('table');
+    var row = document.createElement('tr');
+    rez_node.appendChild(row);
+    var numberCell1 = document.createElement('td');
+    var numberCell2 = document.createElement('td');
+    var codeCell = document.createElement('td');
+
+    row.appendChild(numberCell1);
+    row.appendChild(codeCell);
+    row.appendChild(numberCell2);
+
+    /** @type {Element} */
+    var code_node = document.createElement('pre');
+    code_node.setAttribute('class', 'syntax_highlighted');
+    codeCell.appendChild(code_node);
+
+    /** @type {Element} */
+    var number_node = document.createElement('pre');
+    number_node.setAttribute('class', 'line_number_column');
+    numberCell1.appendChild(number_node);
+
+    var number_node2 = document.createElement('pre');
+    number_node2.setAttribute('class', 'line_number_column');
+    numberCell2.appendChild(number_node2);
+
+    var curr_diff;
+    var acc = ""
+    var diff_node;
+    var prev_end = -1;
+
+    var create_number_node = function(n) {
+        var node = document.createElement('span');
+        node.setAttribute('class', 'syntax_line_number');
+        node.appendChild(document.createTextNode(n.toString() + "\n"));
+        return node;
+    };
+
+	/** @type {function(string) : Element} */
+    var div_node = function(kind) {
+        var node = document.createElement('div');
+        node.setAttribute('class', kind);
+        return node;
+    };
+
+    for ( var i = 0; i < diff.length; i++ )
+    {
+        var has_sub = false;
+
+        curr_diff = diff[i];
+		has_sub = (curr_diff.hasOwnProperty('sub') &&
+				   curr_diff.sub.length > 0);
+
+        if (curr_diff.way == '+') {
+            diff_node = div_node("diff_addition");
+            hl.set_current_line_number(curr_diff.dest_idx + 1);
+        }
+        else if (curr_diff.way == '-') {
+            diff_node = div_node("diff_deletion");
+            hl.set_current_line_number(curr_diff.dest_idx + 1);
+        }
+        else {
+            diff_node = div_node("diff_context");
+            hl.set_current_line_number(curr_diff.dest_idx + 1);
+
+            if (prev_end != curr_diff.dest_idx)
+                hl.reset_context();
+        }
+
+        prev_end = curr_diff.dest_idx + curr_diff.data.length;
+
+        for ( var l = 0; l < curr_diff.data.length; l++ )
+        {
+            if (has_sub) {
+                hl.setPositionHighlight(curr_diff.sub[l]);
+            }
+
+            var lineNodes = hl.colorLine(curr_diff.data[l] + "\n");
+            if (has_sub) {
+                hl.setPositionHighlight([]);
+            }
+
+            if (curr_diff.way == '=')
+            {
+                number_node.appendChild(create_number_node(curr_diff.orig_idx + l));
+                number_node2.appendChild(create_number_node(curr_diff.dest_idx + l));
+            }
+            else if (curr_diff.way == '+')
+            {
+                number_node.appendChild(document.createTextNode('\n'));
+                number_node2.appendChild(create_number_node(curr_diff.dest_idx + l));
+            }
+            else
+            {
+                number_node.appendChild(create_number_node(curr_diff.orig_idx + l));
+                number_node2.appendChild(document.createTextNode('\n'));
+            }
+
+
+            for ( var node = 0; node < lineNodes.length; node++ )
+                diff_node.appendChild(lineNodes[node]);
+        }
+
+        code_node.appendChild(diff_node);
+
+        if (i < diff.length - 1 &&
+            curr_diff.dest_idx + curr_diff.size < diff[i + 1].dest_idx )
+        {
+            number_node.appendChild(document.createTextNode("\n...\n\n"));
+            number_node2.appendChild(document.createTextNode("\n...\n\n"));
+            code_node.appendChild(document.createTextNode("\n...\n\n"));
+        }
+
+    }
+
+    return rez_node;
+};
+
+App.DiffElemView = Ember.View.extend({
   didInsertElement: function() {
     var name = this.get('filename');
     var diff = this.get('diff');
-    var highlighter =
-        TinySyntaxHighlighter.from_filename(true, name);
 
-    // dest_idx
-    // orig_idx
-    // way
-    // sub
-    // size
-    var chunks = this.data;
-    var node = document.createElement('div');
-    
-    for (var i = 0; i < diff.length; i++)
-    {
-        var chunk = diff[i];
-
-        for (var c = 0; c < chunk.data.length; c++)
-            highlighter.colorLineInNode(node, chunk.data[c]);
-    }
-
-    this.$().append(node);
+    this.$().append(commit_renderer(name, diff));
   },
 });
