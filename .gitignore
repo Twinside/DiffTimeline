@@ -15,4 +15,6 @@ static/tmp
 difftimeline
 composed.js
 *.bz2
+.cabal-sandbox
+cabal.sandbox.config
 
