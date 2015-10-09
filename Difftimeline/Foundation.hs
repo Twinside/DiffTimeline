@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 module Difftimeline.Foundation
     ( DiffTimeline (..)
     , Route (..)
