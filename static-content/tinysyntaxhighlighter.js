@@ -856,7 +856,12 @@ var TinySyntaxHighlighter = (function () {
             , { kind:'syntax_exception', words:["except", "finally", "raise", "try"] }
             ]),
 
-        regions:[]
+        regions:[
+            { begin:tok_region('"""')
+            , end:tok_region('"""')
+            , kind:"syntax_string"
+            , regions:[], parsers:[], keywords:[] }
+        ]
     };
 
     /** @type {LangDef} */
