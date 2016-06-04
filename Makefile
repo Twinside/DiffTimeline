@@ -12,7 +12,7 @@ endif
 all: build
 
 build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
-	runhaskell Setup.hs build
+	cabal build
 
 pre: composed.js static-content/third_party.js Difftimeline/Foundation.hs
 
@@ -44,13 +44,12 @@ hlint:
 # on windows, instead, prepare a tiny tar gz and install
 # it manually
 prepare:
-	cd hit-simple; make pack
-	cabal-dev add-source hit-simple/hit-simple-0.3.tar.gz
-	cd ClosureExternalProducer; make pack
-	cabal-dev add-source ClosureExternalProducer/ClosureExternalProducer-0.1.tar.gz
+	cabal sandbox init
+	cabal sandbox add-source hit-simple
+	cabal sandbox add-source ClosureExternalProducer
 	make composed.js
 	make static-content/third_party.js
-	cabal-dev install $(CABAL_FLAG)
+	cabal install $(CABAL_FLAG)
 
 place:
 	cp dist/build/DiffTimeline/DiffTimeline.exe ~/AppData/Roaming/cabal/bin/
