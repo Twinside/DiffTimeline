@@ -46,10 +46,8 @@ import Data.List( sortBy, foldl', find  )
 import Data.Maybe( catMaybes )
 import Data.Byteable( toBytes )
 import System.FilePath( splitDirectories  )
-import Control.Applicative
-import qualified Control.Exception as E
 import Control.Monad( forM, when, void )
-import Control.Monad.Error( ErrorT, throwError, runErrorT, catchError )
+import Control.Monad.Trans.Except( ExceptT, throwE, runExceptT, catchE )
 import Control.Monad.IO.Class( liftIO )
 import qualified Data.Set as S
 import qualified Data.ByteString as B
@@ -59,6 +57,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
+import Control.Monad.Trans.Writer.Strict( WriterT, runWriterT )
 
 import Data.Time.Clock( UTCTime )
 
@@ -71,13 +70,13 @@ import Data.Git
     , Person( .. )
     , Tree( .. )
     , Blob( .. )
+    , RefName( .. )
     , Git
     , Ref
     , getObject
     , resolveRevision
     , headGet
     )
-import Data.Git.Monad( RefName( .. ) )
 import Data.Git.Ref
     ( fromHexString
     , toHexString
@@ -94,39 +93,8 @@ import Data.Git.Types
     ( TreeEnt
     , GitTime( .. )
     )
-        {-  
-               ( GitObject( .. )
-               , CommitAuthor( .. )
-               , CommitInfo( .. )
-               , Git
-               , findObject
-               , gitRepoPath 
-               , CommitInfo( .. )
-               , getHead
-               , Ref
-               , RefSpec( .. )
-               , fromHexString
-               , toHexString
-               , getBranchNames
-               , getRemoteNames
-               , getRemoteBranchNames
-               , getTagNames
-               , readRemoteBranch
-               , readAllRemoteBranches
-               , readBranch
-               , readTag
-
-               , TreeEntry
-               , revFromString
-               , resolveRevision
-               , getGitSvnBranchNames, readGitSvnBranch 
-               )
--}
 
 import Control.Monad.Trans.Class( lift )
-import Control.Monad.Trans.Writer.Strict( WriterT
-                                        , runWriterT
-                                        )
 
 import qualified Data.Vector as V
 import Data.Vector.Algorithms.Intro( sort )
@@ -215,6 +183,7 @@ timeOfAuthor :: Person -> Int
 timeOfAuthor = unCTime . timeFromElapsed . gitTimeUTC . personTime
   where unCTime (CTime t) = fromIntegral t
 
+unpackPath :: Git -> FilePath
 unpackPath = BC.unpack . FP.encode FP.posix . gitRepoPath 
 
 -- | Try to detect binary element given a blob
@@ -231,42 +200,42 @@ firstParentRef info = case commitParents info of
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) a b = a ++ "/" ++ b
 
-errorIO :: String -> IO (Maybe a) -> ErrorT String IO a
+errorIO :: String -> IO (Maybe a) -> ExceptT String IO a
 errorIO str a = do
     mayrez <- liftIO a
     case mayrez of
-        Nothing -> throwError str
+        Nothing -> throwE str
         Just j  -> return j
 
-accessCommit :: String -> Git -> Ref -> ErrorT String IO Object
+accessCommit :: String -> Git -> Ref -> ExceptT String IO Object
 accessCommit s rep ref = do
   rez <- liftIO $ getObject rep ref True
   case rez of
-      Nothing -> throwError s
+      Nothing -> throwE s
       Just c@(ObjCommit _) -> return c
-      Just _ -> throwError s
+      Just _ -> throwE s
 
-accessTree :: String -> Git -> Ref -> ErrorT String IO Object
+accessTree :: String -> Git -> Ref -> ExceptT String IO Object
 accessTree s rep ref = do
     rez <- liftIO $ getObject rep ref True
     case rez of
-        Nothing -> throwError s
+        Nothing -> throwE s
         Just c@(ObjTree _) -> return c
-        Just _ -> throwError s
+        Just _ -> throwE s
 
-accessBlob :: String -> Git -> Ref -> ErrorT String IO Object
+accessBlob :: String -> Git -> Ref -> ExceptT String IO Object
 accessBlob s rep ref = do
     rez <- liftIO $ getObject rep ref True
     case rez of
-        Nothing -> throwError s
+        Nothing -> throwE s
         Just c@(ObjBlob _) -> return c
-        Just _ -> throwError s
+        Just _ -> throwE s
 
 nullRef :: Ref
 nullRef = fromHexString $ replicate 40 '0'
 
 batchSubTree :: Git -> (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> Object
-             -> ErrorT String IO CommitTreeDiff
+             -> ExceptT String IO CommitTreeDiff
 batchSubTree  repository f = aux where
   objAccess = errorIO "" . accessObject repository
 
@@ -274,11 +243,11 @@ batchSubTree  repository f = aux where
   aux name r (ObjTree (Tree t)) = TreeElement (T.pack name) r <$>
     sequence [objAccess subRef >>= aux (BC.unpack $ toBytes n) subRef
                                 | (_, n, subRef) <- t]
-  aux _ _ _ = throwError "Wrong git object kind"
+  aux _ _ _ = throwE "Wrong git object kind"
 
 compareBranches :: Git -> Int -> String -> String
                 -> IO (Either String CommitDetail)
-compareBranches repo contextSize b1 b2 = runErrorT $
+compareBranches repo contextSize b1 b2 = runExceptT $
     detailer <$> diffBranches repo contextSize b1 b2
   where detailer diff = CommitDetail
             { commitDetailMessage = T.pack $ "Comparing " ++ b1 ++ " and " ++ b2
@@ -311,7 +280,7 @@ brancheslist repo = do
   branchSet <- branchList repo
   tagSet <- tagList repo
   let fetchInfos refSet =
-        forM (S.toList branchSet) $ \r -> do
+        forM (S.toList refSet) $ \r -> do
             resolved <- resolve repo r
             return $ BranchInfo (T.pack $ refNameRaw r) <$> resolved
   branches <- catMaybes <$> fetchInfos branchSet
@@ -319,14 +288,14 @@ brancheslist repo = do
   return [RemoteBranches "Branches" branches, RemoteBranches "Tags" tags]
 
 
-diffBranches :: Git -> Int -> String -> String -> ErrorT String IO CommitTreeDiff
+diffBranches :: Git -> Int -> String -> String -> ExceptT String IO CommitTreeDiff
 diffBranches repo contextSize branch1 branch2 = do
     ref1 <- revisionToRef repo branch1
     ref2 <- revisionToRef repo branch2
     snd <$> createCommitDiff  repo contextSize True ref1 ref2
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
-diffCommitTree repository ref = runErrorT $ do
+diffCommitTree repository ref = runExceptT $ do
   (ObjCommit thisCommit) <- accessCommit "Error can't file commit" repository ref
   let prevRef = firstParentRef thisCommit
   snd <$> createCommitDiff repository 0 False prevRef ref
@@ -340,21 +309,21 @@ fetchDirectoryInfo name = do
         where kindOfExist True = KindFile
               kindOfExist False = KindDirectory
 
-revisionToRef :: Git -> String -> ErrorT String IO Ref
+revisionToRef :: Git -> String -> ExceptT String IO Ref
 revisionToRef repo r = (do
     rr <- liftIO $ resolveRevision repo $ Rev.fromString r
     case rr of
-      Nothing -> throwError $ "Can't resolve revision" ++ r
-      Just f -> return f) `catchError` (\err ->
-            throwError $ "Can't parse revision " ++ r ++ " " ++ show err)
+      Nothing -> throwE $ "Can't resolve revision" ++ r
+      Just f -> return f) `catchE` (\err ->
+            throwE $ "Can't parse revision " ++ r ++ " " ++ show err)
 
 workingDirectoryChanges  :: Git -> IgnoredSet -> Int -> String
                          -> IO (Either String CommitDetail)
-workingDirectoryChanges repository ignoreSet contextSize ref = runErrorT $ do
+workingDirectoryChanges repository ignoreSet contextSize ref = runExceptT $ do
     resolved <- revisionToRef repository ref
     workingDirectoryChanges' repository ignoreSet contextSize resolved
 
-workingDirectoryChanges'  :: Git -> IgnoredSet -> Int -> Ref -> ErrorT String IO CommitDetail
+workingDirectoryChanges'  :: Git -> IgnoredSet -> Int -> Ref -> ExceptT String IO CommitDetail
 workingDirectoryChanges' repository ignoreSet contextSize ref = do
    time <- lift $ truncate <$> getPOSIXTime 
    parentDetail <- fetchCommitOverview repository ref
@@ -377,7 +346,7 @@ workingDirectoryChanges' repository ignoreSet contextSize ref = do
 a  <///> b = a </> b
 
 diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
-                     -> ErrorT String IO (Commit, CommitTreeDiff)
+                     -> ExceptT String IO (Commit, CommitTreeDiff)
 diffWorkingDirectory repository ignoreSet contextSize ref = do
     (ObjCommit thisCommit) <- accessCommit "Error can't file commit" repository ref
     let authorStamp = timeOfAuthor $ commitAuthor thisCommit
@@ -408,10 +377,10 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
         inner _ flatname name (ObjBlob (Blob c1)) r1 = do
             file2 <- liftIO $ L.readFile flatname
             pure $! fileComparer name c1 r1 file2
-        inner _ _ _ _ _ = throwError "Wrong git object kind"
+        inner _ _ _ _ _ = throwE "Wrong git object kind"
 
         maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
-                   -> ErrorT String IO CommitTreeDiff
+                   -> ExceptT String IO CommitTreeDiff
         maySubTree f name r = do
             sub <- liftIO $ accessObject repository r
             -- | Sometimes, there is nothing to see
@@ -420,7 +389,7 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
                Just el  -> batchSubTree repository f name r el
 
         diffTree :: UTCTime -> String -> String -> [TreeEnt] -> [(SubKind, BC.ByteString)]
-                 -> ErrorT String IO [CommitTreeDiff]
+                 -> ExceptT String IO [CommitTreeDiff]
         diffTree _ _ _name   []     [] = return []
         diffTree _ _ name    [] rights = pure
             [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
@@ -446,7 +415,7 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
 
                   (_, Just subL) ->
                         (((:) <$> inner maxTime (flatname </> BC.unpack (toBytes lName)) (BC.unpack $ toBytes lName) subL lRef)
-                                `catchError` (\_ -> return id)) <*> diffTree maxTime flatname name ls rs
+                                `catchE` (\_ -> return id)) <*> diffTree maxTime flatname name ls rs
 
             | toBytes lName < rName =
                 (:) <$> maySubTree DelElement (BC.unpack $ toBytes lName) lRef
@@ -461,7 +430,7 @@ createCommitDiff :: Git
                  -> Bool -- ^ If we compute file diff
                  -> Ref  -- ^ Base commit
                  -> Ref  -- ^ Final commit (destination)
-                 -> ErrorT String IO (Commit, CommitTreeDiff)
+                 -> ExceptT String IO (Commit, CommitTreeDiff)
 createCommitDiff repository contextSize deep prevRef ref = do
     ObjCommit thisCommit <- accessCommit "Error can't file commit" repository ref
     thisTree <- getObj "Error can't access commit tree" $ commitTreeish thisCommit
@@ -488,10 +457,10 @@ createCommitDiff repository contextSize deep prevRef ref = do
                     where strictify = B.concat . L.toChunks
                           txtLeft = decodeUtf8 $ strictify c1
                           txtRight = decodeUtf8 $ strictify c2
-        inner _ _ _ _ _ = throwError "Wrong git object kind"
+        inner _ _ _ _ _ = throwE "Wrong git object kind"
 
         maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
-                   -> ErrorT String IO CommitTreeDiff
+                   -> ExceptT String IO CommitTreeDiff
         maySubTree f name r = do
             sub <- liftIO $ accessObject repository r
             -- | Sometimes, there is nothing to see
@@ -500,7 +469,7 @@ createCommitDiff repository contextSize deep prevRef ref = do
                Just el  -> batchSubTree repository f name r el
 
         diffTree :: String -> [TreeEnt] -> [TreeEnt]
-                 -> ErrorT String IO [CommitTreeDiff]
+                 -> ExceptT String IO [CommitTreeDiff]
         diffTree _name   []     [] = return []
         diffTree _name    [] rights = sequence
             [maySubTree AddElement fullName r | (_, item, r) <- rights
@@ -521,12 +490,12 @@ createCommitDiff repository contextSize deep prevRef ref = do
 
                   (Just subL, Just subR) ->
                         (((:) <$> inner (BC.unpack $ toBytes lName) subL lRef subR rRef)
-                                `catchError` (\_ -> return id)) <*> diffTree name ls rs
+                                `catchE` (\_ -> return id)) <*> diffTree name ls rs
                   (Nothing, _) ->
-                      throwError $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
+                      throwE $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
 
                   (_, Nothing) ->
-                      throwError $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
+                      throwE $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
 
             | lName < rName =
                 (:) <$> maySubTree DelElement (BC.unpack $ toBytes lName) lRef
@@ -548,7 +517,7 @@ filterCommitModifications = filter isModification
 
 -- | For a given commit, compute the diff with it's first parent.
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
-diffCommit repository contextSize deep ref = runErrorT $ do
+diffCommit repository contextSize deep ref = runExceptT $ do
    (ObjCommit thisCommit) <- accessCommit "Error can't find commit" repository ref
    let prevRef = firstParentRef thisCommit
    parentsInfo <- mapM (fetchCommitOverview repository) $ commitParents thisCommit
@@ -572,11 +541,11 @@ findFirstCommit :: Git              -- ^ Repository
                 -> [B.ByteString]   -- ^ Path
                 -> Ref              -- ^ Ref of the element in the path
                 -> Ref              -- ^ First commit ref
-                -> ErrorT String IO (Commit, Ref, [CommitPath])
+                -> ExceptT String IO (Commit, Ref, [CommitPath])
 findFirstCommit repository path currentFileRef ref = inner undefined undefined [ref]
     where inner prevCommit prevRef [] = return (prevCommit, prevRef, [])
           inner prevCommit prevRef (currentCommit:_) =
-            catchError (do
+            catchE (do
                 (info, commitFileRef) <- fetchFileRefInCommit repository currentCommit path
                 if commitFileRef /= currentFileRef
                     then return (prevCommit, prevRef, [])
@@ -614,7 +583,7 @@ findInTree git pathes = go  pathes . Just where
 bytePathToString :: [B.ByteString] -> FilePath
 bytePathToString = BC.unpack . BC.concat . map (BC.append (BC.pack "/"))
 
-fetchFileRefInCommit :: Git -> Ref -> [B.ByteString] -> ErrorT String IO (Commit, Ref)
+fetchFileRefInCommit :: Git -> Ref -> [B.ByteString] -> ExceptT String IO (Commit, Ref)
 fetchFileRefInCommit repo ref bytePath = do
     let path = bytePathToString bytePath
     ObjCommit commit <- accessCommit ("Can't find commit (" ++ show ref ++ ")") repo ref
@@ -627,7 +596,7 @@ fetchFileRefInCommit repo ref bytePath = do
     return (commit, thisFileRef)
 
 fetchBlobInCommit :: Git -> Ref -> [B.ByteString]
-                  -> ErrorT String IO (Commit, L.ByteString)
+                  -> ExceptT String IO (Commit, L.ByteString)
 fetchBlobInCommit repo ref bytePath = do
   let path = bytePathToString bytePath
   (commit, thisFileRef) <- fetchFileRefInCommit repo ref bytePath
@@ -651,7 +620,7 @@ pathOfRef (LocalRef p) = p
 pathOfRef (RepoRef _ p) = p
 
 fetchFileReference :: Git -> FileReference
-                   -> ErrorT String IO (T.Text, Ref)
+                   -> ExceptT String IO (T.Text, Ref)
 fetchFileReference _ (LocalRef path) =
     liftIO $ (,nullRef) <$> TIO.readFile path
 
@@ -663,7 +632,7 @@ fetchFileReference repo (RepoRef commitKey path) = do
 
 compareFiles :: Git -> FileReference -> FileReference
              -> IO (Either String FileComparison)
-compareFiles repo ref1 ref2 = runErrorT $ do
+compareFiles repo ref1 ref2 = runExceptT $ do
     (blobContent1, f1) <- fetchFileReference repo ref1
     (blobContent2, f2) <- fetchFileReference repo ref2
 
@@ -683,7 +652,7 @@ getHead repo = do
     Right rn -> resolve repo rn
 
 findParentFile :: Git -> FileReference -> IO (Either String ParentFile)
-findParentFile repository originalRef = runErrorT inner where
+findParentFile repository originalRef = runExceptT inner where
   path = pathOfRef originalRef
   bytePath = map BC.pack $ splitDirectories path
 
@@ -702,15 +671,17 @@ findParentFile repository originalRef = runErrorT inner where
               previousRef, currentFileRef)
 
   fetchCurrentRef (LocalRef _) = do
-      let path = unpackPath repository ++ "/../" ++ path
+      let fullPath = unpackPath repository ++ "/../" ++ path
       file <- 
-          catchError (liftIO $ L.readFile path)
-                     (\_ -> fail $ "Impossible to read file " ++ path)
-      time <- lift $ truncate <$> getPOSIXTime 
+          catchE (liftIO $ L.readFile path)
+                     (\_ -> fail $ "Impossible to read file " ++ fullPath)
+      {-time <- lift $ truncate <$> getPOSIXTime -}
       headRef  <- errorIO "Can't read HEAD" $ getHead repository
       let dummyAuthor = Person "" "" (GitTime 0 (TimezoneOffset 0))
           commit = Commit
             { commitTreeish = nullRef
+            , commitEncoding = mempty
+            , commitExtras = mempty
             , commitParents = [headRef]
             , commitAuthor = dummyAuthor
             , commitCommitter = dummyAuthor
@@ -722,7 +693,7 @@ findParentFile repository originalRef = runErrorT inner where
           previousRef, currentFileRef) <- fetchCurrentRef originalRef
 
       thisFile <-
-          catchError (snd <$> fetchBlobInCommit repository previousRef bytePath)
+          catchE (snd <$> fetchBlobInCommit repository previousRef bytePath)
                      (\_ -> return L.empty)
 
       let toStrict = B.concat . L.toChunks
@@ -794,75 +765,80 @@ data BlameInfo = BlameInfo
 
 -- | Perform a "blame", find the origin of every line of a commited file.
 blameFile :: Git -> String -> FilePath -> IO (Either String BlameInfo)
-blameFile repository commitStrSha path = runErrorT finalData
-  where currentCommit = fromHexString commitStrSha
-        bytePath = map BC.pack $ splitDirectories path
-        toStrict = decodeUtf8 . B.concat . L.toChunks
+blameFile repository commitStrSha path = runExceptT finalData where
+  currentCommit = fromHexString commitStrSha
 
-        dateRange = V.foldl minMax (maxBound, minBound)
-                  . V.map (commitOverviewTimestamp . sourceTag)
-            where minMax (mini, maxi) v = (min mini v, max maxi v)
+  bytePath = map BC.pack $ splitDirectories path
+  toStrict = decodeUtf8 . B.concat . L.toChunks
 
-        finalData = do
-            (file, ranges) <- runWriterT initiator
-            unfrozen <- liftIO $ V.unsafeThaw ranges
-            liftIO $ sort unfrozen
-            immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
-            let blameRange = V.fromList . simplifyRange $ V.toList immutableSorted
-                (earliest, latest) = dateRange blameRange
+  dateRange = V.foldl minMax (maxBound, minBound)
+            . V.map (commitOverviewTimestamp . sourceTag)
+      where minMax (mini, maxi) v = (min mini v, max maxi v)
 
-            return BlameInfo { blameData = T.unlines $ V.toList file
-                             , blameRanges = blameRange
-                             , blameFilename = T.pack path
-                             , blameEarlyStamp = earliest
-                             , blameLatestStamp = latest
-                             }
+  finalData = do
+    (file, ranges) <- runWriterT initiator
+    unfrozen <- liftIO $ V.unsafeThaw ranges
+    liftIO $ sort unfrozen
+    immutableSorted <- liftIO $ V.unsafeFreeze unfrozen
+    let blameRange = V.fromList . simplifyRange $ V.toList immutableSorted
+        (earliest, latest) = dateRange blameRange
 
-        fetchCommit = lift . accessCommit "Can't find current commit" repository
-        fetchTree = lift . accessTree "Can't find tree commit" repository
-        fetchBlob = lift . accessBlob "Can't find file content" repository
-        fetchFileRef =
-            lift . errorIO "Can't find current content" . findInTree repository bytePath
+    return BlameInfo
+      { blameData = T.unlines $ V.toList file
+      , blameRanges = blameRange
+      , blameFilename = T.pack path
+      , blameEarlyStamp = earliest
+      , blameLatestStamp = latest
+      }
 
-        initiator = do
-            (_, currentFileRef) <- lift $
-                fetchFileRefInCommit repository currentCommit bytePath
+  fetchCommit = accessCommit "Can't find current commit" repository
+  fetchTree = accessTree "Can't find tree commit" repository
+  fetchBlob = accessBlob "Can't find file content" repository
+  fetchFileRef =
+      errorIO "Can't find current content" . findInTree repository bytePath
 
-            (firstNfo, firstRef, _betweenCommits) <- lift $
-                    findFirstCommit repository bytePath currentFileRef currentCommit
-            ObjBlob (Blob initialFile) <- fetchBlob currentFileRef
+  initiator :: WriterT (V.Vector (BlameRangeSource CommitOverview)) (ExceptT String IO) (V.Vector T.Text)
+  initiator = do
+    (_, currentFileRef) <- lift $
+        fetchFileRefInCommit repository currentCommit bytePath
 
-            when (detectBinary initialFile)
-                 (throwError "Can't perform blame on a binary file")
+    (firstNfo, firstRef, _betweenCommits) <- lift $
+        findFirstCommit repository bytePath currentFileRef currentCommit
+    ObjBlob (Blob initialFile) <- lift $ fetchBlob currentFileRef
 
-            let backLines = V.fromList . T.lines $ toStrict initialFile
-                initialRange = createBlameRangeForSize $ V.length backLines
-                overview = makeOverview firstRef firstNfo
-            aux initialRange backLines overview $ commitParents firstNfo
-            return backLines
+    when (detectBinary initialFile) .
+       lift $ throwE "Can't perform blame on a binary file"
 
-        aux []            _       _ _ = return ()
-        aux ranges backData backRef [] =
-            void $ blameInitialStep backRef (V.length backData) ranges
+    let backLines = V.fromList . T.lines $ toStrict initialFile
+        initialRange = createBlameRangeForSize $ V.length backLines
+        overview = makeOverview firstRef firstNfo
+    aux initialRange backLines overview $ commitParents firstNfo
+    return backLines
 
-        aux ranges backData backRef (firstParent:_) = do
-            ObjCommit commit <- fetchCommit firstParent
-            t@(ObjTree _)    <- fetchTree  $ commitTreeish commit
-            (parents, overview, thisCommitData) <- catchError (do
-                            currentFileRef <- fetchFileRef t
-                            (firstNfo, firstRef, _betweenCommits) <- lift $
-                                    findFirstCommit repository bytePath currentFileRef firstParent
-                            ObjBlob (Blob nextFile) <- fetchBlob currentFileRef
-                            let overview = makeOverview firstRef firstNfo
-                            return (commitParents firstNfo, overview, nextFile))
+  {-aux :: [BlameRange] -> V.Vector T.Text -> tag -> [Ref]-}
+      {--> WriterT (V.Vector (BlameRangeSource tag)) (ExceptT String IO) ()-}
+  aux []            _       _ _ = return ()
+  aux ranges backData backRef [] =
+      void $ blameInitialStep backRef (V.length backData) ranges
 
-                            (\_ -> return ([], undefined, L.empty))
+  aux ranges backData backRef (firstParent:_) = do
+      ObjCommit commit <- lift $ fetchCommit firstParent
+      t@(ObjTree _)    <- lift . fetchTree  $ commitTreeish commit
+      (parents, overview, thisCommitData) <- lift $ catchE (do
+                      currentFileRef <- fetchFileRef t
+                      (firstNfo, firstRef, _betweenCommits) <-
+                              findFirstCommit repository bytePath currentFileRef firstParent
+                      ObjBlob (Blob nextFile) <- fetchBlob currentFileRef
+                      let overview = makeOverview firstRef firstNfo
+                      return (commitParents firstNfo, overview, nextFile))
 
-            let nextData = V.fromList . T.lines $ toStrict thisCommitData
-            leftRanges <- blameStep backRef nextData backData ranges
-            aux leftRanges nextData overview parents
+                      (\_ -> return ([], undefined, L.empty))
 
-fetchCommitOverview :: Git -> Ref -> ErrorT String IO CommitOverview
+      let nextData = V.fromList . T.lines $ toStrict thisCommitData
+      leftRanges <- blameStep backRef nextData backData ranges
+      aux leftRanges nextData overview parents
+
+fetchCommitOverview :: Git -> Ref -> ExceptT String IO CommitOverview
 fetchCommitOverview git ref = do
   ObjCommit info <- accessCommit ("Invalid parent " ++ show ref) git ref
   return $ makeOverview ref info
@@ -877,7 +853,7 @@ makeOverview r c = CommitOverview
    }
 
 commitList :: Git -> Int -> Ref -> IO (Either String [CommitOverview])
-commitList repository count = runErrorT . go count where 
+commitList repository count = runExceptT . go count where 
   go 0 _ = return []
   go n _ | n < 0 = return []
   go n r = do
@@ -885,7 +861,7 @@ commitList repository count = runErrorT . go count where
     (makeOverview r commit :) <$> go (n - 1) (firstParentRef commit)
 
 basePage :: Git -> [B.ByteString] -> IO (Either String ParentFile)
-basePage repository path = runErrorT $ do
+basePage repository path = runExceptT $ do
     let getObj errorReason = errorIO errorReason . accessObject repository
     headRef        <- errorIO "Can't read HEAD" $ getHead repository
     (cInfo, foundFileRef) <- fetchFileRefInCommit repository headRef path

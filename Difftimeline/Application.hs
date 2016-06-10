@@ -8,6 +8,9 @@ import System.Directory( getCurrentDirectory, doesDirectoryExist, doesFileExist 
 import Network.Wai( Application )
 import Yesod.Default.Config( AppConfig, DefaultEnv )
 import Yesod.Default.Handlers (getFaviconR)
+import qualified Filesystem.Path as FPR
+import qualified Filesystem.Path.Rules as FPR
+import qualified Data.ByteString.Char8 as BC
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
@@ -23,13 +26,19 @@ import System.Exit( exitFailure )
 -- the comments there for more details.
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
 
+unpackPath :: Git -> FilePath
+unpackPath = BC.unpack . FPR.encode FPR.posix . gitRepoPath 
+
+packPath :: String -> FPR.FilePath
+packPath = FPR.decode FPR.posix . BC.pack
+
 -- | Find the nearest repository in the file tree starting
 -- at the given directory
 findRepository :: FilePath -> IO (Maybe FilePath)
 findRepository = inner ""
   where inner prevDir dir | prevDir == dir || dir == "." = return Nothing
         inner _ dir = do
-            isGitRepo <- isRepo $ dir </> ".git"
+            isGitRepo <- isRepo . packPath $ dir </> ".git"
             if isGitRepo then return $ Just dir
                          else inner dir $ takeDirectory dir
 
@@ -37,7 +46,7 @@ initRepository :: FilePath -> IO (FilePath, Git)
 initRepository startDir = do
     maybeRepo <- findRepository startDir
     case maybeRepo of
-       Just dir -> (dir,) <$> (openRepo $ dir </> ".git")
+       Just dir -> (dir,) <$> (openRepo . packPath $ dir </> ".git")
        Nothing -> do
            putStrLn "Error : no git repository found"
            exitFailure
@@ -83,7 +92,7 @@ getApplication devModePath (DiffBlame fname) conf = do
     initPath <- if isDir 
         then pure DiffWorking
         else do
-          let absPath = takeDirectory $ gitRepoPath initRepo
+          let absPath = takeDirectory $ unpackPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffBlame relPath
 
@@ -104,7 +113,7 @@ getApplication devModePath (DiffFile fname) conf = do
     initPath <- if isDir 
         then pure DiffWorking
         else do
-          let absPath = takeDirectory $ gitRepoPath initRepo
+          let absPath = takeDirectory $ unpackPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffFile relPath
 

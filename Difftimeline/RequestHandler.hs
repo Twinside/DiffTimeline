@@ -35,7 +35,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LC
-import Control.Monad.Error( runErrorT )
+import Control.Monad.Trans.Except( runExceptT )
 
 import System.Directory( doesFileExist )
 import System.Exit( exitSuccess )
@@ -168,7 +168,7 @@ getCommitTreeR commitSha = withRepository extractor
 
 getJSONExternR :: Handler RepPlain
 getJSONExternR = return . RepPlain . toContent
-			   $ renderClosureEnvironment difftimelineEnv 
+               $ renderClosureEnvironment difftimelineEnv 
 
 getCommitListR :: Int -> String -> Handler RepJson
 getCommitListR count commitSha = withRepository extractor
@@ -181,7 +181,7 @@ getInitialCommit = do
   let repository = getRepository app
       ignoreSet = getIgnoreSet app
 
-  diffRez <- liftIO . runErrorT $ do
+  diffRez <- liftIO . runExceptT $ do
       headRef <- errorIO "Problem reading HEAD ref" $ getHead repository
       workingDirectoryChanges' repository ignoreSet 3 headRef 
 
@@ -255,7 +255,7 @@ getInitialBranch b1 b2 = do
 getInitialBlame :: String -> Handler RepPlain
 getInitialBlame file = do
   repository <- getRepository <$> getYesod
-  blameRez <- liftIO . runErrorT $ do
+  blameRez <- liftIO . runExceptT $ do
       headRef <- errorIO "can't read HEAD ref" $ getHead repository
       liftIO $ blameFile repository (show headRef) file
 

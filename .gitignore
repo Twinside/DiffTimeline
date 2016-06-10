@@ -5,6 +5,8 @@ vendor
 Difftimeline.app
 .bundle
 .DS_STORE
+.stack-work
+stack.yaml
 static-content/tmp
 static-content/difftimeline.js
 *.o
