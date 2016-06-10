@@ -1,4 +1,3 @@
-{-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.RequestHandler( getRootR
                                   , getQuitR
@@ -41,7 +40,8 @@ import Control.Monad.Error( runErrorT )
 import System.Directory( doesFileExist )
 import System.Exit( exitSuccess )
 import System.FilePath( splitDirectories  )
-import Data.Git( Git, getHead, fromHexString )
+import Data.Git( Git )
+import Data.Git.Ref( fromHexString )
 import Data.Aeson( encode )
 
 import Text.Language.Closure( renderClosureEnvironment )

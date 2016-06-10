@@ -30,8 +30,6 @@ module Difftimeline.Diff(
                         ) where
 
 import Prelude
-import Data.Monoid( mappend )
-import Control.Applicative( Applicative, (<$>), (<*>), pure )
 import Control.Monad.ST( ST, runST )
 import Control.Monad.Trans.Writer.Strict( WriterT )
 import qualified Data.Text as T

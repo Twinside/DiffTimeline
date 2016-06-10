@@ -18,9 +18,10 @@ Flag Dynlink
 
 executable         difftimeline
     if flag(Dynlink)
-        ghc-options: -Wall -threaded -O2 -optl-pthread
+        ghc-options: -Wall -threaded -O2 -optl-pthread -rtsopts
     else
-        ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread
+        ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread -rtsopts
+    ghc-prof-options: -optl-static -static -Wall -threaded -prof -auto-all -rtsopts
 
     main-is:       main.hs
 
@@ -35,11 +36,12 @@ executable         difftimeline
 
     build-depends: base                          >= 4          && < 5
                  , aeson                         >= 0.6
+                 , containers
                  , directory                     >= 1.2
                  , bytestring                    >= 0.9
                  , file-embed                    >= 0.0.4
                  , filepath                      >= 1.3
-                 , hit-simple                    >= 0.3
+                 , hit                           >= 0.6
                  , monad-control                 >= 0.3
                  , mtl                           >= 2.0
                  , template-haskell
@@ -47,6 +49,9 @@ executable         difftimeline
                  , transformers                  >= 0.3
                  , vector                        >= 0.9.1
                  , vector-algorithms             >= 0.5.4.1
+                 , byteable
+                 , system-filepath
+                 , hourglass
 
                  , yesod                         >= 1.2
                  , yesod-core                    >= 1.2.1

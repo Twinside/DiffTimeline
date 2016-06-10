@@ -5,8 +5,6 @@ module Difftimeline.GitIgnore ( IgnoredSet
                               ) where
 
 import Prelude
-import Data.Monoid
-import Control.Applicative( (<$>) )
 import System.FilePath.Glob( Pattern, compile, match )
 import System.FilePath( pathSeparator )
 

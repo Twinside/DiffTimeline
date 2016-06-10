@@ -7,6 +7,7 @@ module Difftimeline.Externs( ErrorReturn( .. ), difftimelineEnv ) where
 import Prelude
 
 import Data.Git
+import Data.Git.Ref
 import qualified Data.Text as T
 import Difftimeline.GitQuery
 import Difftimeline.Diff

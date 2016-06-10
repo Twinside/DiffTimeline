@@ -12,7 +12,7 @@ import Yesod.Default.Handlers (getFaviconR)
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
 import qualified System.FilePath as FP
-import Data.Git( Git, openRepo, findRepository, gitRepoPath )
+import Data.Git.Storage( Git, isRepo, openRepo, gitRepoPath )
 -- Import all relevant handler modules here.
 import Difftimeline.RequestHandler
 import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile )
@@ -22,6 +22,16 @@ import System.Exit( exitFailure )
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
 -- the comments there for more details.
 mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
+
+-- | Find the nearest repository in the file tree starting
+-- at the given directory
+findRepository :: FilePath -> IO (Maybe FilePath)
+findRepository = inner ""
+  where inner prevDir dir | prevDir == dir || dir == "." = return Nothing
+        inner _ dir = do
+            isGitRepo <- isRepo $ dir </> ".git"
+            if isGitRepo then return $ Just dir
+                         else inner dir $ takeDirectory dir
 
 initRepository :: FilePath -> IO (FilePath, Git)
 initRepository startDir = do
