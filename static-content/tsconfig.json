@@ -1,0 +1,16 @@
+{                                  
+    "compilerOptions": {           
+        "module": "commonjs",      
+        "noImplicitAny": true,     
+        "removeComments": true,    
+        "preserveConstEnums": true,
+        "out": "built.js",         
+        "sourceMap": true          
+    },                             
+    "files": [ 
+        "./frontend/linealign.ts",
+        "./frontend/jquery.d.ts",
+        "./frontend/blameshower.ts"
+        "../../DefinitelyTyped/jquery/jquery.d.ts"
+    ]                              
+}
