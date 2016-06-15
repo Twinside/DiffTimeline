@@ -1159,6 +1159,49 @@ var TinySyntaxHighlighter = (function () {
         return cppOnlyDef;
     })();
 
+    var csDef = {
+        begin:null_region, end:null_region, kind: '',
+
+        regions:[{ begin:tok_region("/*")
+                 , end:tok_region("*/")
+                 , kind:"syntax_comment"
+                 , regions:[], parsers:[], keywords:[] }],
+
+        parsers:[ generic_parsers.c_like_identifier
+                , generic_parsers.c_like_preproc
+                , generic_parsers.double_quote_string
+                , generic_parsers.integer
+                , generic_parsers.monoline_comment('//')
+                ],
+            
+        keywords:expand_keyword_groups(
+            [ { kind:'syntax_conditional', words: ['if', 'else', 'switch'] }
+            , { kind:'syntax_repeat', words:['while', 'for', 'foreach', 'do'] }
+            , { kind:'syntax_structure', words:["class", "namespace", "interface", "struct", "delegate", "enum"] }
+            , { kind:'syntax_statement', words:["base", "public", "protected", "private"] }
+            , { kind:'syntax_exception', words:["throw", "try", "catch", "finally"] }
+            , { kind:'syntax_operator', words:["in", "as", "is"]}
+            , { kind:'syntax_statement', words:['new', 'this', 'using', 'typeof', 'await', 'yield'] }
+            , { kind:'syntax_bool'     , words:["true", "false"] }
+            , { kind:'syntax_statement', words: ['goto', 'break', 'return', 'continue'] }
+            , { kind:'syntax_label', words:['case', 'default'] }
+
+            , { kind:'syntax_type', words:["virtual", "bool"] }
+            , { kind:'syntax_storage_class'
+              , words: [ 'static', 'extern', 'const', 'abstract', 'sealed'
+                       , 'override', 'readonly', 'unchecked', 'unsafe', 'volatile'
+                       , 'params', 'checked' ] }
+
+            , { kind:'syntax_type'
+              , words:[ 'int', 'long', 'short', 'char', 'void', 'byte', 'decimal'
+                      , 'double', 'fixed', 'float', 'sbyte', 'string', 'uint', 'ulong'
+                      , 'ushort', 'null', 'operator', 'object'
+                      , 'var'
+                      ]
+              }
+            ])
+    };
+
     var assoc = function(expr, lang) {
         return {pattern: expr, def: lang};
     };
@@ -1170,6 +1213,7 @@ var TinySyntaxHighlighter = (function () {
         assoc(/\.cc$/      , cppDef),
         assoc(/\.h$/       , cppDef),
         assoc(/\.hpp$/     , cppDef),
+        assoc(/\.cs$/      , csDef),
         assoc(/\.php$/     , phpDef),
         assoc(/\.ml$/      , ocamlDef),
         assoc(/\.mli$/     , ocamlDef),
