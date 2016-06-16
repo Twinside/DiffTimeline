@@ -499,8 +499,8 @@ namespace Languages {
 
         export var double_quote_string : SyntaxParser =
             { kind: 'syntax_string'
-            , recognizer: function( line, idx ) {
-                if (line[idx] !== '"') return '';
+            , recognizer: ( line, idx ) => {
+                if (line[idx] !== '"') return "";
                 var currIdx = idx + 1;
                 while (currIdx < line.length)
                 {
@@ -510,30 +510,30 @@ namespace Languages {
                     currIdx++;
                 }
 
-                return '';
+                return "";
               }
             };
 
         export var back_quote_string : SyntaxParser =
-            { kind: 'syntax_special'
-            , recognizer: function( line, idx ) {
-                if (line[idx] !== '`') return '';
+            { kind: "syntax_special"
+            , recognizer: ( line, idx ) => {
+                if (line[idx] !== "`") return "";
                 var currIdx = idx + 1;
                 while (currIdx < line.length)
                 {
-                    if (line[currIdx] === '`') {
+                    if (line[currIdx] === "`") {
                         return line.substring(idx, currIdx + 1);
                     }
                     currIdx++;
                 }
 
-                return '';
+                return "";
               }
             };
 
         export function monoline_comment( commentPrefix : string ) : SyntaxParser {
             return { kind:'syntax_comment'
-                   , recognizer: function( line, idx ) {
+                   , recognizer: ( line, idx ) => {
                         return (isTokenPrefixOf( commentPrefix, line, idx ) 
                                ? line.substring(idx, line.length)
                                : '');
@@ -543,7 +543,7 @@ namespace Languages {
         
         
         export function tok_region(tok : string) : RegionParser {
-            return function(line : string, base : number) : number {
+            return (line : string, base : number) : number => {
                 if ( isTokenPrefixOf(tok, line, base) )
                     return tok.length;
                 else
@@ -560,12 +560,11 @@ namespace Languages {
     }
 
     function expand_keyword_groups( lst : { kind: string, words: string[] }[] ) : KeywordTable {
-        var ret = new KeywordTable();
+        const ret = new KeywordTable();
 
-        for ( var group in lst )
-        {
-            var g = lst[group];
-            for ( var word in g.words )
+        for ( let group in lst ) {
+            const g = lst[group];
+            for ( let word in g.words )
                 ret[g.words[word]] = g.kind;
         }
 
@@ -1136,10 +1135,9 @@ class TinySyntaxHighlighter {
 
     public static from_filename(with_line_number : boolean, filename : string) : LineHighlighter
     {
-        var i;
-        var langAssoc = Languages.langAssoc;
+        const langAssoc = Languages.langAssoc;
 
-        for (i = 0; i < langAssoc.length; i++)
+        for (let i = 0; i < langAssoc.length; i++)
         {
             if (filename.match(langAssoc[i].pattern))
                 return new LanguageHighlighter(with_line_number, langAssoc[i].def);
@@ -1150,21 +1148,21 @@ class TinySyntaxHighlighter {
 
     public highlight_node(with_line_number : boolean, filename : string, node : Element)
     {
-        var highlighter =
-            this.from_filename(with_line_number, filename);
+        const highlighter =
+            TinySyntaxHighlighter.from_filename(with_line_number, filename);
 
-        var text = node.textContent;
-        var lines = text.split('\n');
+        const text = node.textContent;
+        const lines = text.split("\n");
 
         node.textContent = "";
 
-        for (var i = 0; i < lines.length; i++)
+        for (let i = 0; i < lines.length; i++)
         {
-            var line = highlighter.colorLine(lines[i]);
-            for (var j = 0; j < line.length; j++)
+            const line = highlighter.colorLine(lines[i]);
+            for (let j = 0; j < line.length; j++)
                 node.appendChild(line[j]);
 
-            node.appendChild(document.createTextNode('\n'));
+            node.appendChild(document.createTextNode("\n"));
         }
     }
 }

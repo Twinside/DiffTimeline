@@ -1,4 +1,5 @@
 /// <reference path="resultset.ts" />
+/// <reference path="breadcrumb.ts" />
 /// <reference path="jquery.d.ts" />
 /// <reference path="global_constant.ts" />
 
@@ -56,7 +57,7 @@ namespace Project {
             this.btn_toggle_text[Project.ViewMode.VIEW_COMPACT] =  '&#x25b2;<br/>&#x25bc;';
         }
    
-        private show_hide_toolbar_elements(descr) {
+        private show_hide_toolbar_elements(descr : GuiDescr) {
             if (descr.compact_view)
                 $('.btn_toggleview').show();
             else
@@ -82,12 +83,12 @@ namespace Project {
         public active_context_size() { return this.context_size; }
         public apparition_duration() { return this.apparition_duration_time; }
 
-        public send_state_message(message : string) {
-            var last_path = this.states[ this.states.length - 1 ];
+        public send_state_message(message : GuiMessage) {
+            const last_path = this.states[ this.states.length - 1 ];
             last_path.send_message(message);
-        }
+	    }
 
-        public create_all_dom() {
+	    public create_all_dom() {
             var last_path = this.states[ this.states.length - 1 ];
             this.show_hide_toolbar_elements(last_path.gui_descr);
             last_path.create_all_dom();
@@ -99,11 +100,10 @@ namespace Project {
         }
 
         public set_previous_button_count( count : number, tooltips: string[] ) {
-            var i;
-            var container = $('div .return_past_container');
+            const container = $('div .return_past_container');
             container.children().remove();
 
-            for (i = 0; i < count; i++) {
+            for (let i = 0; i < count; i++) {
                 var tooltip = i < tooltips.length ? tooltips[i] : "";
                 var sub_node = ich.fetch_previous(
                     {id: i, tooltip: tooltip}
@@ -117,9 +117,6 @@ namespace Project {
             last_path.fetch_previous(id);
         }
 
-        /**
-         * @type {function(ref, string) : void}
-         */
         public switch_blame(start_commit : ref , file : string) {
             this.clear_display();
             BlameShower.create_from_arg(start_commit, file, function( new_state ) {
@@ -129,10 +126,7 @@ namespace Project {
             });
         }
 
-        /**
-         * @type {function(string, ref, ref) : void}
-         */
-        public switch_file: function(file : string, fkey : ref, start_commit : ref) {
+        public switch_file(file : string, fkey : ref, start_commit : ref) {
             this.clear_display();
 
             if (start_commit == display_null_ref)
@@ -156,7 +150,7 @@ namespace Project {
 
         public switch_file_comp(key1, file1, key2, file2) {
             this.clear_display();
-            var new_state = FileComparer.create_from_args(key1, file1, key2, file2);
+            const new_state = FileComparer.create_from_args(key1, file1, key2, file2);
             this.states.push( new_state );
             this.show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb('Compare file');
@@ -164,8 +158,8 @@ namespace Project {
 
         public switch_commit(id : ref) {
             this.clear_display();
-            var new_state = new CommitRenderer.create_from_arg(id);
-           this. states.push(new_state);
+            const new_state = new CommitRenderer.create_from_arg(id);
+            this.states.push(new_state);
 
             if (id !== null_ref)
                 breadcrumb.append_breadcrumb(id);
@@ -176,9 +170,7 @@ namespace Project {
         }
 
         public jump_context(idx : number) {
-            if (this.states.length - 1 == idx) return;
-
-            var i;
+            if (this.states.length - 1 === idx) return;
 
             if (idx < this.states.length - 1) {
                 while (idx != this.states.length - 1)
@@ -248,54 +240,52 @@ namespace Project {
         }
 
         public start_file(file_obj) {
-            var new_state = FileRenderer.create_from_data(file_obj);
+            const new_state = FileRenderer.create_from_data(file_obj);
             this.states.push( new_state );
             this.show_hide_toolbar_elements(new_state.gui_descr);
             breadcrumb.append_breadcrumb(file_obj.filename);
         }
 
         public update_diff() {
-            var zone_a = $('.global_compare_recipient_a');
-            var zone_b = $('.global_compare_recipient_b');
+            const zone_a = $('.global_compare_recipient_a');
+            const zone_b = $('.global_compare_recipient_b');
 
             Project.state.check_comparison(zone_a, zone_b);
         }
 
-        public check_comparison(node_a : Element, node_b : Element) {
-            var commit_a = $("[class*='branch_widget']", node_a);
-            var commit_b = $("[class*='branch_widget']", node_b);
-            var commit_count = (commit_a.length > 0 ? 1 : 0) +
-                               (commit_b.length > 0 ? 1 : 0);
+        public check_comparison(node_a : Node, node_b : Node) {
+            const commit_a = $("[class*='branch_widget']", node_a);
+            const commit_b = $("[class*='branch_widget']", node_b);
+            const commit_count = (commit_a.length > 0 ? 1 : 0) + (commit_b.length > 0 ? 1 : 0);
 
-            if (commit_count == 2) {
-                var b1 = commit_a.text().replace(/^\s+|\s+$/g, '');
-                var b2 = commit_b.text().replace(/^\s+|\s+$/g, '');
+            if (commit_count === 2) {
+                let b1 = commit_a.text().replace(/^\s+|\s+$/g, '');
+                let b2 = commit_b.text().replace(/^\s+|\s+$/g, '');
 
-                if (b1 == display_null_ref)
+                if (b1 === display_null_ref)
                     b1 = working_dir_request_token;
 
-                if (b2 == display_null_ref)
+                if (b2 === display_null_ref)
                     b2 = working_dir_request_token;
 
                 this.switch_commit_comp(b1, b2);
                 return;
             }
 
-            var file_a = $('> .file_widget', node_a);
-            var file_b = $('> .file_widget', node_b);
-            var file_count = (file_a.length > 0 ? 1 : 0) +
-                             (file_b.length > 0 ? 1 : 0);
+            const file_a = $('> .file_widget', node_a);
+            const file_b = $('> .file_widget', node_b);
+            const file_count = (file_a.length > 0 ? 1 : 0) + (file_b.length > 0 ? 1 : 0);
 
             if (commit_count > 0 && file_count > 0) {
                 show_error({error: "Can't compare file and commit" });
                 return;
             }
 
-            if (file_count == 2) {
-                var file1 = $('.path', file_a).text();
-                var file2 = $('.path', file_b).text();
-                var key1  = $('.key', file_a).text();
-                var key2  = $('.key', file_b).text();
+            if (file_count === 2) {
+                const file1 = $('.path', file_a).text();
+                const file2 = $('.path', file_b).text();
+                let key1 = $('.key', file_a).text();
+                let key2 = $('.key', file_b).text();
 
                 if (key1 == display_null_ref)
                     key1 = working_dir_request_token;

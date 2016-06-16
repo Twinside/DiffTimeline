@@ -8,9 +8,15 @@
         "sourceMap": true          
     },                             
     "files": [ 
-        "./frontend/linealign.ts",
-        "./frontend/jquery.d.ts",
-        "./frontend/blameshower.ts"
-        "../../DefinitelyTyped/jquery/jquery.d.ts"
+        "linealign.js",
+        "commitcomparer.ts",
+        "diffmanipulator.ts",
+        "blameshower.ts.ts",
+        "branch_list.ts",
+        "global_constants.ts",
+        "project.ts",
+        "resultset.ts",
+        "jquery.d.ts",
+        "../../../DefinitelyTyped/jquery/jquery.d.ts"
     ]                              
 }

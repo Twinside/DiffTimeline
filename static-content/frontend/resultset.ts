@@ -6,8 +6,7 @@ type GuiDescr =
 	{ compact_view: boolean
 	, fetch_previous: boolean
 	, context_size: boolean
-	, syntax_toggle: boolean
-	};
+	, syntax_toggle: boolean };
 
 interface ResultSet {
 	create_all_dom: () => void;
