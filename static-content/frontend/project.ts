@@ -215,7 +215,7 @@ namespace Project {
 
             $('.btn_toggleview').html(this.btn_toggle_text[this.view_mode]);
             this.render_all();
-        },
+        }
 
         public chrome_scroll_offset() {
             return {top:-120, left:-120};

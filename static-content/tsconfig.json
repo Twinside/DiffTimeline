@@ -1,6 +1,5 @@
 {                                  
     "compilerOptions": {           
-        "module": "commonjs",      
         "noImplicitAny": true,     
         "removeComments": true,    
         "preserveConstEnums": true,
@@ -8,15 +7,19 @@
         "sourceMap": true          
     },                             
     "files": [ 
-        "linealign.js",
-        "commitcomparer.ts",
-        "diffmanipulator.ts",
-        "blameshower.ts.ts",
-        "branch_list.ts",
-        "global_constants.ts",
-        "project.ts",
-        "resultset.ts",
-        "jquery.d.ts",
-        "../../../DefinitelyTyped/jquery/jquery.d.ts"
+        "tinysyntaxhighlighter.ts",
+        "frontend/linealign.ts",
+        "frontend/commitcomparer.ts",
+        "frontend/diffmanipulator.ts",
+        "frontend/blameshower.ts",
+        "frontend/branch_list.ts",
+        "frontend/global_constant.ts",
+        "frontend/breadcrumb.ts",
+        "frontend/commit.ts",
+        "frontend/commitcomparer.ts",
+        "frontend/global_constant.ts",
+        "frontend/project.ts",
+        "frontend/resultset.ts",
+        "frontend/jquery.d.ts"
     ]                              
 }

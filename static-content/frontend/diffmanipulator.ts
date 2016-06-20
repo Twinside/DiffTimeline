@@ -5,46 +5,51 @@
 namespace DiffManipulator {
 
     function append_all(n : Node, lst : Node[]) : Node{
-        var maxi = lst.length;
+        const maxi = lst.length;
 
-       for (var i = 0; i < maxi; i++) {
+        for (var i = 0; i < maxi; i++) {
             n.appendChild(lst[i]);
         }
 
-        n.appendChild(document.createTextNode('\n'));
+        n.appendChild(document.createTextNode("\n"));
 
         return n;
     }
 
     function glob(kinds : string[], nodeList : Node[][]) : Node[][] {
-        var nodes = [];
+        const nodes: Node[] = [];
 
         if (kinds.length === 0) return [];
 
         for (var j = 0; j < kinds.length; j++) {
-            var node = document.createElement('div');
-            node.setAttribute('class', kinds[j]);
+            const node = document.createElement('div');
+            node.setAttribute("class", kinds[j]);
             nodes.push(node);
             if (j > 0) nodes[j - 1].appendChild(node);
         }
 
-        for (var i = 0; i < nodeList.length; i++) {
+        for (let i = 0; i < nodeList.length; i++) {
             append_all(nodes[nodes.length - 1], nodeList[i])
         }
         
         return [[ nodes[0] ]];
     }
 
-    /** @type {Object.<Project.DiffChar, function(Array.<Array.<Element>>) : Array.<Array.<Element>>>} */
-    var begs = {};
-    begs[Project.DiffChar.DIFF_ADD] =
-        function (n) { return glob(["diff_addition"], n); };
-    begs[Project.DiffChar.DIFF_DEL] =
-        function (n) { return glob(["diff_deletion"], n); };
-    begs[Project.DiffChar.DIFF_DELADD] =
-        function (n) { return glob(["diff_addition", "diff_deletion"], n); };
-    begs[Project.DiffChar.DIFF_ADDDEL] =
-        function (n) { return glob(["diff_deletion", "diff_addition"], n); };
+    class BegAssoc {
+        public constructor() {
+            this[Project.DiffChar.DIFF_ADD] =
+                n => { return glob(["diff_addition"], n); };
+            this[Project.DiffChar.DIFF_DEL] =
+                n => { return glob(["diff_deletion"], n); };
+            this[Project.DiffChar.DIFF_DELADD] =
+                n => { return glob(["diff_addition", "diff_deletion"], n); };
+            this[Project.DiffChar.DIFF_ADDDEL] =
+                n => { return glob(["diff_deletion", "diff_addition"], n); };
+        }
+        [ix: string]: (nodes: Node[][]) => Node[][];
+    }
+
+    var begs : BegAssoc = new BegAssoc();
 
     function generate_full_html(filename : string,
 								isLineNumberRequired : boolean,
@@ -52,15 +57,15 @@ namespace DiffManipulator {
 								diff : DiffRange[],
 								number_node : Element,
 								node : Element) {
-        var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
+        const highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
 
-        var lines : string[] = data.split("\n");
-        var diff_count = diff.length;
-        var current_line = 0;
+        const lines: string[] = data.split("\n");
+        const diff_count = diff.length;
+        let current_line = 0;
 
-        var diff_node : Element[];
+        let diff_node: Element[];
 
-        var add_number = function(n) {
+        const add_number = (n : number) => {
             var node = document.createElement('span');
             node.setAttribute('class', 'syntax_line_number');
             node.appendChild(document.createTextNode(n.toString() + "\n"));

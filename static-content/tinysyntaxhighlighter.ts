@@ -165,8 +165,10 @@ function context_free_highlight(kind : classname, txt : string) : Element {
 class EmptyHighlighter implements LineHighlighter {
     public with_line_number : boolean;
     protected pos_highlight = new PositionnalHighlighter();
-    private current_line : number = 1;
+    private _current_line : number = 1;
     
+    get current_line(): number { return this._current_line;  }
+
     public constructor( with_line_number: boolean ) {
         this.with_line_number = with_line_number;
     }
@@ -174,11 +176,11 @@ class EmptyHighlighter implements LineHighlighter {
     protected writeSubSplittedText(str : string ) : Node[] {
         var ret : Node[] = [];
 
-        this.pos_highlight.split_parts(function( k, sub_str ) {
+        this.pos_highlight.split_parts(( k, sub_str ) => {
             if (k === '')
             ret.push(document.createTextNode(sub_str));
             else {
-                var sub_span = document.createElement('span');
+                const sub_span = document.createElement('span');
                 sub_span.setAttribute('class', k);
                 sub_span.appendChild(document.createTextNode(sub_str));
                 ret.push(sub_span);
@@ -206,13 +208,13 @@ class EmptyHighlighter implements LineHighlighter {
     public reset_context() {}   
 
     protected set_current_line_number(i : number) {
-        this.current_line = i;
+        this._current_line = i;
     }
     
     protected compute_line_number() : Element {
-        this.current_line = this.current_line + 1;
+        this._current_line = this._current_line + 1;
         if (this.with_line_number) {
-            return context_free_highlight('syntax_line_number', (this.current_line - 1).toString());
+            return context_free_highlight('syntax_line_number', (this._current_line - 1).toString());
         }
         return undefined;
     }
