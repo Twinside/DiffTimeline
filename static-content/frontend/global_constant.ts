@@ -35,8 +35,10 @@ const blame_gradient = {
     end: { r: 0x80, g:0x80, b:0x80 }
 };
 
-var color_lerp = function ( c1, c2, v ) {
-    var lerp = function( v1, v2 ) {
+type color = {r: number, g: number, b: number };
+
+var color_lerp = function ( c1 : color, c2 : color, v : number ) {
+    var lerp = function( v1 : number, v2 : number ) : number {
         return Math.floor(v2 * v + v1 * (1 - v));
     };
 

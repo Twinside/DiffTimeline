@@ -4,7 +4,8 @@
         "removeComments": true,    
         "preserveConstEnums": true,
         "out": "built.js",         
-        "sourceMap": true          
+        "sourceMap": true,
+        "target": "es5"
     },                             
     "files": [ 
         "tinysyntaxhighlighter.ts",

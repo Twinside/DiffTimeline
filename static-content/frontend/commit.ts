@@ -1,19 +1,29 @@
 /** @type {!Object.<Project.DiffKind, function(json) : !jQuery>} */
 var kind_formater = {};
 
+
+
+class KindAssoc {
+    public constructor() {
+        this[Project.DiffKind.KIND_DELETION] = ich.commit_file;
+        this[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
+        this[Project.DiffKind.KIND_MODIFICATION] = renderCommit;
+    }
+    [ix: string]: (json: JSON) => JQuery;
+};
+
+var kind_format : KindAssoc;
+
 $(document).ready(function() {
-    kind_formater[Project.DiffKind.KIND_DELETION] = ich.commit_file;
-    kind_formater[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
+    kind_format = new KindAssoc();
 });
 
-kind_formater[Project.DiffKind.KIND_MODIFICATION] = function(e) {
+function renderCommit(e : JSON) : JQuery {
     var hl = TinySyntaxHighlighter.from_filename(false, e.name);
-
-    /** @type {jQuery} */
-    var rez_node = ich.commit_file_modification_detailed(e);
+    var rez_node : JQuery = ich.commit_file_modification_detailed(e);
 
     /** @type {Element} */
-    var code_node = rez_node.find('.syntax_highlighted')[0];
+    var code_node : Element  = rez_node.find('.syntax_highlighted')[0];
 
     /** @type {Element} */
     var number_node = rez_node.find('.line_number_column')[0];

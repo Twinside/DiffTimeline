@@ -149,7 +149,7 @@ interface LangDef {
 
 interface LineHighlighter {
     colorLine: (line : string) => Node[];
-    setPositionHighlight(lst : subrange[]);
+    setPositionHighlight: (lst : subrange[]) => void;
     reset_context: () => void;
 };
 

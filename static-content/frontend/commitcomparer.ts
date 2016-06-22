@@ -3,17 +3,17 @@
 /// <reference path="commit.ts" />
 
 class CommitComparer implements ResultSet {
-    private branch_a : string;
-    private branch_b : string;
-    private last_comparison : any;
+    private branch_a : ref;
+    private branch_b : ref;
+    private last_comparison : Commit;
     
-    public constructor(b1 : string, b2 : string) {
+    public constructor(b1 : ref, b2 : ref) {
         this.branch_a = b1;
         this.branch_b = b2;
         this.refresh_diff();
     }
     
-    public fetch_previous(id) {
+    public fetch_previous(id : any) {
         show_error({error: 'Does not exists in this mode'});
     };
     
@@ -50,16 +50,16 @@ class CommitComparer implements ResultSet {
         $('.container').append(this.last_comparison.create_dom());
     }
     
-    public send_message(msg) {
+    public send_message(msg : {action: string}) {
         if (this.last_comparison)
             this.last_comparison.send_message(msg);    
     }
-    
-    public gui_descr =
-        { compact_view: false, fetch_previous: false
-        , context_size: false, syntax_toggle: false }
-        
-    public static create_from_args(b1, b2) {
+            
+    public static create_from_args(b1 :ref, b2 : ref) {
         return new CommitComparer(b1, b2);
     }
+
+    public gui_descr =
+        { compact_view: false, fetch_previous: false
+        , context_size: false, syntax_toggle: false };
 }
