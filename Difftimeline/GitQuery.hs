@@ -56,6 +56,8 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Text.Encoding( decodeUtf8With )
+import qualified Data.Text.Lazy.Encoding as LE
+import qualified Data.Text.Lazy as TL
 import Data.Text.Encoding.Error( lenientDecode )
 import Control.Monad.Trans.Writer.Strict( WriterT, runWriterT )
 
@@ -104,6 +106,9 @@ import Difftimeline.GitIgnore
 
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
+
+decodeUtf8Lazy :: L.ByteString -> T.Text
+decodeUtf8Lazy = TL.toStrict . LE.decodeUtf8With lenientDecode
 
 data CommitTreeDiff
     = AddElement !T.Text !Ref
@@ -361,12 +366,10 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
         fileComparer name bin1 r1 bin2
             | bin1 == bin2 = NeutralElement (T.pack name) r1
             | detectBinary bin2 = ModifyBinaryElement (T.pack name) r1
-            | otherwise = case computeTextScript contextSize txtLeft txtRight of
-                    [] -> NeutralElement (T.pack name) r1
-                    lst -> ModifyElement (T.pack name) r1 lst
-                    where strictify = B.concat . L.toChunks
-                          txtLeft = decodeUtf8 $ strictify bin1
-                          txtRight = decodeUtf8 $ strictify bin2
+            | otherwise = case computeTextScript contextSize bin1 bin2 of
+                [] -> NeutralElement (T.pack name) r1
+                lst -> ModifyElement (T.pack name) r1 $ unpackDiff lst
+                   where unpackDiff = fmap (\(a, t) -> (a, fmap decodeUtf8Lazy t))
 
         inner maxTime flatname name (ObjTree (Tree left)) r = do
           right <- liftIO $ fetchDirectoryInfo flatname
