@@ -50,7 +50,7 @@ class CommitComparer implements ResultSet {
         $('.container').append(this.last_comparison.create_dom());
     }
     
-    public send_message(msg : {action: string}) {
+    public send_message(msg : GuiMessage) {
         if (this.last_comparison)
             this.last_comparison.send_message(msg);    
     }

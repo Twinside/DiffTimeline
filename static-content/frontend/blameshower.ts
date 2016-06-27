@@ -1,13 +1,15 @@
 /// <reference path="resultset.ts" />
 /// <reference path="linealign.ts" />
+/// <reference path="diffmanipulator.ts" />
+/// <reference path="difftimeline.extern.ts" />
 
 class BlameShower implements ResultSet {
-    private data: any;
+    private data: BlameInfo;
     private line_index: number;
     private aligner: FileAlign;
-    private orig_node: Node;
+    private orig_node: JQuery;
 
-    public constructor(data : any) {
+    public constructor(data : BlameInfo) {
         this.data = data;
         this.aligner = new FileAlign();
         this.line_index = 0;
@@ -22,13 +24,13 @@ class BlameShower implements ResultSet {
         this.render_all();
     }
 
-    public split_cut_lines(range) : string {
+    public split_cut_lines(range : BlameRangeSource) : string {
         const n = range.size - 1;
         let ret = '';
         const messageLines = range.tag.message.split('\n');
         let i = 0;
 
-        const splitedMessageLines = [];
+        const splitedMessageLines : string[] = [];
         for (i = 0; i < messageLines.length; i++) {
             const sub = messageLines[i].match(/.{1,30}/g);
 
@@ -73,7 +75,7 @@ class BlameShower implements ResultSet {
         }
     }
 
-    public fetch_previous(id) {
+    public fetch_previous(id : any) {
         show_error({error: 'Does not exists in this mode'});
     }
 
@@ -128,20 +130,20 @@ class BlameShower implements ResultSet {
         return line;
     }
 
-    public send_message( msg : GuiMessage ) {
-        if (msg.action === Project.GuiMessage.MOVE_DOWN)
+    public send_message( msg : GuiMessage ) : number | boolean {
+        if (msg.action === Project.GuiMessageCode.MOVE_DOWN)
             return this.move_line_down();
-        else if (msg.action === Project.GuiMessage.MOVE_UP)
+        else if (msg.action === Project.GuiMessageCode.MOVE_UP)
             return this.move_line_up();
-        if (msg.action === Project.GuiMessage.COMMAND_REQUEST) {
+        if (msg.action === Project.GuiMessageCode.COMMAND_REQUEST) {
             var this_obj = this;
 
-            var abs = function (line) {
+            var abs = function (line : number) {
                 this_obj.line_index = this_obj.check_line(line);
                 this_obj.align_abs(this_obj.line_index);
             };
 
-            var rel = function (offset) {
+            var rel = function (offset : number) {
                 var line = this_obj.check_line(this_obj.line_index + offset);
                 this_obj.align_abs(line);
                 this_obj.line_index = line;
@@ -151,15 +153,13 @@ class BlameShower implements ResultSet {
         }
     };
 
-    public gui_descr =
-        { compact_view: false, fetch_previous: false
-        , context_size: false, syntax_toggle: false };
-
-    public create_from_data = function(data) {
+    public static create_from_data(data : BlameInfo) {
         return new BlameShower(data);
     }
 
-    public create_from_arg(key, file, f) {
+    public static create_from_arg(key : Ref,
+                                  file : string,
+                                  f: (bs: BlameShower) => void) {
         if (file[0] != '/') file = '/' + file;
 
         $.ajax({ url: '/blame/' + encodeURIComponent(key) + file,
@@ -178,5 +178,9 @@ class BlameShower implements ResultSet {
             }
         });
     }
+
+    public gui_descr =
+        { compact_view: false, fetch_previous: false
+        , context_size: false, syntax_toggle: false }
 }
 

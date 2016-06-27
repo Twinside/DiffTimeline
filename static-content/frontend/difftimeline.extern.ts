@@ -19,26 +19,33 @@ type DiffWithContext =
     sub: SubModification[][],
     data: string[] };
 
-/** @typedef {{ kind: string,
-                name: string,
-                hash: Ref,
-                binary: boolean,
-                children: Array.<CommitTreeDiff>,
-                diff: Array.<DiffWithContext> }} */
-var CommitTreeDiff;
+type CommitTreeDiff =
+    { kind: string,
+      name: string,
+      hash: Ref,
+      binary: boolean,
+      children: CommitTreeDiff[],
+      diff: DiffWithContext[],
+      // added by guy
+      key: Ref,
+      full_path: string
+    };
 
-/** @typedef {{ message: string,
-                parents_sha: Array.<{ parent_commit: Array.<Ref>,
-                message: string,
-                key: Ref,
-                author: string,
-                timestamp: number }>,
-                key: Ref,
-                author: string,
-                file_changes: Array.<CommitTreeDiff>,
-                timestamp: number,
-                timezone: number }} */
-var CommitDetail;
+type CommitDetailInfo =
+    { parent_commit: Ref[],
+      message: string,
+      key: Ref,
+      author: string,
+      timestamp: number };
+
+type CommitDetail = 
+    { message: string,
+      parents_sha: CommitDetailInfo[],
+      key: Ref,
+      author: string,
+      file_changes: CommitTreeDiff[],
+      timestamp: number,
+      timezone: number };
 
 /** @enum {string} */
 var DiffAction = {
@@ -47,64 +54,76 @@ var DiffAction = {
    DiffNeutral: "="
 };
 
-/** @typedef {{ commit: Ref,
-                parent_commit: Array.<Ref>,
-                message: string,
-                author: string,
-                timestamp: number,
-                timezone: number }} */
-var CommitPath;
+type CommitPath =
+    { commit: Ref,
+      parent_commit: Ref[],
+      message: string,
+      author: string,
+      timestamp: number,
+      timezone: number,
 
-/** @typedef {{ data: string,
-                binary: boolean,
-                filekey: Ref,
-                filename: string,
-                parent_commit: Array.<{ parent_commit: Array.<Ref>,
-                message: string,
-                key: Ref,
-                author: string,
-                timestamp: number }>,
-                message: string,
-                diff: Array.<DiffCommand>,
-                path: Array.<CommitPath>,
-                key: Ref,
-                author: string,
-                timestamp: number,
-                timezone: number }} */
-var ParentFile;
+      // additional field added by the GUI
+      commit_date: string,
+      splited_message: string,
+     };
 
-/** @typedef {{ parent_commit: Array.<Ref>,
-                message: string,
-                key: Ref,
-                author: string,
-                timestamp: number }} */
-var CommitOverview;
+type ParentCommit =
+    { parent_commit: Ref[],
+      message: string,
+      key: Ref,
+      author: string,
+      timestamp: number };
 
-/** @typedef {{ name: string,
-                key: Ref }} */
-var BranchInfo;
+type ParentFile = 
+    { data: string,
+      binary: boolean,
+      filekey: Ref,
+      filename: string,
+      parent_commit: ParentCommit[],
+      message: string,
+      diff: DiffCommand[],
+      path: CommitPath[],
+      key: Ref,
+      author: string,
+      timestamp: number,
+      timezone: number,
 
-/** @typedef {{ name: string,
-                branches: Array.<BranchInfo> }} */
-var RemoteBranches;
+      // added by the GUI (bad)
+      full_path: string,
+      name: string,
+      file: string
+    
+  };
 
-/** @typedef {{ data_orig: string,
-                ref_orig: Ref,
-                data_dest: string,
-                ref_dest: Ref,
-                diff: Array.<DiffCommand> }} */
-var FileComparison;
+type CommitOverview =
+    { parent_commit: Ref[],
+      message: string,
+      key: Ref,
+      author: string,
+      timestamp: number };
 
-/** @typedef {{ idx: number,
-                size: number,
-                orig_idx: number,
-                tag: CommitOverview }} */
-var BlameRangeSource;
+type BranchInfo = { name: string, key: Ref };
 
-/** @typedef {{ data: string,
-                ranges: Array.<BlameRangeSource>,
-                filename: string,
-                earliest: number,
-                latest: number }} */
-var BlameInfo;
+type RemoteBranches = { name: string, branches: BranchInfo[] };
+
+type FileComparison = 
+    { data_orig: string,
+      ref_orig: Ref,
+      data_dest: string,
+      ref_dest: Ref,
+      diff: DiffCommand[] };
+
+type BlameRangeSource =
+    { idx: number,
+      size: number,
+      orig_idx: number,
+      padd_string: string
+      tag: CommitOverview };
+
+type BlameInfo = 
+    { data: string,
+      ranges: BlameRangeSource[],
+      filename: string,
+      earliest: number,
+      latest: number };
 

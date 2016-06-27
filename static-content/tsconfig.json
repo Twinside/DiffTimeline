@@ -9,6 +9,8 @@
     },                             
     "files": [ 
         "tinysyntaxhighlighter.ts",
+        "frontend/filecomparer.ts",
+        "frontend/commitrenderer.ts",
         "frontend/linealign.ts",
         "frontend/commitcomparer.ts",
         "frontend/diffmanipulator.ts",
@@ -21,6 +23,8 @@
         "frontend/global_constant.ts",
         "frontend/project.ts",
         "frontend/resultset.ts",
+        "frontend/fileblob.ts",
+        "frontend/filerenderer.ts",
         "frontend/jquery.d.ts"
     ]                              
 }

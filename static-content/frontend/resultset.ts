@@ -1,6 +1,6 @@
 /// <reference path="project.ts" />
 
-type GuiMessage = {action: string};
+type GuiMessage = {action: Project.GuiMessageCode};
 
 type GuiDescr =
 	{ compact_view: boolean
@@ -18,5 +18,6 @@ interface ResultSet {
 
 type DiffInfo =
     {way: Project.DiffChar, orig_idx: number, dest_idx: number, size: number};
-	
-type DiffRange = {way: Project.DiffChar, beg: number, end: number };
+
+// Way is in reality Project.DiffChar
+type DiffRange = {way: string, beg: number, end: number };

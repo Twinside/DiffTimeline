@@ -1,11 +1,29 @@
 /// <reference path="jquery.d.ts" />
+/// <reference path="difftimeline.extern.ts" />
 
 type ref = string;
 
-var ich : {
-    branch_list : (data: {ref_list: any}) => JQuery,
-    breadcrumbelem : (data: {name: string, id: number}) => JQuery,
-};
+namespace ich {
+    export var branch_list : (data: {ref_list: any}) => JQuery;
+    export var breadcrumbelem : (data: {name: string, id: number}) => JQuery;
+    export var blamefile: (data : BlameInfo) => JQuery;
+    export var commit_file: (data: any) => JQuery;
+    export var commitfile: (data: any) => JQuery;
+    export var commit_file_modification_detailed: (data: CommitTreeDiff) => JQuery;
+    export var tree_folder: (data: CommitTreeDiff) => JQuery;
+    export var tree_elem: (data: any) => JQuery;
+    export var commit_detailed: (data: any) => JQuery;
+    export var commit_compact: (data: any) => JQuery;
+    export var fetch_previous: (data: any) => JQuery;
+    export var file_widget: (data: any) => JQuery;
+    export var commit_file_modification: (data: any) => JQuery;
+    export var commitfile_huge_path: (data: any) => JQuery;
+    export var file_search_result: (data: any) => JQuery;
+    export var compare_files : (data: any) => JQuery;
+    export var key_help: (data: { keys: KeyBinding[] }) => JQuery;
+
+    export var grabTemplates: () => void;
+}
 
 const null_ref : ref = "0000000000000000000000000000000000000000";
 const display_null_ref : string = 'Working directory';
@@ -14,7 +32,7 @@ const sub_focus : string = 'focused_diff';
 const global_focus : string = 'focused_commit';
 
 
-function make_draggable_elems(node : Element ) {
+function make_draggable_elems(node : Node | Element | JQuery) {
     $('.file_widget', node).draggable({ 
         helper: 'clone',
         appendTo: 'body',

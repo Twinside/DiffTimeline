@@ -150,6 +150,8 @@ interface LangDef {
 interface LineHighlighter {
     colorLine: (line : string) => Node[];
     setPositionHighlight: (lst : subrange[]) => void;
+    set_current_line_number: (n : number) => void;
+    current_line: number;
     reset_context: () => void;
 };
 
@@ -207,7 +209,7 @@ class EmptyHighlighter implements LineHighlighter {
     
     public reset_context() {}   
 
-    protected set_current_line_number(i : number) {
+    public set_current_line_number(i : number) {
         this._current_line = i;
     }
     

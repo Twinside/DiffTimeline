@@ -1,5 +1,6 @@
 /// <reference path="project.ts" />
 /// <reference path="resultset.ts" />
+/// <reference path="difftimeline.extern.ts" />
 /// <reference path="../tinysyntaxhighlighter.ts" />
 
 namespace DiffManipulator {
@@ -51,7 +52,7 @@ namespace DiffManipulator {
 
     var begs : BegAssoc = new BegAssoc();
 
-    function generate_full_html(filename : string,
+    export function generateFullHtml(filename : string,
 								isLineNumberRequired : boolean,
                                 data : string,
 								diff : DiffRange[],
@@ -63,7 +64,7 @@ namespace DiffManipulator {
         const diff_count = diff.length;
         let current_line = 0;
 
-        let diff_node: Element[];
+        let diff_node: Node[][];
 
         const add_number = (n : number) => {
             var node = document.createElement('span');
@@ -83,7 +84,7 @@ namespace DiffManipulator {
             }
 
             var curr_diff = diff[i];
-            var diff_nodes = [];
+            var diff_nodes : Node[][]= [];
 
             for (var j = curr_diff.beg; j < curr_diff.end && current_line < lines.length; j++) {
                 add_number(highlighter.current_line);
@@ -102,28 +103,19 @@ namespace DiffManipulator {
         }
     }
 
-    /** Generate an HTML representation of a diff and a file content.
-     * @param {string} filename filename of the file, used for syntax detection
-     * @param {number} contextSize
-     * @param {boolean} isLineNumberRequired
-     * @param {string} data content.
-     * @param {Array.<DiffRange>} diff diff ranges
-     * @param {Element} node
-     */
-    var generate_compact_html = function (filename, contextSize, isLineNumberRequired,
-                                          data, diff, number_node, node) {
+    export function generateCompactHtml (filename : string,
+                                         contextSize : number,
+                                         isLineNumberRequired : boolean,
+                                         data : string,
+                                         diff : DiffRange[],
+                                         number_node : Node,
+                                         node : Node) {
         var highlighter = TinySyntaxHighlighter.from_filename(isLineNumberRequired, filename);
-
-        /** @type {Array.<string>} */
-        var lines = data.split('\n');
-
-        /** @type {Array.<Array.<Element>>} */
-        var processed_lines = [];
-
-        /** @type {number} */
+        var lines : string[] = data.split('\n');
+        var processed_lines : Node[][] = [];
         var last_outputted_line = -1;
 
-        var add_number = function(n) {
+        var add_number = function(n : number) {
             var node = document.createElement('span');
             node.setAttribute('class', 'syntax_line_number');
             node.appendChild(document.createTextNode(n.toString() + "\n"));
@@ -132,13 +124,12 @@ namespace DiffManipulator {
         };
 
         remove_children(node);
-        var i;
-        for ( i = 0; i < diff.length; i++ )
+        for ( let i = 0; i < diff.length; i++ )
         {
-            var d = diff[i];
+            let d = diff[i];
             
             // output the context before the diff
-            var context_begin = Math.max(last_outputted_line + 1, d.beg - contextSize);
+            let context_begin = Math.max(last_outputted_line + 1, d.beg - contextSize);
 
             // write an elipssiss if there is a deconnection
             if (context_begin > last_outputted_line + 1 && i != 0) {
@@ -167,7 +158,7 @@ namespace DiffManipulator {
                 highlighter.set_current_line_number(d.beg + 1);
                 processed_lines = [];
 
-                for ( var lineNum = d.beg; lineNum < d.end; lineNum++ ) {
+                for ( let lineNum : number = d.beg; lineNum < d.end; lineNum++ ) {
                     add_number(highlighter.current_line);
                     processed_lines.push(highlighter.colorLine(lines[lineNum]));
                 }
@@ -181,7 +172,7 @@ namespace DiffManipulator {
             var context_end = Math.min(d.end + contextSize, next_commit_begin);
 
             highlighter.set_current_line_number(d.end + 1);
-            for ( var lineNum = d.end; lineNum < context_end; lineNum++ ) {
+            for ( let lineNum = d.end; lineNum < context_end; lineNum++ ) {
                 add_number(highlighter.current_line);
                 append_all(node, highlighter.colorLine(lines[lineNum]));
             }
@@ -192,22 +183,13 @@ namespace DiffManipulator {
 
     /** Combine two diff list into one list of edition
      * ranges.
-     * @param {Array.<DiffCommand>} removings 
-     * @param {Array.<DiffCommand>} addings   
-     * @return {Array.<DiffRange>}
      */
-    var calculate_fold_set = function (removings, addings) {
-        /** @type {Array.<DiffRange>} */
-        var ranges = [];
-
-        /** @type {Array.<DiffRange>} */
-        var lefts = [];
-
-        /** @type {Array.<DiffRange>} */
-        var rights = [];
-
-        /** @type {DiffCommand} */
-        var tempElem;
+    export function calculateFoldSet(removings : DiffCommand[],
+                                     addings : DiffCommand[]) : DiffRange[] {
+        let ranges : DiffRange[] = [];
+        let lefts : DiffRange[] = [];
+        let rights : DiffRange[] = [];
+        let tempElem : DiffCommand;
 
         for ( var i = 0; i < removings.length; i++ ) {
             tempElem = removings[i];
@@ -222,51 +204,40 @@ namespace DiffManipulator {
                           end: tempElem.dest_idx + tempElem.size});
         }
 
-		/**
-		 * @param a {string}
-		 * @param b {string}
-		 * @return {string}
-		 */
-        var combiner = function(a,b) {
+        let combiner = (a : string, b : string) : string => {
             if (a === '+' && b === '-')
                 { return '~' }
             else
                 { return '!' }
         };
 
-		/** @type {number} */
-        var left_read_index = 0;
+        let left_read_index : number = 0;
+        let right_read_index : number = 0;
 
-		/** @type {number} */
-        var right_read_index = 0;
+        let left : DiffRange = lefts[left_read_index];
+        let right : DiffRange = rights[right_read_index];
 
-        /** @type {DiffRange} */
-        var left = lefts[left_read_index];
-
-        /** @type {DiffRange} */
-        var right = rights[right_read_index];
-
-        var swapArrays = function() {
-            var swap_idx = left_read_index;
+        let swapArrays = () => {
+            let swap_idx = left_read_index;
             left_read_index = right_read_index;
             right_read_index = swap_idx;
 
-            var swap_array = lefts;
+            let swap_array = lefts;
             lefts = rights;
             rights = swap_array;
 
-            var swap_obj = left;
+            let swap_obj = left;
             left = right;
             right = swap_obj;
-        }
+        };
 
-        var inc_right = function() {
+        let inc_right = () => {
             right_read_index++;
             if (right_read_index < rights.length)
                 right = rights[right_read_index];
         }
 
-        var inc_left = function() {
+        let inc_left = () => {
             left_read_index++;
             if (left_read_index < lefts.length)
                 left = lefts[left_read_index];
@@ -346,11 +317,10 @@ namespace DiffManipulator {
     }
 
     /** Keep only the diff information of adding (with a '+' way property)
-     * @param {Array.<(DiffCommand|DiffRange)>} diffs
-     * @return {Array.<(DiffCommand|DiffRange)>}
      */
-    var filter_adds = function(diffs) {
-        var ret = [];
+    export function filterAdds(diffs : (DiffCommand | DiffRange)[])
+        : (DiffCommand | DiffRange)[] {
+        var ret : (DiffCommand | DiffRange)[] = [];
         for (var i = 0; i < diffs.length; i++) {
             if (diffs[i].way === Project.DiffChar.DIFF_ADD)
                 ret.push(diffs[i]);
@@ -359,11 +329,11 @@ namespace DiffManipulator {
     }
 
     /** Keep only the diff information of adding (with a '-' way property)
-     * @param {Array.<(DiffCommand|DiffRange)>} diffs
-     * @return {Array.<(DiffCommand|DiffRange)>}
      */
-    var filter_rems = function(diffs) {
-        var ret = [];
+    export function filterRems(diffs : (DiffCommand|DiffRange)[])
+        : (DiffCommand|DiffRange)[]
+    {
+        var ret : (DiffCommand|DiffRange)[] = [];
         for (var i = 0; i < diffs.length; i++) {
             if (diffs[i].way === Project.DiffChar.DIFF_DEL)
                 ret.push(diffs[i]);
@@ -371,35 +341,30 @@ namespace DiffManipulator {
         return ret;
     }
 
-    var to_diff_del_range = function(diff) {
-        var ret = [];
-        for (var i = 0; i < diff.length; i++) {
+    export function toDiffDelRange(diff : DiffCommand[]) : DiffRange[] {
+        let ret : DiffRange[]= [];
+        for (let i = 0; i < diff.length; i++) {
             ret.push({ way: diff[i].way, beg: diff[i].orig_idx, end: diff[i].orig_idx + diff[i].size });
         }
         return ret;
     }
 
-    var to_diff_add_range = function(diff) {
-        var ret = [];
-        for (var i = 0; i < diff.length; i++) {
+    export function toDiffAddRange(diff : DiffCommand[]) : DiffRange[] {
+        let ret : DiffRange[]= [];
+        for (let i = 0; i < diff.length; i++) {
             ret.push({ way: diff[i].way, beg: diff[i].dest_idx, end: diff[i].dest_idx + diff[i].size });
         }
         return ret;
     }
 
-    /**
-     * @param {number} line
-     * @param {Array.<DiffCommand>} diffs
-     * @return {number}
-     */
-    var to_prev_diff = function(line, diffs) {
-        var i = 0;
-        var offset = 0;
-        var diff;
+    export function toPrevDiff(line : number, diffs : DiffCommand[]) : number {
+        let i = 0;
+        let offset = 0;
+        let diff : DiffCommand;
 
-        var add = '+';
-        var del = '-';
-        var neutral = '=';
+        const add = '+';
+        const del = '-';
+        const neutral = '=';
 
         for (i = 0; i < diffs.length; i++) {
             diff = diffs[i];
@@ -423,21 +388,16 @@ namespace DiffManipulator {
         }
 
         return line + offset;
-    };
+    }
 
-    /**
-     * @param {number} line
-     * @param {Array.<DiffCommand>} diffs
-     * @return {number}
-     */
-    var to_next_diff = function(line, diffs) {
-        var i = 0;
-        var offset = 0;
-        var diff;
+    export function toNextDiff(line : number, diffs : DiffCommand[]) : number {
+        let i = 0;
+        let offset = 0;
+        let diff : DiffCommand;
 
-        var add = '+';
-        var del = '-';
-        var neutral = '=';
+        const add = '+';
+        const del = '-';
+        const neutral = '=';
 
         for (i = 0; i < diffs.length; i++) {
             diff = diffs[i];
@@ -461,18 +421,5 @@ namespace DiffManipulator {
         }
 
         return line + offset;
-    };
-
-    return {
-        generateFullHtml:    generate_full_html,
-        generateCompactHtml: generate_compact_html,
-        filterAdds: filter_adds,
-        filterRems: filter_rems,
-        calculateFoldSet: calculate_fold_set,
-        toDiffDelRange: to_diff_del_range,
-        toDiffAddRange: to_diff_add_range,
-
-        toNextDiff: to_next_diff,
-        toPrevDiff: to_prev_diff
     };
 }

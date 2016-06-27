@@ -1,7 +1,7 @@
-/** @type {!Object.<Project.DiffKind, function(json) : !jQuery>} */
-var kind_formater = {};
-
-
+/// <reference path="../tinysyntaxhighlighter.ts" />
+/// <reference path="difftimeline.extern.ts" />
+/// <reference path="global_constant.ts" />
+/// <reference path="project.ts" />
 
 class KindAssoc {
     public constructor() {
@@ -9,7 +9,7 @@ class KindAssoc {
         this[Project.DiffKind.KIND_ADDITION] = ich.commit_file;
         this[Project.DiffKind.KIND_MODIFICATION] = renderCommit;
     }
-    [ix: string]: (json: JSON) => JQuery;
+    [ix: string]: (json: CommitTreeDiff) => JQuery;
 };
 
 var kind_format : KindAssoc;
@@ -18,30 +18,25 @@ $(document).ready(function() {
     kind_format = new KindAssoc();
 });
 
-function renderCommit(e : JSON) : JQuery {
+function renderCommit(e : CommitTreeDiff) : JQuery {
     var hl = TinySyntaxHighlighter.from_filename(false, e.name);
     var rez_node : JQuery = ich.commit_file_modification_detailed(e);
-
-    /** @type {Element} */
     var code_node : Element  = rez_node.find('.syntax_highlighted')[0];
-
-    /** @type {Element} */
     var number_node = rez_node.find('.line_number_column')[0];
 
-    var curr_diff;
+    var curr_diff : DiffWithContext;
     var acc = ""
-    var diff_node;
+    var diff_node : Node;
     var prev_end = -1;
 
-    var create_number_node = function(n) {
+    var create_number_node = (n : number) => {
         var node = document.createElement('span');
         node.setAttribute('class', 'syntax_line_number');
         node.appendChild(document.createTextNode(n.toString() + "\n"));
         return node;
     };
 
-	/** @type {function(string) : Element} */
-    var div_node = function(kind) {
+    var div_node = (kind : string) : Node => {
         var node = document.createElement('div');
         node.setAttribute('class', kind);
         return node;
@@ -115,7 +110,7 @@ class Commit {
     private key : ref;
     private is_key_real: boolean;
     private commit_date: string;
-    private parents_sha: {message: string, key: ref}[];
+    public parents_sha: {message: string, key: ref}[];
     private head_message : string;
     private sub_message : string;
     private split_message: string;
@@ -126,15 +121,17 @@ class Commit {
 
     private message: string;
 
-    private tree: JSON;
+    private tree: CommitTreeDiff;
     private author: any;
     private file_changes : any;
     private diff_nodes : any[];
 
     private last_view_mode : Project.ViewMode;
-    private orig_node : Element;
+    private _orig_node : JQuery;
 
-    public constructor( key: ref, data : /*commitdetail*/ JSON ) {
+    public get orig_node() { return this._orig_node; }
+
+    public constructor( key: ref, data : CommitDetail ) {
         this.key = key === null_ref ? display_null_ref : key;
         this.is_key_real = key !== null_ref;
         this.commit_date = timestamp_to_string(data['timestamp']);
@@ -210,31 +207,32 @@ class Commit {
     }
 
     public send_message(msg : GuiMessage) {
-        if (msg.action === Project.GuiMessage.MOVE_UP)
+        if (msg.action === Project.GuiMessageCode.MOVE_UP)
             return this.move_up();
-        else if (msg.action === Project.GuiMessage.MOVE_DOWN)
+        else if (msg.action === Project.GuiMessageCode.MOVE_DOWN)
             return this.move_down();
-        else if (msg.action === Project.GuiMessage.MOVE_INNER) {
+        else if (msg.action === Project.GuiMessageCode.MOVE_INNER) {
             var file = this.file_changes[this.focused_diff];
             return Project.state.switch_file(file.name, file.hash, file.key);
         }
     }
 
     public render_tree(node : Element, depth : number, tree_path : string, 
-                       elem /* CommitTreeDiff */) : Element {
-        var new_node : Element;
+                       elem : CommitTreeDiff) : JQuery | Element {
+        var new_node : JQuery;
         var opened = false;
 
-        elem.key = this.key;
-        elem.full_path = (depth > 0) ? tree_path + "/" + elem.name
+        let full_path = (depth > 0) ? tree_path + "/" + elem.name
                                     : elem.name;
+        elem.key = this.key;
+        elem.full_path = full_path;
 
         if (elem.hasOwnProperty('children') && elem.children.length > 0)
         {
             if (depth == 0) {
                 for ( var i = 0; i < elem.children.length; i++ )
                     this.render_tree(node, depth + 1, 
-                                    elem.full_path, elem.children[i]);
+                                     full_path, elem.children[i]);
                 return node;
             }
 
@@ -245,7 +243,7 @@ class Commit {
 
             for ( var i = 0; i < elem.children.length; i++ )
                 this.render_tree(child_node[0], depth + 1, 
-                                elem.full_path, elem.children[i]);
+                                 full_path, elem.children[i]);
 
             child_node.animate({height: 'toggle'}, 0);
 
@@ -319,9 +317,9 @@ class Commit {
         });
     }
 
-    public find_matching_file_list(pattern : RegExp) : string[] {
-        var ret_list = [];
-        var recurse = (elem) => {
+    public find_matching_file_list(pattern : RegExp) : CommitTreeDiff[] {
+        var ret_list : CommitTreeDiff[] = [];
+        var recurse = (elem : CommitTreeDiff) => {
             if (elem.hasOwnProperty('children') && elem.children.length > 0)
             {
                 for ( var i = 0; i < elem.children.length; i++ )
@@ -337,7 +335,7 @@ class Commit {
         return ret_list;
     }
 
-    public find_matching_files(pattern: RegExp, callback : (matches : string[]) => void) {
+    public find_matching_files(pattern: RegExp, callback : (matches : CommitTreeDiff[]) => void) {
         if (!this.tree_fetched) {
             var this_obj = this;
             this.fetch_tree_raw(function (){
@@ -359,18 +357,18 @@ class Commit {
         }
     }
 
-    public create_dom() : Element {
+    public create_dom() : JQuery {
         var view_mode = Project.state.active_view_mode();
         this.tree_opened = false;
 
         if (view_mode == Project.ViewMode.VIEW_FULL) {
-            this.orig_node = ich.commit_detailed(this);
+            this._orig_node = ich.commit_detailed(this);
         }
         else if (view_mode == Project.ViewMode.VIEW_COMPACT) {
-            this.orig_node = ich.commit_compact(this);
+            this._orig_node = ich.commit_compact(this);
         }
 
-        return this.orig_node;
+        return this._orig_node;
     }
 
     public render_full() {
@@ -385,8 +383,8 @@ class Commit {
             /* displayed path is full path */
             e.full_path = e.name;
 
-            var new_node = ( kind_formater.hasOwnProperty(kind)
-                        ? kind_formater[kind](e)
+            var new_node = ( kind_format.hasOwnProperty(kind)
+                        ? kind_format[kind](e)
                         : ich.commit_file(e) );
 
             table.append( new_node );

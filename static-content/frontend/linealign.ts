@@ -1,7 +1,7 @@
 /// <reference path="jquery.d.ts" />
 
 class FileAlign {
-	public static create_padding(line_diff : number) : string {
+	public create_padding(line_diff : number) : string {
 		var string_padder = '';
 	
 		if (line_diff > 0) {
@@ -14,7 +14,8 @@ class FileAlign {
 		return string_padder;
 	}
 	
-	public static make_number_clickable(node : Node, callback: (s: number, line: number) => void) {
+	public make_number_clickable(node : Node | JQuery,
+	                             callback: (s: number, line: number) => void) {
 		var number_columns = $('.line_number_column', node);
 		for (var i = 0; i < number_columns.length; i++) {
 			(function(n : number) {
@@ -28,7 +29,7 @@ class FileAlign {
 	}
     
     
-    public static clear_command() {
+    public clear_command() {
         var command = $('.command_line');
         var input = $('input', command);
         var form = $('form', command);
@@ -39,8 +40,8 @@ class FileAlign {
         input.unbind('keyup');
     }
     
-    public static command_request(absolute_callback : (line: number) => void,
-                                  relative_callback : (offset: number) => void) {
+    public command_request(absolute_callback : (line: number) => void,
+                           relative_callback : (offset: number) => void) {
         var command = $('.command_line');
         var input = $('input', command);
         var form = $('form', command);
@@ -89,7 +90,7 @@ class FileAlign {
         return false;
     }
     
-    public static move_line_up(line_index : number, node : Node) {
+    public static move_line_up(line_index : number, node : Node | JQuery) {
         if (line_index === 0)
             return line_index;
     
@@ -100,7 +101,7 @@ class FileAlign {
         return line_index;
     }
     
-    public static move_line_down(line_index : number, node : Node) {
+    public static move_line_down(line_index : number, node : Node | JQuery) {
         var numbers = $('.syntax_line_number', node);
         if (line_index === numbers.length)
             return line_index;

@@ -1,6 +1,10 @@
 /// <reference path="resultset.ts" />
 /// <reference path="breadcrumb.ts" />
 /// <reference path="jquery.d.ts" />
+/// <reference path="blameshower.ts" />
+/// <reference path="commitrenderer.ts" />
+/// <reference path="filecomparer.ts" />
+/// <reference path="filerenderer.ts" />
 /// <reference path="global_constant.ts" />
 
 namespace Project {
@@ -16,7 +20,7 @@ namespace Project {
 		public static DIFF_ADDDEL = '!';
 	}
 	
-	export enum GuiMessage {
+	export enum GuiMessageCode {
 		FETCH_TREE =   0,
 		FETCH_DETAIL = 1,
 		MOVE_LEFT =    2,
@@ -140,7 +144,7 @@ namespace Project {
             });
         }
 
-        public switch_commit_comp( b1, b2 ) {
+        public switch_commit_comp( b1 : Ref, b2 : Ref) {
             this.clear_display();
             var new_state = CommitComparer.create_from_args(b1, b2);
             this.states.push( new_state );
@@ -148,7 +152,7 @@ namespace Project {
             breadcrumb.append_breadcrumb('Compare commit');
         }
 
-        public switch_file_comp(key1, file1, key2, file2) {
+        public switch_file_comp(key1: Ref, file1: string, key2 : Ref, file2: string) {
             this.clear_display();
             const new_state = FileComparer.create_from_args(key1, file1, key2, file2);
             this.states.push( new_state );
@@ -158,7 +162,7 @@ namespace Project {
 
         public switch_commit(id : ref) {
             this.clear_display();
-            const new_state = new CommitRenderer.create_from_arg(id);
+            const new_state = CommitRenderer.create_from_arg(id);
             this.states.push(new_state);
 
             if (id !== null_ref)
@@ -221,14 +225,14 @@ namespace Project {
             return {top:-120, left:-120};
         }
 
-        public start_blame(blame_obj) {
+        public start_blame(blame_obj : BlameInfo) {
             var new_state = BlameShower.create_from_data(blame_obj);
             this.states.push( new_state );
             breadcrumb.append_breadcrumb('Blame (' + blame_obj.filename + ')');
             this.show_hide_toolbar_elements(new_state.gui_descr);
         }
 
-        public start_commit(commit_obj) {
+        public start_commit(commit_obj : CommitDetail) {
             var new_state = CommitRenderer.create_from_data(commit_obj);
             this.states.push( new_state );
             this.show_hide_toolbar_elements(new_state.gui_descr);
@@ -239,7 +243,7 @@ namespace Project {
                 breadcrumb.append_breadcrumb('HEAD');
         }
 
-        public start_file(file_obj) {
+        public start_file(file_obj : ParentFile) {
             const new_state = FileRenderer.create_from_data(file_obj);
             this.states.push( new_state );
             this.show_hide_toolbar_elements(new_state.gui_descr);
@@ -253,7 +257,7 @@ namespace Project {
             Project.state.check_comparison(zone_a, zone_b);
         }
 
-        public check_comparison(node_a : Node, node_b : Node) {
+        public check_comparison(node_a : Node | JQuery, node_b : Node | JQuery) {
             const commit_a = $("[class*='branch_widget']", node_a);
             const commit_b = $("[class*='branch_widget']", node_b);
             const commit_count = (commit_a.length > 0 ? 1 : 0) + (commit_b.length > 0 ? 1 : 0);
