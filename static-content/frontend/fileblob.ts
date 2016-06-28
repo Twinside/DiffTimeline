@@ -33,7 +33,7 @@ class FileBlob
     private path_end : CommitPath[];
     
     private _ref : Ref;
-    public get key() : Ref { return this._ref }
+    public get key() : Ref { return this._key; }
 
     public constructor(data: ParentFile) {
         this.file = data.filename;

@@ -81,6 +81,7 @@ import Data.Git
     )
 import Data.Git.Ref
     ( fromHexString
+    , isHexString
     , toHexString
     )
 import Data.Hourglass
@@ -315,6 +316,7 @@ fetchDirectoryInfo name = do
               kindOfExist False = KindDirectory
 
 revisionToRef :: Git -> String -> ExceptT String IO Ref
+revisionToRef _repo r | isHexString r && length r == 40 = return $ fromHexString r
 revisionToRef repo r = (do
     rr <- liftIO $ resolveRevision repo $ Rev.fromString r
     case rr of

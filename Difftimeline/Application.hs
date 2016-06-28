@@ -5,7 +5,7 @@ module Difftimeline.Application( getApplication, Command( .. ) ) where
 
 import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist, doesFileExist )
-import Network.Wai( Application )
+{-import Network.Wai( Application )-}
 import Yesod.Default.Config( AppConfig, DefaultEnv )
 import Yesod.Default.Handlers (getFaviconR)
 import qualified Filesystem.Path as FPR
