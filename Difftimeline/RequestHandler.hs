@@ -21,8 +21,8 @@ module Difftimeline.RequestHandler( getRootR
                                   -- ** Scripts
                                   , getDifftimelineJs
                                   , getFavicon
-                                  , getTinysyntaxhighlighter
                                   , getComposed
+                                  , getComposedMap
                                   , getThirdParty
 
                                   -- ** CSS
@@ -97,12 +97,12 @@ getDifftimelineCss, getSyntax_highlight :: Handler RepCss
 getDifftimelineCss = fetchStatic RepCss diffTimelineCssEmbedded
 getSyntax_highlight = fetchStatic RepCss syntaxhighlihgtCss
 
-getDifftimelineJs, getFavicon, getTinysyntaxhighlighter, 
-    getThirdParty, getComposed :: Handler RepPlain
+getDifftimelineJs, getFavicon,
+    getThirdParty, getComposed, getComposedMap :: Handler RepPlain
 getDifftimelineJs = fetchStatic RepPlain diffTimlineJsEmbedded
 getFavicon = fetchStatic RepPlain faviconEmbed
-getTinysyntaxhighlighter = fetchStatic RepPlain tinySyntaxHighlightJs
 getComposed = fetchStatic RepPlain composedEmbedded
+getComposedMap = fetchStatic RepPlain composedMapEmbedded
 getThirdParty = fetchStatic RepPlain thirdParty
 
 getBlameFromRoot :: String -> [Text] -> Handler RepJson

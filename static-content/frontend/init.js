@@ -23,11 +23,12 @@ function setup_global_drop()
     });
 }
 
-ich.grabTemplates();
-
 var branch_list;
 
 $(document).ready(function() {
+    ich.grabTemplates();
+    kind_format = new KindAssoc();
+
     branch_list = new BranchLister();
     setup_global_drop();
     $(document).scrollTo( { top: 0, left: 0 } );

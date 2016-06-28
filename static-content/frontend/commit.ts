@@ -12,11 +12,7 @@ class KindAssoc {
     [ix: string]: (json: CommitTreeDiff) => JQuery;
 };
 
-var kind_format : KindAssoc;
-
-$(document).ready(function() {
-    kind_format = new KindAssoc();
-});
+var kind_format : KindAssoc = new KindAssoc();
 
 function renderCommit(e : CommitTreeDiff) : JQuery {
     var hl = TinySyntaxHighlighter.from_filename(false, e.name);

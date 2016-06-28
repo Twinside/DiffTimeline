@@ -6,44 +6,9 @@
 /// <reference path="filecomparer.ts" />
 /// <reference path="filerenderer.ts" />
 /// <reference path="global_constant.ts" />
+/// <reference path="constants.ts" />
 
 namespace Project {
-	export enum ViewMode {
-		VIEW_FULL = 1,
-		VIEW_COMPACT = 0
-	}
-	
-	export class DiffChar {
-		public static DIFF_ADD = '+';
-		public static DIFF_DEL = '-';
-		public static DIFF_DELADD = '~';
-		public static DIFF_ADDDEL = '!';
-	}
-	
-	export enum GuiMessageCode {
-		FETCH_TREE =   0,
-		FETCH_DETAIL = 1,
-		MOVE_LEFT =    2,
-		MOVE_RIGHT =   3,
-		MOVE_UP =      4,
-		MOVE_DOWN =    5,
-		MOVE_FIRST =   6,
-		MOVE_LAST =    7,
-	
-		MOVE_INNER =      8,
-		COMMAND_REQUEST = 9,
-		ESCAPE =          10,
-		SELECT_AS_LEFT =  11,
-		SELECT_AS_RIGHT = 12,
-		SWITCH_BLAME =    13
-	}
-	
-	export const DiffKind = {
-		KIND_MODIFICATION: 'modification',
-		KIND_ADDITION: 'addition',
-		KIND_DELETION: 'deletion'
-	}
-
 	export class State {
 		private view_mode : ViewMode = ViewMode.VIEW_FULL;
     	private apply_syntax_coloration = true;
@@ -123,7 +88,7 @@ namespace Project {
 
         public switch_blame(start_commit : ref , file : string) {
             this.clear_display();
-            BlameShower.create_from_arg(start_commit, file, function( new_state ) {
+            BlameShower.create_from_arg(start_commit, file, ( new_state ) => {
                 this.states.push( new_state );
                 this.show_hide_toolbar_elements(new_state.gui_descr);
                 breadcrumb.append_breadcrumb("Blame (" + file + ")");
@@ -136,8 +101,8 @@ namespace Project {
             if (start_commit == display_null_ref)
                 start_commit = working_dir_request_token;
 
-            FileRenderer.create_from_arg(file, fkey, start_commit,
-                                         function( new_state ) {
+
+            FileRenderer.create_from_arg(file, fkey, start_commit, ( new_state ) => {
                 this.states.push( new_state );
                 this.show_hide_toolbar_elements(new_state.gui_descr);
                 breadcrumb.append_breadcrumb(file);

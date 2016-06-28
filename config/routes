@@ -14,6 +14,7 @@
 /compare_files/#String/#String/#String/*Texts FileComparisonR GET
 /quit                               QuitR             GET
 
+
 /initial_info.js                    InitialInfoR      GET
 
 /difftimeline.extern.js		        JSONExternR		GET
@@ -23,7 +24,6 @@
 /static-content/difftimeline.js              DifftimelineJs          GET
 /static-content/favicon.ico                  Favicon                 GET
 /static-content/syntax-highlight.css         Syntax_highlight        GET
-/static-content/tinysyntaxhighlighter.js     Tinysyntaxhighlighter   GET
 
 /static-content/third_party.js               ThirdParty              GET
 

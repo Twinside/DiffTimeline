@@ -41,7 +41,7 @@ executable         difftimeline
                  , bytestring                    >= 0.9
                  , file-embed                    >= 0.0.4
                  , filepath                      >= 1.3
-                 , hit                           >= 0.6
+                 , hit                           >= 0.6.4
                  , monad-control                 >= 0.3
                  , mtl                           >= 2.0
                  , template-haskell

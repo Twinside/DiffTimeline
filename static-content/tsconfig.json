@@ -3,28 +3,30 @@
         "noImplicitAny": true,     
         "removeComments": true,    
         "preserveConstEnums": true,
-        "out": "built.js",         
+        "out": "../composed.js",         
         "sourceMap": true,
         "target": "es5"
     },                             
     "files": [ 
         "tinysyntaxhighlighter.ts",
+        "frontend/jquery.d.ts",
+        "frontend/constants.ts",
+        "frontend/project.ts",
+        "frontend/global_constant.ts",
+        "frontend/diffmanipulator.ts",
+        "frontend/resultset.ts",
         "frontend/filecomparer.ts",
         "frontend/commitrenderer.ts",
         "frontend/linealign.ts",
         "frontend/commitcomparer.ts",
-        "frontend/diffmanipulator.ts",
         "frontend/blameshower.ts",
         "frontend/branch_list.ts",
-        "frontend/global_constant.ts",
         "frontend/breadcrumb.ts",
         "frontend/commit.ts",
         "frontend/commitcomparer.ts",
-        "frontend/global_constant.ts",
-        "frontend/project.ts",
-        "frontend/resultset.ts",
         "frontend/fileblob.ts",
         "frontend/filerenderer.ts",
-        "frontend/jquery.d.ts"
+        "frontend/init.ts",
+        "frontend/keybindings.ts"
     ]                              
 }

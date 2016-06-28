@@ -23,8 +23,6 @@ function setup_global_drop()
     });
 }
 
-ich.grabTemplates();
-
 var branch_list : BranchLister;
 
 $(document).ready(function() {

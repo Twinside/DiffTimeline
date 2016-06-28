@@ -25,6 +25,8 @@ namespace ich {
     export var grabTemplates: () => void;
 }
 
+ich.grabTemplates();
+
 const null_ref : ref = "0000000000000000000000000000000000000000";
 const display_null_ref : string = 'Working directory';
 const working_dir_request_token : string = '__WORKING_DIR__';

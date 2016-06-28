@@ -178,11 +178,11 @@ Project.state = (function () {
             if (start_commit == display_null_ref)
                 start_commit = working_dir_request_token;
 
-            FileRenderer.create_from_arg(file, fkey, start_commit,
-                                         function( new_state ) {
-                states.push( new_state );
-                show_hide_toolbar_elements(new_state.gui_descr);
-                breadcrumb.append_breadcrumb(file);
+            let that = this;
+            FileRenderer.create_from_arg(file, fkey, start_commit, ( new_state ) => {
+                that.states.push( new_state );
+                that.show_hide_toolbar_elements(new_state.gui_descr);
+                that.breadcrumb.append_breadcrumb(file);
             });
         },
 
