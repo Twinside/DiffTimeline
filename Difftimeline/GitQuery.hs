@@ -47,7 +47,6 @@ import Prelude
 import Data.List( sortBy, foldl', find  )
 import Data.Maybe( catMaybes )
 import Data.Byteable( toBytes )
-import Data.Monoid( (<>) )
 import System.FilePath( splitDirectories  )
 import Control.Monad( forM, when, void )
 import Control.Monad.Trans.Except( ExceptT, throwE, runExceptT, catchE )
@@ -58,25 +57,10 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Text.Encoding( decodeUtf8With )
-import qualified Data.Text.Lazy.Encoding as LE
-import qualified Data.Text.Lazy as TL
-import Data.Text.Encoding.Error( lenientDecode )
 import Control.Monad.Trans.Writer.Strict( WriterT, runWriterT )
 
-import Data.Time.Clock
-    ( UTCTime
-    , addUTCTime
-    , picosecondsToDiffTime 
-    )
+import Data.Time.Clock.POSIX( getPOSIXTime )
 
-import Data.Time.Clock.POSIX
-    ( getPOSIXTime
-    , posixSecondsToUTCTime
-    )
-
-import qualified Filesystem.Path.Rules as FP
-import System.Directory( getDirectoryContents, doesFileExist, getModificationTime )
 import Data.Git 
     ( Commit( .. )
     , Person( .. )
@@ -85,7 +69,6 @@ import Data.Git
     , RefName( .. )
     , Git
     , Ref
-    , getObject
     , resolveRevision
     , headGet
     )
@@ -95,16 +78,9 @@ import Data.Git.Ref
     , toHexString
     )
 import Data.Hourglass
-    ( TimezoneOffset( TimezoneOffset, timezoneOffsetToMinutes )
-    , timeFromElapsed )
-import Foreign.C.Types( CTime( CTime ) )
+    ( TimezoneOffset( TimezoneOffset, timezoneOffsetToMinutes ))
 import Data.Git.Repository( branchList, tagList )
 import qualified Data.Git.Revision as Rev
-import Data.Git.Storage
-    ( gitRepoPath
-    , findFileInIndex
-    , IndexEntry( _mtime, _mtimeNano )
-    )
 import Data.Git.Storage.Object( Object( .. ) )
 import Data.Git.Types
     ( TreeEnt
@@ -121,9 +97,6 @@ import Difftimeline.BaseLayer
 import Difftimeline.Contract
 import Difftimeline.DiffWorkingDirectory
 import Difftimeline.GitIgnore
-
-import Debug.Trace
-import Text.Printf
 
 joinBytePath :: [BC.ByteString] -> T.Text
 joinBytePath = foldl' (<//>) mempty
@@ -166,6 +139,7 @@ data CommitDetail = CommitDetail
     , commitDetailAuthor  :: !T.Text
     , commitDetailChanges :: ![CommitTreeDiff]
     }
+    deriving Show
 
 data CommitPath = CommitPath
     { pathCommitRef     :: !Ref
@@ -582,7 +556,7 @@ data CommitOverview = CommitOverview
     , commitOverviewAuthor    :: T.Text
     , commitOverviewTimestamp :: Int
     }
-    deriving (Eq)
+    deriving (Eq, Show)
 
 simplifyRange :: (Eq a) => [BlameRangeSource a] -> [BlameRangeSource a]
 simplifyRange [] = []

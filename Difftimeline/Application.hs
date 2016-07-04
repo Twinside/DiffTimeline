@@ -1,7 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Difftimeline.Application( getApplication, Command( .. ) ) where
+module Difftimeline.Application
+    ( getApplication
+    , getDebugStart
+    , Command( .. )
+    ) where
 
 import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist, doesFileExist )
@@ -16,9 +20,11 @@ import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
 import qualified System.FilePath as FP
 import Data.Git.Storage( Git, isRepo, openRepo, gitRepoPath )
+import Control.Monad.Trans.Except( runExceptT )
 -- Import all relevant handler modules here.
 import Difftimeline.RequestHandler
 import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile )
+import Difftimeline.GitQuery( getHead, workingDirectoryChanges' )
 import System.Exit( exitFailure )
 
 -- This line actually creates our YesodSite instance. It is the second half
@@ -71,6 +77,15 @@ loadIgnoreSet path = do
     if isExisting
         then loadIgnoreFile ignoreFile
         else pure mempty
+
+getDebugStart :: IO ()
+getDebugStart = do
+  initDir <- getCurrentDirectory 
+  (repoDir, initRepo) <- initRepository initDir 
+  ignoreSet <- loadIgnoreSet repoDir
+  Just headRef <- getHead initRepo
+  rez <- runExceptT $ workingDirectoryChanges' initRepo ignoreSet 2 headRef
+  print rez
 
 -- This function allocates resources (such as a database connection pool),
 -- performs initialization and creates a WAI application. This is also the

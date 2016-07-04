@@ -31,6 +31,7 @@ import Network.Wai.Middleware.RequestLogger(logStdoutDev)
 import Yesod.Default.Config( AppConfig(..)
                            , DefaultEnv( Development )
                            )
+import Difftimeline.Application
 
 version :: String
 version = "1.0"
@@ -146,4 +147,4 @@ main = do
             | otherwise = app
 
     runUrlPort usePort "" finalApp
-
+-- -}

@@ -24,6 +24,20 @@ executable         difftimeline
     ghc-prof-options: -optl-static -static -Wall -threaded -prof -auto-all -rtsopts
 
     main-is:       main.hs
+    other-modules:
+       Difftimeline.Application
+       Difftimeline.BaseLayer
+       Difftimeline.Blame
+       Difftimeline.Contract
+       Difftimeline.Diff
+       Difftimeline.DiffWorkingDirectory
+       Difftimeline.Externs
+       Difftimeline.Foundation
+       Difftimeline.GitIgnore
+       Difftimeline.GitQuery
+       Difftimeline.Import
+       Difftimeline.RequestHandler
+       Difftimeline.StaticFiles
 
     extensions: TemplateHaskell
                 QuasiQuotes

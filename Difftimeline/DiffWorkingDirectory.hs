@@ -9,6 +9,7 @@ import Data.List( sortBy )
 import Data.Byteable( toBytes )
 import Control.Monad.Trans.Except( ExceptT, throwE, catchE )
 import Control.Monad.IO.Class( liftIO )
+import qualified Control.Exception as E
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
@@ -50,18 +51,22 @@ import Difftimeline.GitIgnore
 a  <///> b = a </> b
 
 wasEdited :: Git -> UTCTime -> FilePath -> IO Bool
-wasEdited repository maxTime path = do
-  indexEntry <- findFileInIndex repository $ BC.pack path
-  modTime <- getModificationTime path
-  case indexEntry of
-    Nothing -> return $ maxTime < modTime
-    Just ix -> do
-      let diffToTime = fromRational . toRational
-          nanoTime = diffToTime $ picosecondsToDiffTime (fromIntegral (_mtimeNano ix) * 1000)
-          secondTime = posixSecondsToUTCTime . realToFrac $ _mtime ix
-          time = addUTCTime nanoTime secondTime
-          latestTime = max time maxTime
-      return $ latestTime < modTime
+wasEdited repository maxTime path = check `E.catch` onError where
+  onError :: E.SomeException -> IO Bool
+  onError _ = return True
+
+  check = do
+    indexEntry <- findFileInIndex repository (BC.pack path)
+    modTime <- getModificationTime path
+    case indexEntry of
+      Nothing -> return $ maxTime < modTime
+      Just ix -> do
+        let diffToTime = fromRational . toRational
+            nanoTime = diffToTime $ picosecondsToDiffTime (fromIntegral (_mtimeNano ix) * 1000)
+            secondTime = posixSecondsToUTCTime . realToFrac $ _mtime ix
+            time = addUTCTime nanoTime secondTime
+            latestTime = max time maxTime
+        return $ latestTime < modTime
 
 fileComparer :: Int -> FilePath -> L.ByteString -> Ref -> L.ByteString
              -> CommitTreeDiff
