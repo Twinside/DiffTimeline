@@ -117,36 +117,13 @@ import qualified Data.Vector as V
 import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
+import Difftimeline.BaseLayer
+import Difftimeline.Contract
+import Difftimeline.DiffWorkingDirectory
 import Difftimeline.GitIgnore
 
 import Debug.Trace
 import Text.Printf
-
-decodeUtf8 :: B.ByteString -> T.Text
-decodeUtf8 = decodeUtf8With lenientDecode
-
-decodeUtf8Lazy :: L.ByteString -> T.Text
-decodeUtf8Lazy = TL.toStrict . LE.decodeUtf8With lenientDecode
-
-data CommitTreeDiff
-    = AddElement !T.Text !Ref
-    | DelElement !T.Text !Ref
-    | NeutralElement !T.Text !Ref
-    | TreeElement !T.Text !Ref ![CommitTreeDiff]
-    | ModifyElement !T.Text !Ref ![(DiffCommand, V.Vector T.Text)]
-    | ModifyBinaryElement !T.Text !Ref
-    deriving (Eq, Show)
-
-instance Invertible CommitTreeDiff where
-    invertWay e@(NeutralElement _ _) = e
-    invertWay e@(ModifyBinaryElement _ _)  = e
-    invertWay (AddElement t r) = DelElement t r
-    invertWay (DelElement t r) = AddElement t r
-    invertWay (TreeElement t r sub) =
-        TreeElement t r $ invertWay <$> sub
-    invertWay (ModifyElement t r lst) =
-        ModifyElement t r $ invertDiff <$> lst
-          where invertDiff (d, v) = (invertWay d, v)
 
 joinBytePath :: [BC.ByteString] -> T.Text
 joinBytePath = foldl' (<//>) mempty
@@ -201,72 +178,6 @@ data CommitPath = CommitPath
 
 timezoneOfAuthor :: Person -> Int
 timezoneOfAuthor = timezoneOffsetToMinutes . gitTimeTimezone . personTime
-
-timeOfAuthor :: Person -> Int
-timeOfAuthor = unCTime . timeFromElapsed . gitTimeUTC . personTime
-  where unCTime (CTime t) = fromIntegral t
-
-unpackPath :: Git -> FilePath
-unpackPath = BC.unpack . FP.encode FP.posix . gitRepoPath 
-
--- | Try to detect binary element given a blob
-detectBinary :: L.ByteString -> Bool
-detectBinary = L.any (== 0) . L.take binaryDetectionSize
-    where binaryDetectionSize = 8 * 1024
-
-firstParentRef :: Commit -> Ref
-firstParentRef info = case commitParents info of
-    [] -> nullRef
-    (r:_) -> r
-
--- | Want same behaviour between windows & Unix
-(</>) :: FilePath -> FilePath -> FilePath
-(</>) a b = a ++ "/" ++ b
-
-errorIO :: String -> IO (Maybe a) -> ExceptT String IO a
-errorIO str a = do
-    mayrez <- liftIO a
-    case mayrez of
-        Nothing -> throwE str
-        Just j  -> return j
-
-accessCommit :: String -> Git -> Ref -> ExceptT String IO Object
-accessCommit s rep ref = do
-  rez <- liftIO $ getObject rep ref True
-  case rez of
-      Nothing -> throwE s
-      Just c@(ObjCommit _) -> return c
-      Just _ -> throwE s
-
-accessTree :: String -> Git -> Ref -> ExceptT String IO Object
-accessTree s rep ref = do
-    rez <- liftIO $ getObject rep ref True
-    case rez of
-        Nothing -> throwE s
-        Just c@(ObjTree _) -> return c
-        Just _ -> throwE s
-
-accessBlob :: String -> Git -> Ref -> ExceptT String IO Object
-accessBlob s rep ref = do
-    rez <- liftIO $ getObject rep ref True
-    case rez of
-        Nothing -> throwE s
-        Just c@(ObjBlob _) -> return c
-        Just _ -> throwE s
-
-nullRef :: Ref
-nullRef = fromHexString $ replicate 40 '0'
-
-batchSubTree :: Git -> (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref -> Object
-             -> ExceptT String IO CommitTreeDiff
-batchSubTree  repository f = aux where
-  objAccess = errorIO "" . accessObject repository
-
-  aux name r (ObjBlob _) = return $ f (T.pack name) r
-  aux name r (ObjTree (Tree t)) = TreeElement (T.pack name) r <$>
-    sequence [objAccess subRef >>= aux (BC.unpack $ toBytes n) subRef
-                                | (_, n, subRef) <- t]
-  aux _ _ _ = throwE "Wrong git object kind"
 
 compareBranches :: Git -> Int -> String -> String
                 -> IO (Either String CommitDetail)
@@ -323,15 +234,6 @@ diffCommitTree repository ref = runExceptT $ do
   let prevRef = firstParentRef thisCommit
   snd <$> createCommitDiff repository 0 False prevRef ref
 
-data SubKind = KindFile | KindDirectory
-
-fetchDirectoryInfo :: FilePath -> IO [(SubKind, BC.ByteString)]
-fetchDirectoryInfo name = do
-    files <- getDirectoryContents name
-    sequence [(, BC.pack sub) <$> (kindOfExist <$> doesFileExist sub) | sub <- files ]
-        where kindOfExist True = KindFile
-              kindOfExist False = KindDirectory
-
 revisionToRef :: Git -> String -> ExceptT String IO Ref
 revisionToRef _repo r | isHexString r && length r == 40 = return $ fromHexString r
 revisionToRef repo r = (do
@@ -364,96 +266,6 @@ workingDirectoryChanges' repository ignoreSet contextSize ref = do
                 , commitDetailChanges = filterCommitModifications
                                       $ flattenTreeDiff diff
                 }
-
-(<///>) :: FilePath -> FilePath -> FilePath
-"" <///> a = a
-a  <///> b = a </> b
-
-diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
-                     -> ExceptT String IO (Commit, CommitTreeDiff)
-diffWorkingDirectory repository ignoreSet contextSize ref = do
-    (ObjCommit thisCommit) <- accessCommit "Error can't file commit" repository ref
-    let authorStamp = timeOfAuthor $ commitAuthor thisCommit
-        commitStamp = timeOfAuthor $ commitCommitter thisCommit
-        maxStamp = min commitStamp authorStamp
-        utcTime = posixSecondsToUTCTime $ realToFrac maxStamp
-        upperPath = unpackPath repository ++ "/.."
-    thisTree <- getObj "Error can't access commit tree" $ commitTreeish thisCommit
-    (,) thisCommit <$> inner utcTime upperPath "" thisTree (commitTreeish thisCommit) 
-  where getObj reason = errorIO reason . accessObject repository
-
-        fileComparer name bin1 r1 bin2
-            | bin1 == bin2 = NeutralElement (T.pack name) r1
-            | detectBinary bin2 = ModifyBinaryElement (T.pack name) r1
-            | otherwise = case computeTextScript contextSize bin1 bin2 of
-                [] -> NeutralElement (T.pack name) r1
-                lst -> ModifyElement (T.pack name) r1 $ unpackDiff lst
-                   where unpackDiff = fmap (\(a, t) -> (a, fmap decodeUtf8Lazy t))
-
-        wasEdited path = do
-           indexEntry <- findFileInIndex repository $ BC.pack path
-           case indexEntry of
-             Nothing -> return $ trace ("NO_INDEX for: " ++ show path) True
-             Just ix -> do
-                modTime <- getModificationTime path
-                let time = addUTCTime (fromRational . toRational $ picosecondsToDiffTime (fromIntegral (_mtimeNano ix) * 1000))
-                                      (posixSecondsToUTCTime (realToFrac $ _mtime ix))
-                return $ (\v-> trace (printf "MOD: %s (index:%s) (file:%s) => %s" path (show time) (show modTime) (show v)) v) $ time < modTime
-
-        inner maxTime flatname name (ObjTree (Tree left)) r = do
-          right <- liftIO $ fetchDirectoryInfo flatname
-          TreeElement (T.pack name) r <$> diffTree maxTime flatname name sortedLeft (sortFolder right)
-            where sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) left
-                  sortFolder = sortBy (\(_,a) (_,b) -> compare a b)
-
-        inner _ flatname name (ObjBlob (Blob c1)) r1 = do
-            file2 <- liftIO $ L.readFile flatname
-            pure $! fileComparer name c1 r1 file2
-        inner _ _ _ _ _ = throwE "Wrong git object kind"
-
-        maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
-                   -> ExceptT String IO CommitTreeDiff
-        maySubTree f name r = do
-            sub <- liftIO $ accessObject repository r
-            -- | Sometimes, there is nothing to see
-            case sub of
-               Nothing -> return $ f (T.pack name) r
-               Just el  -> batchSubTree repository f name r el
-
-        diffTree :: UTCTime -> String -> String -> [TreeEnt] -> [(SubKind, BC.ByteString)]
-                 -> ExceptT String IO [CommitTreeDiff]
-        diffTree _ _ _name   []     [] = return []
-        diffTree _ _ name    [] rights = pure
-            [AddElement (T.pack fullName) nullRef | (KindFile, fname) <- rights
-                                                  , let fullName = name </> BC.unpack fname 
-                                                        fullNameCheck = name <///> BC.unpack fname
-                                                  , not $ isPathIgnored ignoreSet fullNameCheck]
-
-        diffTree _ _flatname name lefts     [] = sequence
-            [maySubTree DelElement fullName r | (_, item, r) <- lefts
-                                              , let fullName = name </> BC.unpack (toBytes item) ]
-        diffTree maxTime flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
-            | rName `elem` [".", "..", ".git"]
-                || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree maxTime flatname name lefts rs
-            | toBytes lName == rName = do
-                -- We try to prune scanning if possible
-                wasModified <- liftIO $ wasEdited (name <///> BC.unpack (toBytes lName))
-                let thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
-                if not wasModified then (thisElem :) <$> diffTree maxTime flatname name ls rs else do
-                maySubL <- liftIO $ accessObject repository lRef
-                case maySubL of
-                  -- This case should happen in presence of submodules.
-                  Nothing -> (thisElem :) <$> diffTree maxTime flatname name ls rs
-                  Just subL ->
-                        (((:) <$> inner maxTime (flatname </> BC.unpack (toBytes lName)) (BC.unpack $ toBytes lName) subL lRef)
-                                `catchE` (\_ -> return id)) <*> diffTree maxTime flatname name ls rs
-
-            | toBytes lName < rName =
-                (:) <$> maySubTree DelElement (BC.unpack $ toBytes lName) lRef
-                    <*> diffTree maxTime flatname name ls rights
-
-            | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> 
-                              diffTree maxTime flatname name lefts rs
 
 -- | Compare two commits
 createCommitDiff :: Git
@@ -592,9 +404,6 @@ findFirstCommit repository path currentFileRef ref = inner undefined undefined [
                                 pathTimezone = timezoneOfAuthor author
                             } : commitPathRest))
                             (\_ -> return (prevCommit, prevRef, []))
-
-accessObject :: Git -> Ref -> IO (Maybe Object)
-accessObject repo ref = getObject repo ref True
 
 -- | Given a Tree object, try to find a path in it.
 -- This function should not call error
