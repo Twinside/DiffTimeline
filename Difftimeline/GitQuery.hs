@@ -32,6 +32,8 @@ module Difftimeline.GitQuery( CommitTreeDiff( .. )
                             , BlameInfo( .. )
 
 
+                            , diffWorkingDirectory 
+
                             -- * Manipulation functions
                             , flattenTreeDiff
                             , filterCommitTreeDiff
@@ -45,6 +47,7 @@ import Prelude
 import Data.List( sortBy, foldl', find  )
 import Data.Maybe( catMaybes )
 import Data.Byteable( toBytes )
+import Data.Monoid( (<>) )
 import System.FilePath( splitDirectories  )
 import Control.Monad( forM, when, void )
 import Control.Monad.Trans.Except( ExceptT, throwE, runExceptT, catchE )
@@ -61,9 +64,16 @@ import qualified Data.Text.Lazy as TL
 import Data.Text.Encoding.Error( lenientDecode )
 import Control.Monad.Trans.Writer.Strict( WriterT, runWriterT )
 
-import Data.Time.Clock( UTCTime )
+import Data.Time.Clock
+    ( UTCTime
+    , addUTCTime
+    , picosecondsToDiffTime 
+    )
 
-import Data.Time.Clock.POSIX( getPOSIXTime, posixSecondsToUTCTime )
+import Data.Time.Clock.POSIX
+    ( getPOSIXTime
+    , posixSecondsToUTCTime
+    )
 
 import qualified Filesystem.Path.Rules as FP
 import System.Directory( getDirectoryContents, doesFileExist, getModificationTime )
@@ -90,7 +100,11 @@ import Data.Hourglass
 import Foreign.C.Types( CTime( CTime ) )
 import Data.Git.Repository( branchList, tagList )
 import qualified Data.Git.Revision as Rev
-import Data.Git.Storage( gitRepoPath )
+import Data.Git.Storage
+    ( gitRepoPath
+    , findFileInIndex
+    , IndexEntry( _mtime, _mtimeNano )
+    )
 import Data.Git.Storage.Object( Object( .. ) )
 import Data.Git.Types
     ( TreeEnt
@@ -104,6 +118,9 @@ import Data.Vector.Algorithms.Intro( sort )
 
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
+
+import Debug.Trace
+import Text.Printf
 
 decodeUtf8 :: B.ByteString -> T.Text
 decodeUtf8 = decodeUtf8With lenientDecode
@@ -373,6 +390,16 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
                 lst -> ModifyElement (T.pack name) r1 $ unpackDiff lst
                    where unpackDiff = fmap (\(a, t) -> (a, fmap decodeUtf8Lazy t))
 
+        wasEdited path = do
+           indexEntry <- findFileInIndex repository $ BC.pack path
+           case indexEntry of
+             Nothing -> return $ trace ("NO_INDEX for: " ++ show path) True
+             Just ix -> do
+                modTime <- getModificationTime path
+                let time = addUTCTime (fromRational . toRational $ picosecondsToDiffTime (fromIntegral (_mtimeNano ix) * 1000))
+                                      (posixSecondsToUTCTime (realToFrac $ _mtime ix))
+                return $ (\v-> trace (printf "MOD: %s (index:%s) (file:%s) => %s" path (show time) (show modTime) (show v)) v) $ time < modTime
+
         inner maxTime flatname name (ObjTree (Tree left)) r = do
           right <- liftIO $ fetchDirectoryInfo flatname
           TreeElement (T.pack name) r <$> diffTree maxTime flatname name sortedLeft (sortFolder right)
@@ -410,15 +437,14 @@ diffWorkingDirectory repository ignoreSet contextSize ref = do
                 || isPathIgnored ignoreSet (name <///> BC.unpack rName) = diffTree maxTime flatname name lefts rs
             | toBytes lName == rName = do
                 -- We try to prune scanning if possible
-                modificationTime <- liftIO $ getModificationTime flatname
+                wasModified <- liftIO $ wasEdited (name <///> BC.unpack (toBytes lName))
+                let thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
+                if not wasModified then (thisElem :) <$> diffTree maxTime flatname name ls rs else do
                 maySubL <- liftIO $ accessObject repository lRef
-
-                case (modificationTime > maxTime, maySubL) of
+                case maySubL of
                   -- This case should happen in presence of submodules.
-                  (_, Nothing) -> (thisElem :) <$> diffTree maxTime flatname name ls rs
-                        where thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
-
-                  (_, Just subL) ->
+                  Nothing -> (thisElem :) <$> diffTree maxTime flatname name ls rs
+                  Just subL ->
                         (((:) <$> inner maxTime (flatname </> BC.unpack (toBytes lName)) (BC.unpack $ toBytes lName) subL lRef)
                                 `catchE` (\_ -> return id)) <*> diffTree maxTime flatname name ls rs
 
