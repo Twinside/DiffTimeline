@@ -7,7 +7,7 @@ import Prelude
 import Data.List( sortBy )
 import Data.Byteable( toBytes )
 import Control.Monad.Trans.Except( ExceptT, throwE, catchE )
-import Control.Monad.Trans.Reader( ReaderT, runReaderT, ask, asks )
+import Control.Monad.Trans.Reader( ReaderT, runReaderT, mapReaderT, ask, asks )
 import Control.Monad.Trans.Class( lift )
 import Control.Monad.IO.Class( liftIO )
 import qualified Data.ByteString as B
@@ -44,9 +44,7 @@ catchAppend :: ExceptIO a -> ExceptIO ([a] -> [a])
 catchAppend m = ((:) <$> m) `catchE` (\_ -> return id)
 
 catchAppendL :: forall a. DiffMonad a -> DiffMonad ([a] -> [a])
-catchAppendL v = do
-  b <- ask
-  lift $ catchAppend $ runReaderT v b
+catchAppendL = mapReaderT catchAppend 
 
 maySubTree :: (T.Text -> Ref -> CommitTreeDiff) -> String -> Ref
            -> DiffMonad CommitTreeDiff
