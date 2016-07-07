@@ -42,6 +42,9 @@ import Difftimeline.Contract
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
 
+import Text.Printf
+import Debug.Trace
+
 -- | Want same behaviour between windows & Unix
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) a b = a ++ "/" ++ b
@@ -53,14 +56,14 @@ a  <///> b = a </> b
 wasEdited :: Git -> UTCTime -> FilePath -> IO Bool
 wasEdited repository maxTime path = check `E.catch` onError where
   onError :: E.SomeException -> IO Bool
-  onError _ = return True
+  onError e = return True
 
   check = do
     indexEntry <- findFileInIndex repository (BC.pack path)
-    modTime <- getModificationTime path
     case indexEntry of
-      Nothing -> return $ maxTime < modTime
+      Nothing -> return True
       Just ix -> do
+        modTime <- getModificationTime path
         let diffToTime = fromRational . toRational
             nanoTime = diffToTime $ picosecondsToDiffTime (fromIntegral (_mtimeNano ix) * 1000)
             secondTime = posixSecondsToUTCTime . realToFrac $ _mtime ix

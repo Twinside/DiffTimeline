@@ -30,6 +30,7 @@ executable         difftimeline
        Difftimeline.Blame
        Difftimeline.Contract
        Difftimeline.Diff
+       Difftimeline.CommitDiff
        Difftimeline.DiffWorkingDirectory
        Difftimeline.Externs
        Difftimeline.Foundation
