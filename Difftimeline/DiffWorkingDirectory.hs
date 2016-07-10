@@ -1,4 +1,5 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE BangPatterns #-}
 module Difftimeline.DiffWorkingDirectory
     ( diffWorkingDirectory
     ) where
@@ -42,21 +43,22 @@ import Difftimeline.Contract
 import Difftimeline.Diff
 import Difftimeline.GitIgnore
 
-import Text.Printf
-import Debug.Trace
+{-import Text.Printf-}
+{-import Debug.Trace-}
 
 -- | Want same behaviour between windows & Unix
 (</>) :: FilePath -> FilePath -> FilePath
-(</>) a b = a ++ "/" ++ b
+"" </> b = b
+a  </> b = a ++ "/" ++ b
 
 (<///>) :: FilePath -> FilePath -> FilePath
-"" <///> a = a
+"" <///> b = b
 a  <///> b = a </> b
 
 wasEdited :: Git -> UTCTime -> FilePath -> IO Bool
 wasEdited repository maxTime path = check `E.catch` onError where
   onError :: E.SomeException -> IO Bool
-  onError e = return True
+  onError _e = return True
 
   check = do
     indexEntry <- findFileInIndex repository (BC.pack path)
@@ -106,16 +108,16 @@ toDeletions repository name lst = sequence
 
 diffTree :: Git -> Int -> IgnoredSet -> UTCTime -> FilePath -> Object -> Ref
          -> ExceptT String IO CommitTreeDiff
-diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" where
+diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" "" where
   go flatName name lefts rights = case (lefts, rights) of
     ([], []) -> return []
     ([], lst) -> return $ toAdditions ignoreSet name lst
     (lst, []) -> toDeletions repository name lst
     (ll, rr) -> compareDirectoryContent flatName name ll rr
 
-  diffObject flatname name obj r = case obj of
+  diffObject flatname name elemName obj r = case obj of
      ObjTree (Tree left) -> goTree flatname name left r
-     ObjBlob (Blob c1) -> goObj flatname name c1 r
+     ObjBlob (Blob c1) -> goObj flatname elemName c1 r
      _ -> throwE "Wrong git object kind"
 
   goTree flatname name lefts r = do
@@ -133,12 +135,11 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" wh
   compareDirectoryContent  _ _ ((_, _, _) : _) [] = error "Impossible"
   compareDirectoryContent flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
     | rName `elem` [".", "..", ".git"]
-        || isPathIgnored ignoreSet (name <///> BC.unpack rName) = go flatname name lefts rs
+        || isPathIgnored ignoreSet thisName = go flatname name lefts rs
     | toBytes lName == rName = do
         -- We try to prune scanning if possible
-        let thisName = name <///> BC.unpack (toBytes lName)
-            thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
-        wasModified <- liftIO $ wasEdited repository maxTime thisName
+        let thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
+        !wasModified <- liftIO $ wasEdited repository maxTime thisName
         if not wasModified then (thisElem :) <$> go flatname name ls rs else do
         maySubL <- liftIO $ accessObject repository lRef
         case maySubL of
@@ -146,8 +147,7 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" wh
           Nothing -> (thisElem :) <$> go flatname name ls rs
           Just subL ->
             let flat' = flatname </> BC.unpack (toBytes lName)
-                name' = BC.unpack $ toBytes lName
-                subInfo = diffObject flat' name' subL lRef
+                subInfo = diffObject flat' thisName elemName subL lRef
                 subInfoWrapped = ((:) <$> subInfo) `catchE` (\_ -> return id)
             in
             subInfoWrapped <*> go flatname name ls rs
@@ -157,6 +157,9 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" wh
             <*> go flatname name ls rights
 
     | otherwise = (AddElement (decodeUtf8 rName) lRef:) <$> go flatname name lefts rs
+    where
+      elemName = BC.unpack (toBytes rName)
+      thisName = name <///> elemName
 
 diffWorkingDirectory :: Git -> IgnoredSet -> Int -> Ref
                      -> ExceptT String IO (Commit, CommitTreeDiff)
