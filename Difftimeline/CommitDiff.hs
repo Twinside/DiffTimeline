@@ -23,8 +23,9 @@ import Data.Git
     , Ref
     )
 import Data.Git.Ref( toHexString )
-import Data.Git.Storage.Object( Object( .. ) )
-import Data.Git.Types ( TreeEnt )
+import Data.Git.Storage( getObjectType )
+import Data.Git.Storage.Object( Object( .. )  )
+import Data.Git.Types ( TreeEnt, ObjectType( .. ) )
 
 import Difftimeline.Diff
 import Difftimeline.BaseLayer
@@ -123,29 +124,48 @@ diffTree _name lefts     [] = sequence
     [maySubTree DelElement fullName r | (_, item, r) <- lefts
                                       , let fullName = BC.unpack $ toBytes item ]
 diffTree name lefts@((_, lName, lRef):ls) rights@((_, rName, rRef):rs)
-    | lName == rName && lRef == rRef = 
-       (NeutralElement (decodeUtf8 $ toBytes lName) lRef:) <$> diffTree name ls rs
-    | lName == rName = do
-        repo <- asks _diffRepository
-        maySubL <- liftIO $ accessObject repo lRef
-        maySubR <- liftIO $ accessObject repo rRef
-        case (maySubL, maySubR) of
-          -- This case should happen in presence of submodules.
-          (Nothing, Nothing) -> (thisElem :) <$> diffTree name ls rs
-             where thisElem = ModifyElement (decodeUtf8 $ toBytes lName) lRef []
-          (Just subL, Just subR) -> do
-              diffInfo <- catchAppendL $ diffObjects (BC.unpack $ toBytes lName) subL subR rRef
-              diffInfo <$> diffTree name ls rs
-          (Nothing, _) ->
-              lift . throwE $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
-
-          (_, Nothing) ->
-              lift . throwE $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
-
+    | lName == rName && lRef == rRef = do
+       -- If we are "deep", we want file diff, but in shallow,
+       -- we want the full tree :]
+       isDeep <- asks _diffDeep
+       let neutral = NeutralElement (decodeUtf8 $ toBytes lName) lRef
+           after = diffTree name ls rs
+       if isDeep then (neutral :) <$> after else do
+         -- check if we are tree, if so, recurse to generate full tree
+         -- information
+         repo <- asks _diffRepository
+         ty <- liftIO $ getObjectType repo rRef
+         case ty of
+           Just TypeTree -> onEquality
+           Just TypeBlob -> (neutral:) <$> after
+           Just TypeCommit -> (neutral:) <$> after
+           Just TypeTag -> (neutral:) <$> after
+           Just TypeDeltaOff -> (neutral:) <$> after
+           Just TypeDeltaRef -> (neutral:) <$> after
+           Nothing -> (neutral:) <$> after
+    | lName == rName = onEquality
     | lName < rName =
         (:) <$> maySubTree DelElement (BC.unpack $ toBytes lName) lRef
             <*> diffTree name ls rights
 
     | otherwise = (:) <$> maySubTree AddElement (BC.unpack $ toBytes rName) rRef
                       <*> diffTree name lefts rs
+  where
+    onEquality = do
+      repo <- asks _diffRepository
+      maySubL <- liftIO $ accessObject repo lRef
+      maySubR <- liftIO $ accessObject repo rRef
+      case (maySubL, maySubR) of
+        -- This case should happen in presence of submodules.
+        (Nothing, Nothing) -> (thisElem :) <$> diffTree name ls rs
+           where thisElem = ModifyElement (decodeUtf8 $ toBytes lName) lRef []
+        (Just subL, Just subR) -> do
+            diffInfo <- catchAppendL $ diffObjects (BC.unpack $ toBytes lName) subL subR rRef
+            diffInfo <$> diffTree name ls rs
+        (Nothing, _) ->
+            lift . throwE $ "Cannot fetch parent sub tree (" ++ toHexString lRef ++ ")"
+
+        (_, Nothing) ->
+            lift . throwE $ "Cannot fetch this sub tree (" ++ toHexString rRef ++ ")"
+
 
