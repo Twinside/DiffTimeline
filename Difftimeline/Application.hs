@@ -23,7 +23,7 @@ import Data.Git.Storage( Git, isRepo, openRepo, gitRepoPath )
 import Control.Monad.Trans.Except( runExceptT )
 -- Import all relevant handler modules here.
 import Difftimeline.RequestHandler
-import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile )
+import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile, emptyIgnoreSet )
 import Difftimeline.GitQuery( getHead, workingDirectoryChanges' )
 import System.Exit( exitFailure )
 
@@ -76,7 +76,7 @@ loadIgnoreSet path = do
     isExisting <- doesFileExist ignoreFile
     if isExisting
         then loadIgnoreFile ignoreFile
-        else pure mempty
+        else pure emptyIgnoreSet
 
 getDebugStart :: IO ()
 getDebugStart = do

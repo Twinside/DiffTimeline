@@ -31,6 +31,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as LE
 import Data.Text.Encoding( decodeUtf8With )
 import Data.Text.Encoding.Error( lenientDecode )
+import System.FilePath( (</>) )
 import System.Directory( getDirectoryContents, doesFileExist )
 
 import qualified Filesystem.Path.Rules as FP
@@ -123,7 +124,7 @@ decodeUtf8Lazy = TL.toStrict . LE.decodeUtf8With lenientDecode
 fetchDirectoryInfo :: FilePath -> IO [(SubKind, BC.ByteString)]
 fetchDirectoryInfo name = do
     files <- getDirectoryContents name
-    sequence [(, BC.pack sub) <$> (kindOfExist <$> doesFileExist sub) | sub <- files ]
+    sequence [(, BC.pack sub) <$> (kindOfExist <$> doesFileExist (name </> sub)) | sub <- files ]
         where kindOfExist True = KindFile
               kindOfExist False = KindDirectory
 

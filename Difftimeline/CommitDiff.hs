@@ -7,7 +7,7 @@ import Prelude
 import Data.List( sortBy )
 import Data.Byteable( toBytes )
 import Control.Monad.Trans.Except( ExceptT, throwE, catchE )
-import Control.Monad.Trans.Reader( ReaderT, runReaderT, mapReaderT, ask, asks )
+import Control.Monad.Trans.Reader( ReaderT, runReaderT, mapReaderT, asks )
 import Control.Monad.Trans.Class( lift )
 import Control.Monad.IO.Class( liftIO )
 import qualified Data.ByteString as B
@@ -74,7 +74,7 @@ createCommitDiff repository contextSize deep prevRef ref = runReaderT go base wh
   go = do
     ObjCommit thisCommit <- getCommit "Error can't file commit" ref
     thisTree <- getObj "Error can't access commit tree" $ commitTreeish thisCommit
-    (prevTreeRef, prevTree) <-
+    (_prevTreeRef, prevTree) <-
       if prevRef /= nullRef then do
         ObjCommit prevCommit <- getCommit  "Error can't file parent commit" prevRef
         let prevTreeRef = commitTreeish prevCommit
@@ -92,10 +92,10 @@ getObj reason ref = do
 
 diffFileContent :: Bool -> Int -> FilePath -> Ref -> L.ByteString -> L.ByteString
                 -> CommitTreeDiff
-diffFileContent deep _ name ref c1 c2
+diffFileContent deep _ name ref _c1 c2
   | not deep = ModifyElement (T.pack name) ref []
   | detectBinary c2 = ModifyBinaryElement (T.pack name) ref
-diffFileContent deep contextSize name ref c1 c2 =
+diffFileContent _deep contextSize name ref c1 c2 =
   ModifyElement (T.pack name) ref $! computeTextScript contextSize txtLeft txtRight
     where 
       strictify = B.concat . L.toChunks

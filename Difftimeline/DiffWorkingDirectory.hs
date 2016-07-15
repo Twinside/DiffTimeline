@@ -134,8 +134,7 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" ""
   compareDirectoryContent _ _ [] _ = error "Impossible"
   compareDirectoryContent  _ _ ((_, _, _) : _) [] = error "Impossible"
   compareDirectoryContent flatname name lefts@((_, lName, lRef):ls) rights@((_, rName):rs)
-    | rName `elem` [".", "..", ".git"]
-        || isPathIgnored ignoreSet thisName = go flatname name lefts rs
+    | rName `elem` [".", "..", ".git"] = go flatname name lefts rs
     | toBytes lName == rName = do
         -- We try to prune scanning if possible
         let thisElem = NeutralElement (decodeUtf8 $ toBytes lName) lRef
@@ -152,6 +151,7 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" ""
             in
             subInfoWrapped <*> go flatname name ls rs
 
+    | isPathIgnored ignoreSet thisName = go flatname name lefts rs
     | toBytes lName < rName =
         (:) <$> maySubTree repository DelElement (BC.unpack $ toBytes lName) lRef
             <*> go flatname name ls rights
