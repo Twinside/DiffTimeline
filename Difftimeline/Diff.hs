@@ -1,4 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 -- | Implement the LCS diff algorithm.
 -- As I already implemented it in another language, I'm
 -- being lazy and implement it in an imperative way.
@@ -21,22 +24,22 @@ module Difftimeline.Diff(
 
                           -- * Diff functions
                         , computeDiff
+                        , TextDiffable
                         , computeTextDiff
                         , computeTextScript
-                        , computeStringDiff
 
                         , shiftToFuture
                         , shiftToPast
                         ) where
 
 import Prelude
-import Data.Monoid( mappend )
-import Control.Applicative( Applicative, (<$>), (<*>), pure )
 import Control.Monad.ST( ST, runST )
 import Control.Monad.Trans.Writer.Strict( WriterT )
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MU
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 
 import Difftimeline.Blame
 
@@ -145,16 +148,45 @@ data DiffContext s a = DiffContext
     , arrayBias     :: Int
     }
 
--- | Compute diff between string, line by line
-computeStringDiff :: String -> String -> [DiffCommand]
-computeStringDiff a b = computeTextDiff (T.pack a) (T.pack b)
+class (Eq a, Eq b) => TextDiffable a b | a -> b where
+  lineVectorOf :: a -> V.Vector a
+  trimLineReturn :: a -> a
+  unpack :: a -> V.Vector b
+
+instance TextDiffable String Char where
+  lineVectorOf = V.fromList . lines
+  trimLineReturn [] = []
+  trimLineReturn str | last str == '\r' = init str
+                     | otherwise = str
+  unpack = V.fromList
+
+instance TextDiffable T.Text Char where
+  lineVectorOf = V.fromList . T.lines
+  trimLineReturn txt
+    | not (T.null txt) && T.last txt == '\r' = T.init txt
+    | otherwise = txt
+  unpack = V.fromList . T.unpack
+
+instance TextDiffable B.ByteString Char where
+  lineVectorOf = V.fromList . B.split '\n'
+  trimLineReturn txt
+    | not (B.null txt) && B.last txt == '\r' = B.init txt
+    | otherwise = txt
+  unpack s = V.fromListN (B.length s) $ B.unpack s
+
+instance TextDiffable BL.ByteString Char where
+  lineVectorOf = V.fromList . BL.split '\n'
+  trimLineReturn txt
+    | not (BL.null txt) && BL.last txt == '\r' = BL.init txt
+    | otherwise = txt
+  unpack s = V.fromListN (fromIntegral $ BL.length s) $ BL.unpack s
+
 
 -- | Compute the script to edit difference between two text, line
 -- by line.
-computeTextDiff :: T.Text -> T.Text -> [DiffCommand]
-computeTextDiff orig dest =
-    computeDiff (V.fromList $ T.lines orig)
-                (V.fromList $ T.lines dest)
+computeTextDiff :: TextDiffable t b => t -> t -> [DiffCommand]
+computeTextDiff orig dest = computeDiff (lineVectorOf orig) (lineVectorOf dest)
+
 
 refineMonolineDiff :: (Eq b) => (a -> V.Vector b) -> V.Vector a -> V.Vector a -> [DiffCommand]
                    -> [DiffCommand]
@@ -256,35 +288,31 @@ addContextInformation contextSize origSize _destSize = inner False
             toFullCommand x : DiffCommand DiffNeutral (oi + s) (di + s) contextSize
                             : inner False xs
 
-trimLineReturn :: T.Text -> T.Text
-trimLineReturn txt
-    | not (T.null txt) && T.last txt == '\r' = T.init txt
-    | otherwise = txt
 
 -- | Compute the diff and extract the modification lines from the original text
-computeTextScript :: Int -> T.Text -> T.Text -> [(DiffCommand, V.Vector T.Text)]
-computeTextScript contextSize orig dest = map extract
-                                        . textRefiner origArray destArray
-                                        $ addNeutral diffs
-    where origArray = V.fromList $ trimLineReturn <$> T.lines orig
-          destArray = V.fromList $ trimLineReturn <$> T.lines dest
-          diffs = computeDiffRaw origArray destArray
+computeTextScript :: TextDiffable t b => Int -> t -> t -> [(DiffCommand, V.Vector t)]
+computeTextScript contextSize orig dest =
+    map extract . textRefiner origArray destArray $ addNeutral diffs where
+  
+  origArray = trimLineReturn <$> lineVectorOf orig
+  destArray = trimLineReturn <$> lineVectorOf dest
+  diffs = computeDiffRaw origArray destArray
 
-          addNeutral = addContextInformation contextSize (V.length origArray)
-                                                         (V.length destArray)
+  addNeutral = addContextInformation contextSize (V.length origArray)
+                                                 (V.length destArray)
 
-          slicer = V.slice
+  slicer = V.slice
 
-          extract c@(DiffCommand DiffAddition _oi  di s)   = (c, slicer di s destArray)
-          extract c@(DiffRefined DiffAddition _oi  di s _) = (c, slicer di s destArray)
-          extract c@(DiffCommand DiffDeletion  oi _di s)   = (c, slicer oi s origArray)
-          extract c@(DiffRefined DiffDeletion  oi _di s _) = (c, slicer oi s origArray)
-          extract c@(DiffCommand DiffNeutral   oi _di s)   = (c, slicer oi s origArray)
-          extract c@(DiffRefined DiffNeutral   oi _di s _) = (c, slicer oi s origArray)
+  extract c@(DiffCommand DiffAddition _oi  di s)   = (c, slicer di s destArray)
+  extract c@(DiffRefined DiffAddition _oi  di s _) = (c, slicer di s destArray)
+  extract c@(DiffCommand DiffDeletion  oi _di s)   = (c, slicer oi s origArray)
+  extract c@(DiffRefined DiffDeletion  oi _di s _) = (c, slicer oi s origArray)
+  extract c@(DiffCommand DiffNeutral   oi _di s)   = (c, slicer oi s origArray)
+  extract c@(DiffRefined DiffNeutral   oi _di s _) = (c, slicer oi s origArray)
 
-textRefiner :: V.Vector T.Text -> V.Vector T.Text -> [DiffCommand]
+textRefiner :: TextDiffable t b => V.Vector t -> V.Vector t -> [DiffCommand]
             -> [DiffCommand]
-textRefiner = refineMonolineDiff (V.fromList . T.unpack)
+textRefiner = refineMonolineDiff unpack 
 
 -- | Perform a blame step, take two vectors, a list of searched
 -- range, a tag, and calculate the matched ranges and what's left

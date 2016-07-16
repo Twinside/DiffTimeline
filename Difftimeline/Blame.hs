@@ -15,8 +15,6 @@ module Difftimeline.Blame ( -- * Manipulated types
 
 
 import Prelude
-import Data.Monoid( Monoid )
-import Control.Applicative( Applicative, (<$>), pure )
 import Control.Monad.Trans.Writer.Strict( tell, WriterT )
 
 --------------------------------------------------

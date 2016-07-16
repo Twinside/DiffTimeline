@@ -108,7 +108,7 @@
                     </div>
                     {{#is_key_real}}
                         <span class="more_info"
-                            onclick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_TREE, key:'{{key}}'});">
+                            onclick="Project.state.send_state_message({action:Project.GuiMessageCode.FETCH_TREE, key:'{{key}}'});">
                             <span class="btn_indicator">&#x25bc;</span> Commit files
                         </span>
                     {{/is_key_real}}
@@ -227,7 +227,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:Project.GuiMessageCode.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>
@@ -259,7 +259,7 @@
                     </div>
 
                     <span class="more_info"
-                        onClick="Project.state.send_state_message({action:Project.GuiMessage.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
+                        onClick="Project.state.send_state_message({action:Project.GuiMessageCode.FETCH_DETAIL, key:'{{key}}'});">&#x25bc;
                         </span>
                     <div class="commit_detail"></div>
                 </div>
@@ -332,9 +332,9 @@
                 </div>
             </div>
         </script>
-        <script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>
-        <script language="javascript" type="text/javascript" src="static-content/difftimeline.js"></script>
-        <!--<script language="javascript" type="text/javascript" src="static-content/composed.js"></script>-->
+        <!--<script language="javascript" type="text/javascript" src="static-content/tinysyntaxhighlighter.js"></script>-->
+        <!--<script language="javascript" type="text/javascript" src="static-content/difftimeline.js"></script>-->
+        <script language="javascript" type="text/javascript" src="static-content/composed.js"></script>
     </head>
     <body onUnload="leave_server()">
         <div class="horizontal_toolbar">

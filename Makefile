@@ -9,18 +9,13 @@ else
 	CABAL_FLAG:=
 endif
 
-all: build
+all: static-content/third_party.js composed.js static-content/third_party.js
+	stack build
 
-build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
+build: static-content/third_party.js composed.js static-content/third_party.js
 	cabal build
 
-pre: composed.js static-content/third_party.js Difftimeline/Foundation.hs
-
-# Modify the file date to let the build system detect
-# modification and reparse the routes using template
-# haskell.
-Difftimeline/Foundation.hs: config/routes
-	touch Difftimeline/Foundation.hs
+pre: composed.js static-content/third_party.js
 
 blame_tests:
 	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf -cpp -Wall test/blame_test.hs
@@ -33,9 +28,6 @@ ghci:
 
 conf:
 	cabal-dev install
-
-all:
-	yesod --dev devel
 
 hlint:
 	hlint .
@@ -57,38 +49,35 @@ place:
 unixplace:
 	cp dist/build/difftimeline/difftimeline ~/.cabal/bin/
 
-composed.js: static-content/difftimeline.js static-content/tinysyntaxhighlighter.js
-	java -jar compiler.jar \
-		 --warning_level VERBOSE \
-		 --js_output_file composed.js \
-		 --jscomp_warning=checkTypes \
-		 --externs test/externs/jquery-1.7.js \
-		 --externs test/externs/jquery.ext.js \
-		 --externs test/externs/icanhaz.extern.js \
-		 --externs test/externs/difftimeline.extern.js \
-		 --summary_detail_level 3 \
-		 --js static-content/difftimeline.js \
-		 --js static-content/tinysyntaxhighlighter.js
 
 #--compilation_level ADVANCED_OPTIMIZATIONS \
 
 JS_FILE_NAMES:= \
-	global_constants.js \
-	linealign.js \
-	breadcrumb.js \
-	resultset.js \
-	project.js \
-	diffmanipulator.js \
-	commit.js \
-	commitrenderer.js \
-	fileblob.js \
-	filerenderer.js \
-	commitcomparer.js \
-	filecomparer.js \
-	blameshower.js \
-	branch_list.js \
-	keybindings.js \
-	init.js
+	blameshower.ts \
+	branch_list.ts \
+	breadcrumb.ts \
+	commit.ts \
+	commitcomparer.ts \
+	commitrenderer.ts \
+	constants.ts \
+	diffmanipulator.ts \
+	difftimeline.extern.ts \
+	fileblob.ts \
+	filecomparer.ts \
+	filerenderer.ts \
+	global_constant.ts \
+	init.ts \
+	jquery.d.ts \
+	keybindings.ts \
+	linealign.ts \
+	project.ts \
+	resultset.ts \
+
+JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
+JS_THIRD_PARTY_FILES:=$(addprefix static-content/,$(JS_THIRD_PARTY_NAMES))
+
+composed.js: $(JS_FILES) static-content/tinysyntaxhighlighter.ts
+	cd static-content && make
 
 JS_THIRD_PARTY_NAMES:= \
 	jquery-1.9.1.min.js \
@@ -97,11 +86,6 @@ JS_THIRD_PARTY_NAMES:= \
 	jquery-scrollTo.js \
 	ICanHaz.min.js
 
-JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
-JS_THIRD_PARTY_FILES:=$(addprefix static-content/,$(JS_THIRD_PARTY_NAMES))
-
-static-content/difftimeline.js: $(JS_FILES)
-	cat $(JS_FILES) > $@
 
 static-content/third_party.js: $(JS_THIRD_PARTY_FILES)
 	cat $(JS_THIRD_PARTY_FILES) > $@

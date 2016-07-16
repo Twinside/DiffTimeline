@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Difftimeline.StaticFiles where
 
 import Prelude
@@ -12,8 +13,11 @@ thirdParty = ("third_party.js", decodeUtf8 $(embedFile "static-content/third_par
 composedEmbedded :: (FilePath, T.Text)
 composedEmbedded = ("composed.js", decodeUtf8 $(embedFile "composed.js"))
 
-basePageEmbedded :: (FilePath, T.Text)
-basePageEmbedded = ("base_page.html", decodeUtf8 $(embedFile "static-content/base_page.html"))
+composedMapEmbedded :: (FilePath, T.Text)
+composedMapEmbedded = ("composed.js.map", decodeUtf8 $(embedFile "composed.js.map"))
+
+basePageEmbedded :: (FilePath, B.ByteString)
+basePageEmbedded = ("base_page.html", $(embedFile "static-content/base_page.html"))
 
 diffTimelineCssEmbedded :: (FilePath, B.ByteString)
 diffTimelineCssEmbedded = ("difftimeline.css", $(embedFile "static-content/difftimeline.css"))
@@ -26,7 +30,4 @@ faviconEmbed = ("favicon.ico", $(embedFile "static-content/favicon.ico"))
 
 syntaxhighlihgtCss :: (FilePath, B.ByteString)
 syntaxhighlihgtCss = ("syntax-highlight.css", $(embedFile "static-content/syntax-highlight.css"))
-
-tinySyntaxHighlightJs :: (FilePath, B.ByteString)
-tinySyntaxHighlightJs = ("tinysyntaxhighlighter.js", $(embedFile "static-content/tinysyntaxhighlighter.js"))
 

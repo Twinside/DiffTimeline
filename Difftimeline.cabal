@@ -18,48 +18,55 @@ Flag Dynlink
 
 executable         difftimeline
     if flag(Dynlink)
-        ghc-options: -Wall -threaded -O2 -optl-pthread
+        ghc-options: -Wall -threaded -O2 -optl-pthread -rtsopts
     else
-        ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread
+        ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread -rtsopts
+    ghc-prof-options: -optl-static -static -Wall -threaded -prof -auto-all -rtsopts
 
-    main-is:       main.hs
-
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                OverloadedStrings
-                MultiParamTypeClasses
-                TypeFamilies
+    main-is: main.hs
+    other-modules:
+       Difftimeline.Application
+       Difftimeline.BaseLayer
+       Difftimeline.Blame
+       Difftimeline.Contract
+       Difftimeline.Diff
+       Difftimeline.CommitDiff
+       Difftimeline.DiffWorkingDirectory
+       Difftimeline.Externs
+       Difftimeline.Types
+       Difftimeline.GitIgnore
+       Difftimeline.GitQuery
+       Difftimeline.RequestHandler
+       Difftimeline.StaticFiles
 
     build-depends: base                          >= 4          && < 5
                  , aeson                         >= 0.6
+                 , containers
                  , directory                     >= 1.2
                  , bytestring                    >= 0.9
                  , file-embed                    >= 0.0.4
                  , filepath                      >= 1.3
-                 , hit-simple                    >= 0.3
-                 , monad-control                 >= 0.3
+                 , hit                           >= 0.6.4
                  , mtl                           >= 2.0
                  , template-haskell
                  , text                          >= 0.11
                  , transformers                  >= 0.3
                  , vector                        >= 0.9.1
                  , vector-algorithms             >= 0.5.4.1
-
-                 , yesod                         >= 1.2
-                 , yesod-core                    >= 1.2.1
-                 , fast-logger                   
-                 , monad-logger                  >= 0.3.4
+                 , byteable
+                 , system-filepath
+                 , hourglass
 
                  , wai                           >= 1.4
                  , wai-extra                     >= 1.3
                  , wai-handler-launch            >= 1.3.1
                  , network                       >= 2.3
-                 , Glob                          >= 0.7.2
+                 , regex-tdfa                    >= 1.2
+                 , regex-base
+                 , http-media
+                 , servant
+                 , servant-server
+                 , servant-lucid
 
                  , time                          >= 1.2
-
-                 , ClosureExternalProducer       >= 0.1        && < 0.2
 

@@ -1,33 +1,50 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Difftimeline.Application( getApplication, Command( .. ) ) where
+module Difftimeline.Application
+    ( getApplication
+    , getDebugStart
+    , Command( .. )
+    ) where
 
-import Difftimeline.Import
 import System.Directory( getCurrentDirectory, doesDirectoryExist, doesFileExist )
-import Network.Wai( Application )
-import Yesod.Default.Config( AppConfig, DefaultEnv )
-import Yesod.Default.Handlers (getFaviconR)
+import qualified Filesystem.Path as FPR
+import qualified Filesystem.Path.Rules as FPR
+import qualified Data.ByteString.Char8 as BC
 
 import System.FilePath( (</>), makeRelative, takeDirectory,
                         normalise, splitPath, isRelative )
 import qualified System.FilePath as FP
-import Data.Git( Git, openRepo, findRepository, gitRepoPath )
--- Import all relevant handler modules here.
+import Data.Git.Storage( Git, isRepo, openRepo, gitRepoPath )
+import Control.Monad.Trans.Except( runExceptT )
+import Difftimeline.Types
 import Difftimeline.RequestHandler
-import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile )
+import Difftimeline.GitIgnore( IgnoredSet, loadIgnoreFile, emptyIgnoreSet )
+import Difftimeline.GitQuery( getHead, workingDirectoryChanges' )
 import System.Exit( exitFailure )
 
--- This line actually creates our YesodSite instance. It is the second half
--- of the call to mkYesodData which occurs in Foundation.hs. Please see
--- the comments there for more details.
-mkYesodDispatch "DiffTimeline" resourcesDiffTimeline
+
+unpackPath :: Git -> FilePath
+unpackPath = BC.unpack . FPR.encode FPR.posix . gitRepoPath 
+
+packPath :: String -> FPR.FilePath
+packPath = FPR.decode FPR.posix . BC.pack
+
+-- | Find the nearest repository in the file tree starting
+-- at the given directory
+findRepository :: FilePath -> IO (Maybe FilePath)
+findRepository = inner ""
+  where inner prevDir dir | prevDir == dir || dir == "." = return Nothing
+        inner _ dir = do
+            isGitRepo <- isRepo . packPath $ dir </> ".git"
+            if isGitRepo then return $ Just dir
+                         else inner dir $ takeDirectory dir
 
 initRepository :: FilePath -> IO (FilePath, Git)
 initRepository startDir = do
     maybeRepo <- findRepository startDir
     case maybeRepo of
-       Just dir -> (dir,) <$> (openRepo $ dir </> ".git")
+       Just dir -> (dir,) <$> (openRepo . packPath $ dir </> ".git")
        Nothing -> do
            putStrLn "Error : no git repository found"
            exitFailure
@@ -51,15 +68,23 @@ loadIgnoreSet path = do
     isExisting <- doesFileExist ignoreFile
     if isExisting
         then loadIgnoreFile ignoreFile
-        else pure mempty
+        else pure emptyIgnoreSet
+
+getDebugStart :: IO ()
+getDebugStart = do
+  initDir <- getCurrentDirectory 
+  (repoDir, initRepo) <- initRepository initDir 
+  ignoreSet <- loadIgnoreSet repoDir
+  Just headRef <- getHead initRepo
+  rez <- runExceptT $ workingDirectoryChanges' initRepo ignoreSet 2 headRef
+  print rez
 
 -- This function allocates resources (such as a database connection pool),
 -- performs initialization and creates a WAI application. This is also the
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
-getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv ()
-               -> IO Application
-getApplication devModePath (DiffBlame fname) conf = do
+getApplication :: Maybe FilePath -> Command -> IO DiffTimeline
+getApplication devModePath (DiffBlame fname) = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
     let absName
@@ -73,14 +98,14 @@ getApplication devModePath (DiffBlame fname) conf = do
     initPath <- if isDir 
         then pure DiffWorking
         else do
-          let absPath = takeDirectory $ gitRepoPath initRepo
+          let absPath = takeDirectory $ unpackPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffBlame relPath
 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
+    return $ DiffTimeline devModePath initRepo initPath ignoreSet
 
-getApplication devModePath (DiffFile fname) conf = do
+getApplication devModePath (DiffFile fname) = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
     let absName
@@ -94,16 +119,16 @@ getApplication devModePath (DiffFile fname) conf = do
     initPath <- if isDir 
         then pure DiffWorking
         else do
-          let absPath = takeDirectory $ gitRepoPath initRepo
+          let absPath = takeDirectory $ unpackPath initRepo
               relPath = simplifyPath $ makeRelative absPath name
           pure $ DiffFile relPath
 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
+    return $ DiffTimeline devModePath initRepo initPath ignoreSet
 
-getApplication devModePath cmd conf = do
+getApplication devModePath cmd = do
     initDir <- getCurrentDirectory 
     (repoDir, initRepo) <- initRepository initDir 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd ignoreSet
+    return $ DiffTimeline devModePath initRepo cmd ignoreSet
 
