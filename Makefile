@@ -82,8 +82,8 @@ JS_FILE_NAMES:= \
 JS_FILES:=$(addprefix static-content/frontend/,$(JS_FILE_NAMES))
 JS_THIRD_PARTY_FILES:=$(addprefix static-content/,$(JS_THIRD_PARTY_NAMES))
 
-composed.js: $(JS_FILES)
-	cd static-content; tsc
+composed.js: $(JS_FILES) static-content/tinysyntaxhighlighter.ts
+	cd static-content && make
 
 JS_THIRD_PARTY_NAMES:= \
 	jquery-1.9.1.min.js \

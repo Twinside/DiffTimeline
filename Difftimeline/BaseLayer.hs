@@ -59,7 +59,7 @@ import Data.Git.Types
 
 import Difftimeline.Contract
 
-data SubKind = KindFile | KindDirectory
+data SubKind = KindFile | KindDirectory deriving Show
 
 accessObject :: Git -> Ref -> IO (Maybe Object)
 accessObject repo ref = getObject repo ref True

@@ -160,9 +160,10 @@ class BlameShower implements ResultSet {
     public static create_from_arg(key : Ref,
                                   file : string,
                                   f: (bs: BlameShower) => void) {
-        if (file[0] != '/') file = '/' + file;
+        if (file[0] == '/') 
+            file = file.substring(1);
 
-        $.ajax({ url: '/blame/' + encodeURIComponent(key) + file,
+        $.ajax({ url: '/blame/' + encodeURIComponent(key) + '/' + encodeURIComponent(file),
             dataType: 'json',
             data: {},
             error: function() {

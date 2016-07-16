@@ -15,8 +15,8 @@ composedEmbedded = ("composed.js", decodeUtf8 $(embedFile "composed.js"))
 composedMapEmbedded :: (FilePath, T.Text)
 composedMapEmbedded = ("composed.js.map", decodeUtf8 $(embedFile "composed.js.map"))
 
-basePageEmbedded :: (FilePath, T.Text)
-basePageEmbedded = ("base_page.html", decodeUtf8 $(embedFile "static-content/base_page.html"))
+basePageEmbedded :: (FilePath, B.ByteString)
+basePageEmbedded = ("base_page.html", $(embedFile "static-content/base_page.html"))
 
 diffTimelineCssEmbedded :: (FilePath, B.ByteString)
 diffTimelineCssEmbedded = ("difftimeline.css", $(embedFile "static-content/difftimeline.css"))

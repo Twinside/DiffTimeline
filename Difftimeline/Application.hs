@@ -92,7 +92,7 @@ getDebugStart = do
 -- place to put your migrate statements to have automatic database
 -- migrations handled by Yesod.
 getApplication :: Maybe FilePath -> Command -> AppConfig DefaultEnv ()
-               -> IO Application
+               -> IO DiffTimeline
 getApplication devModePath (DiffBlame fname) conf = do
     cwd <- getCurrentDirectory 
     isDir <- doesDirectoryExist fname
@@ -112,7 +112,7 @@ getApplication devModePath (DiffBlame fname) conf = do
           pure $ DiffBlame relPath
 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
+    return $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath (DiffFile fname) conf = do
     cwd <- getCurrentDirectory 
@@ -133,11 +133,11 @@ getApplication devModePath (DiffFile fname) conf = do
           pure $ DiffFile relPath
 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo initPath ignoreSet
+    return $ DiffTimeline conf devModePath initRepo initPath ignoreSet
 
 getApplication devModePath cmd conf = do
     initDir <- getCurrentDirectory 
     (repoDir, initRepo) <- initRepository initDir 
     ignoreSet <- loadIgnoreSet repoDir
-    toWaiAppPlain $ DiffTimeline conf devModePath initRepo cmd ignoreSet
+    return $ DiffTimeline conf devModePath initRepo cmd ignoreSet
 

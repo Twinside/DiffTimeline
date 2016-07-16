@@ -4,6 +4,7 @@ import Control.Monad( when )
 import Data.List( foldl' )
 import Difftimeline.Application( getApplication, Command( .. )  )
 
+import Difftimeline.Import
 import Network.Wai.Handler.Launch( runUrlPort )
 import Network.Socket( socket
                      , Family( AF_INET )
@@ -32,6 +33,9 @@ import Yesod.Default.Config( AppConfig(..)
                            , DefaultEnv( Development )
                            )
 import Difftimeline.Application
+import Difftimeline.RequestHandler
+import Data.Proxy( Proxy( .. ) )
+import Servant.Server( Server, runReaderTNat, enter, serve )
 
 version :: String
 version = "1.0"
@@ -142,9 +146,10 @@ main = do
       }
 
     app <- getApplication (confDevMode conf) (confCommand conf) config
-    let finalApp 
-            | confVerbose conf = logStdoutDev app
-            | otherwise = app
+    finalApp <-
+        if confVerbose conf then logStdoutDev <$> toWaiAppPlain app
+        else toWaiAppPlain app
+    let server = enter (runReaderTNat app) serveDifftimeline :: Server DifftimelineAPI
 
-    runUrlPort usePort "" finalApp
+    runUrlPort usePort "" $ logStdoutDev $ serve (Proxy :: Proxy DifftimelineAPI) server
 -- -}

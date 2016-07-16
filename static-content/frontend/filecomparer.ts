@@ -64,7 +64,7 @@ class FileComparer implements ResultSet
         var url = ('/compare_files/' + encodeURIComponent(this.key1)
                                 + '/' + encodeURIComponent(this.file1.slice(1))
                                 + '/' + encodeURIComponent(this.key2)
-                                + this.file2);
+                                + '/' + encodeURIComponent(this.file2.substring(1)));
 
         $.ajax({  
             url: url,

@@ -45,8 +45,10 @@ class FileRenderer implements ResultSet
                               f: (data: ParentFile | ErrorReturn) => void) {
         var request = '/ask_parent/' + commit;
 
-        if (file[0] == '/') request += file;
-        else request += '/' + file;
+        if (file[0] == '/')
+            file = file.substring(1);
+        
+        request += '/' + encodeURIComponent(file);
 
         $.ajax({ url: request, dataType: 'json',
                error: function() {

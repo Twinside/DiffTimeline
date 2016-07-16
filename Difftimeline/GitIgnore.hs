@@ -47,7 +47,7 @@ cleanLine s
   | otherwise = s
 
 toFullRegexp :: [String] -> Regex
-toFullRegexp lst = makeRegex . traceShowId $ "^(" <> combined <> ")$" where
+toFullRegexp lst = makeRegex $ "^(" <> combined <> ")$" where
   combined = fold $ intersperse "|" lst
 
 loadIgnoreFile :: FilePath -> IO IgnoredSet

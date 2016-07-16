@@ -79,6 +79,10 @@ executable         difftimeline
                  , network                       >= 2.3
                  , regex-tdfa                    >= 1.2
                  , regex-base
+                 , http-media
+                 , servant
+                 , servant-server
+                 , servant-lucid
 
                  , time                          >= 1.2
 
