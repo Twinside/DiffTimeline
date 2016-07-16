@@ -70,5 +70,3 @@ executable         difftimeline
 
                  , time                          >= 1.2
 
-                 , ClosureExternalProducer       >= 0.1        && < 0.2
-
