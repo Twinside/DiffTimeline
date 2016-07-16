@@ -1051,7 +1051,8 @@ namespace Languages {
     export const csDef : LangDef = {
         begin:null_region, end:null_region, kind: '',
 
-        regions: cDef.regions,
+        regions:[Parsers.multiline_comment('/*', '*/')],
+
         parsers:[ Parsers.c_like_identifier
                 , Parsers.c_like_preproc
                 , Parsers.double_quote_string
@@ -1061,27 +1062,28 @@ namespace Languages {
             
         keywords:expand_keyword_groups(
             [ { kind:'syntax_conditional', words: ['if', 'else', 'switch'] }
-            , { kind:'syntax_statement', words: ['goto', 'break', 'return', 'continue', 'asm'] }
-            , { kind:'syntax_label', words:['case', 'default'] }
             , { kind:'syntax_repeat', words:['while', 'for', 'foreach', 'do'] }
-            , { kind:'syntax_structure', words: ['struct', 'union', 'enum', 'class'] }
+            , { kind:'syntax_structure', words:["class", "namespace", "interface", "struct", "delegate", "enum"] }
+            , { kind:'syntax_statement', words:["base", "public", "protected", "private"] }
+            , { kind:'syntax_exception', words:["throw", "try", "catch", "finally"] }
+            , { kind:'syntax_operator', words:["in", "as", "is"]}
+            , { kind:'syntax_statement', words:['new', 'this', 'using', 'typeof', 'await', 'yield'] }
+            , { kind:'syntax_bool'     , words:["true", "false"] }
+            , { kind:'syntax_statement', words: ['goto', 'break', 'return', 'continue'] }
+            , { kind:'syntax_label', words:['case', 'default'] }
+
+            , { kind:'syntax_type', words:["virtual", "bool"] }
             , { kind:'syntax_storage_class'
-              , words: ['static', 'auto', 'const'] }
+              , words: [ 'static', 'extern', 'const', 'abstract', 'sealed'
+                       , 'override', 'readonly', 'unchecked', 'unsafe', 'volatile'
+                       , 'params', 'checked' ] }
+
             , { kind:'syntax_type'
-              , words:[ 'int', 'long', 'short', 'char', 'void', 'signed', 'unsigned'
-                      , 'float', 'double', 'size_t', 'ssize_t', 'off_t', 'wchar_t'
-                      , 'ptrdiff_t', 'sig_atomic_t', 'fp2408.339os_t', 'clock_t', 'time_t'
-                      , 'va_list', 'jmp_buf', 'FILE', 'DIR', 'div_t', 'ldiv_t'
-                      , 'mbstate_t', 'wctrans_t', 'wint_t', 'wctype_t', 'bool'
-                      , 'complex', 'int8_t', 'int16_t', 'int32_t', 'int64_t'
-                      , 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'int_least8_t'
-                      , 'int_least16_t', 'int_least32_t', 'int_least64_t'
-                      , 'uint_least8_t', 'uint_least16_t', 'uint_least32_t'
-                      , 'uint_least64_t', 'int_fast8_t', 'int_fast16_t'
-                      , 'int_fast32_t', 'int_fast64_t', 'uint_fast8_t'
-                      , 'uint_fast16_t', 'uint_fast32_t', 'uint_fast64_t', 'intptr_t'
-                      , 'uintptr_t', 'intmax_t', 'uintmax_t', '__label__'
-                      , '__complex__', '__volatile__']
+              , words:[ 'int', 'long', 'short', 'char', 'void', 'byte', 'decimal'
+                      , 'double', 'fixed', 'float', 'sbyte', 'string', 'uint', 'ulong'
+                      , 'ushort', 'null', 'operator', 'object'
+                      , 'var'
+                      ]
               }
             ])
     };
