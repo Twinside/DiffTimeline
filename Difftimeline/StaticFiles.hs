@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Difftimeline.StaticFiles where
 
 import Prelude

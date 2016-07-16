@@ -16,7 +16,7 @@ import System.FilePath( isPathSeparator )
 import Text.Regex.TDFA( Regex, makeRegex, matchTest )
 import qualified Data.ByteString.Char8 as B
 
-import Debug.Trace
+{-import Debug.Trace-}
 
 data IgnoredSet = IgnoredSet
   { _ignored     :: !Regex

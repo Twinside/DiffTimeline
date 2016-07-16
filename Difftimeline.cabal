@@ -23,7 +23,7 @@ executable         difftimeline
         ghc-options: -optl-static -static -Wall -threaded -O2 -optl-pthread -rtsopts
     ghc-prof-options: -optl-static -static -Wall -threaded -prof -auto-all -rtsopts
 
-    main-is:       main.hs
+    main-is: main.hs
     other-modules:
        Difftimeline.Application
        Difftimeline.BaseLayer
@@ -33,21 +33,11 @@ executable         difftimeline
        Difftimeline.CommitDiff
        Difftimeline.DiffWorkingDirectory
        Difftimeline.Externs
-       Difftimeline.Foundation
+       Difftimeline.Types
        Difftimeline.GitIgnore
        Difftimeline.GitQuery
-       Difftimeline.Import
        Difftimeline.RequestHandler
        Difftimeline.StaticFiles
-
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                OverloadedStrings
-                MultiParamTypeClasses
-                TypeFamilies
 
     build-depends: base                          >= 4          && < 5
                  , aeson                         >= 0.6
@@ -57,7 +47,6 @@ executable         difftimeline
                  , file-embed                    >= 0.0.4
                  , filepath                      >= 1.3
                  , hit                           >= 0.6.4
-                 , monad-control                 >= 0.3
                  , mtl                           >= 2.0
                  , template-haskell
                  , text                          >= 0.11
@@ -67,11 +56,6 @@ executable         difftimeline
                  , byteable
                  , system-filepath
                  , hourglass
-
-                 , yesod                         >= 1.2
-                 , yesod-core                    >= 1.2.1
-                 , fast-logger                   
-                 , monad-logger                  >= 0.3.4
 
                  , wai                           >= 1.4
                  , wai-extra                     >= 1.3

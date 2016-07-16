@@ -1,5 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.DiffWorkingDirectory
     ( diffWorkingDirectory
     ) where

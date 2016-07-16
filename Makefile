@@ -9,19 +9,13 @@ else
 	CABAL_FLAG:=
 endif
 
-all: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
+all: static-content/third_party.js composed.js static-content/third_party.js
 	stack build
 
-build: static-content/third_party.js composed.js static-content/third_party.js Difftimeline/Foundation.hs
+build: static-content/third_party.js composed.js static-content/third_party.js
 	cabal build
 
-pre: composed.js static-content/third_party.js Difftimeline/Foundation.hs
-
-# Modify the file date to let the build system detect
-# modification and reparse the routes using template
-# haskell.
-Difftimeline/Foundation.hs: config/routes
-	touch Difftimeline/Foundation.hs
+pre: composed.js static-content/third_party.js
 
 blame_tests:
 	runhaskell -package-conf=cabal-dev/packages-7.4.1.conf -cpp -Wall test/blame_test.hs
