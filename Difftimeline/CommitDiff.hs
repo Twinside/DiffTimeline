@@ -1,9 +1,11 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Difftimeline.CommitDiff ( createCommitDiff ) where
 
 import Prelude
 
+import Data.Int( Int64 )
 import Data.List( sortBy )
 import Data.Byteable( toBytes )
 import Control.Monad.Trans.Except( ExceptT, throwE, catchE )
@@ -14,6 +16,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as L
 import qualified Data.Text as T
+import qualified Data.Vector as V
 
 import Data.Git 
     ( Commit( .. )
@@ -93,15 +96,20 @@ getObj reason ref = do
 
 diffFileContent :: Bool -> Int -> FilePath -> Ref -> L.ByteString -> L.ByteString
                 -> CommitTreeDiff
-diffFileContent deep _ name ref _c1 c2
+diffFileContent deep _ name ref c1 c2
   | not deep = ModifyElement (T.pack name) ref []
   | detectBinary c2 = ModifyBinaryElement (T.pack name) ref
+  | L.length c1 > maxObjSizeForDiff || L.length c2 > maxObjSizeForDiff = 
+      ModifyElement (T.pack name) ref [(DiffCommand DiffNeutral 0 0 0, V.singleton "Too big for diff")]
 diffFileContent _deep contextSize name ref c1 c2 =
   ModifyElement (T.pack name) ref $! computeTextScript contextSize txtLeft txtRight
     where 
       strictify = B.concat . L.toChunks
       txtLeft = decodeUtf8 $ strictify c1
       txtRight = decodeUtf8 $ strictify c2
+
+maxObjSizeForDiff :: Int64
+maxObjSizeForDiff = 1024 * 1024 * 3
 
 diffObjects :: FilePath -> Object -> Object -> Ref -> DiffMonad CommitTreeDiff
 diffObjects name (ObjTree (Tree left)) (ObjTree (Tree right)) _r2 = 
