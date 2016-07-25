@@ -61,8 +61,11 @@ loadIgnoreFile path = do
 
 
 toRegexp :: ParseString -> String
-toRegexp wholeString = go wholeString where
+toRegexp wholeString 
+  | not hasWildCard && generalPattern = ".*/" <> go wholeString
+  | otherwise = go wholeString where
   generalPattern = not $ B.any isPathSeparator wholeString
+  hasWildCard = B.any (\c -> c == '*' || c == '?') wholeString
 
   go str = case str of
     '*' :< '*' :< '/' :< after -> ".*/" <> go after
