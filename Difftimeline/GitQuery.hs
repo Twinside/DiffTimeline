@@ -79,8 +79,11 @@ import Data.Hourglass
     ( TimezoneOffset( TimezoneOffset, timezoneOffsetToMinutes ))
 import Data.Git.Repository( branchList, tagList )
 import qualified Data.Git.Revision as Rev
+
+import Data.Git.Named( looseRemotesList )
+import Data.Git.Storage( gitRepoPath )
 import Data.Git.Storage.Object( Object( .. ) )
-import Data.Git.Types ( GitTime( .. ))
+import Data.Git.Types ( GitTime( .. ) )
 
 import Control.Monad.Trans.Class( lift )
 
@@ -183,13 +186,18 @@ brancheslist :: Git -> IO [RemoteBranches]
 brancheslist repo = do
   branchSet <- branchList repo
   tagSet <- tagList repo
+  remotesSet <- S.fromList <$> looseRemotesList (gitRepoPath repo)
   let fetchInfos refSet =
         forM (S.toList refSet) $ \r -> do
             resolved <- resolve repo r
             return $ BranchInfo (T.pack $ refNameRaw r) <$> resolved
   branches <- catMaybes <$> fetchInfos branchSet
   tags <- catMaybes <$> fetchInfos tagSet
-  return [RemoteBranches "Branches" branches, RemoteBranches "Tags" tags]
+  remotes <- catMaybes <$> fetchInfos remotesSet
+  return [
+    RemoteBranches "Branches" branches,
+    RemoteBranches "Tags" tags,
+    RemoteBranches "Remotes" remotes]
 
 
 diffBranches :: Git -> Int -> String -> String -> ExceptT String IO CommitTreeDiff
