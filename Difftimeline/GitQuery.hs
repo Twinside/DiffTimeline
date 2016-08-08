@@ -45,6 +45,7 @@ import Prelude
 
 import Data.List( foldl', find  )
 import Data.Maybe( catMaybes )
+import Data.Monoid( (<>) )
 import Data.Byteable( toBytes )
 import System.FilePath( splitDirectories  )
 import Control.Monad( forM, when, void )
@@ -80,10 +81,11 @@ import Data.Hourglass
 import Data.Git.Repository( branchList, tagList )
 import qualified Data.Git.Revision as Rev
 
-import Data.Git.Named( looseRemotesList )
+import Data.Git.Named( RefSpecTy( RefTag ), looseRemotesList )
 import Data.Git.Storage( gitRepoPath )
 import Data.Git.Storage.Object( Object( .. ) )
-import Data.Git.Types ( GitTime( .. ) )
+import Data.Git.Types ( GitTime( .. )
+                      , Tag( tagRef ) )
 
 import Control.Monad.Trans.Class( lift )
 
@@ -187,8 +189,8 @@ brancheslist repo = do
   branchSet <- branchList repo
   tagSet <- tagList repo
   remotesSet <- S.fromList <$> looseRemotesList (gitRepoPath repo)
-  let fetchInfos refSet =
-        forM (S.toList refSet) $ \r -> do
+  let fetchInfos refList =
+        forM (S.toList refList) $ \r -> do
             resolved <- resolve repo r
             return $ BranchInfo (T.pack $ refNameRaw r) <$> resolved
   branches <- catMaybes <$> fetchInfos branchSet
@@ -207,10 +209,15 @@ diffBranches repo contextSize branch1 branch2 = do
     snd <$> createCommitDiff  repo contextSize True ref1 ref2
 
 diffCommitTree :: Git -> Ref -> IO (Either String CommitTreeDiff)
-diffCommitTree repository ref = runExceptT $ do
-  (ObjCommit thisCommit) <- accessCommit "Error can't file commit" repository ref
-  let prevRef = firstParentRef thisCommit
-  snd <$> createCommitDiff repository 0 False prevRef ref
+diffCommitTree repository = runExceptT . go where
+  go ref = do
+    obj <- accessCommitOrTag "Error can't find commit or tag" repository ref
+    case obj of
+      ObjTag thisTag -> go $ tagRef thisTag
+      ObjCommit thisCommit -> do
+        let prevRef = firstParentRef thisCommit
+        snd <$> createCommitDiff repository 0 False prevRef ref
+      _ -> throwE "diffCommitTree: Unexpected git object, expecting tag or commit"
 
 revisionToRef :: Git -> String -> ExceptT String IO Ref
 revisionToRef _repo r | isHexString r && length r == 40 = return $ fromHexString r
@@ -258,22 +265,28 @@ filterCommitModifications = filter isModification
 
 -- | For a given commit, compute the diff with it's first parent.
 diffCommit :: Git -> Int -> Bool -> Ref -> IO (Either String CommitDetail)
-diffCommit repository contextSize deep ref = runExceptT $ do
-   (ObjCommit thisCommit) <- accessCommit "Error can't find commit" repository ref
-   let prevRef = firstParentRef thisCommit
-   parentsInfo <- mapM (fetchCommitOverview repository) $ commitParents thisCommit
-   detailer parentsInfo <$> createCommitDiff  repository contextSize deep prevRef ref 
-    where detailer parents (thisCommit, diff) = 
-            let author = commitAuthor thisCommit
-            in CommitDetail {
-                  commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
-                , commitDetailParents = parents
-                , commitDetailKey     = ref
-                , commitDetailAuthor  = decodeUtf8 $ personName author
-                , commitDetailTimestamp = timeOfAuthor author
-                , commitDetailTimezone  = timezoneOfAuthor author
-                , commitDetailChanges = filterCommitModifications $ flattenTreeDiff diff
-                }
+diffCommit repository contextSize deep = runExceptT . go where
+  go ref = do
+    obj <- accessCommitOrTag "Error can't find commit" repository ref
+    case obj of
+      ObjCommit thisCommit -> makeDiff ref thisCommit
+      ObjTag thisTag -> go $ tagRef thisTag
+  
+  makeDiff ref thisCommit = do
+    let prevRef = firstParentRef thisCommit
+    parentsInfo <- mapM (fetchCommitOverview repository) $ commitParents thisCommit
+    detailer parentsInfo <$> createCommitDiff  repository contextSize deep prevRef ref 
+     where detailer parents (thisCommit, diff) = 
+             let author = commitAuthor thisCommit
+             in CommitDetail {
+                   commitDetailMessage = decodeUtf8 $ commitMessage thisCommit
+                 , commitDetailParents = parents
+                 , commitDetailKey     = ref
+                 , commitDetailAuthor  = decodeUtf8 $ personName author
+                 , commitDetailTimestamp = timeOfAuthor author
+                 , commitDetailTimezone  = timezoneOfAuthor author
+                 , commitDetailChanges = filterCommitModifications $ flattenTreeDiff diff
+                 }
 
 
 -- | Given a file and a reference commit, compute the difference with

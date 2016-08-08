@@ -3,6 +3,7 @@ module Difftimeline.BaseLayer
     ( SubKind( .. )
     , accessBlob
     , accessCommit
+    , accessCommitOrTag
     , accessObject
     , accessTree
     , timeOfAuthor
@@ -70,6 +71,15 @@ accessCommit s rep ref = do
   case rez of
       Nothing -> throwE s
       Just c@(ObjCommit _) -> return c
+      Just _ -> throwE s
+
+accessCommitOrTag :: String -> Git -> Ref -> ExceptT String IO Object
+accessCommitOrTag s rep ref = do
+  rez <- liftIO $ getObject rep ref True
+  case rez of
+      Nothing -> throwE s
+      Just c@(ObjCommit _) -> return c
+      Just c@(ObjTag _) -> return c
       Just _ -> throwE s
 
 accessTree :: String -> Git -> Ref -> ExceptT String IO Object
