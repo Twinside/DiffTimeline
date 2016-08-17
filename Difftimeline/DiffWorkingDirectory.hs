@@ -79,7 +79,7 @@ fileComparer :: Int -> FilePath -> L.ByteString -> Ref -> L.ByteString
 fileComparer contextSize name bin1 r1 bin2
   | bin1 == bin2 = NeutralElement (T.pack name) r1
   | detectBinary bin2 = ModifyBinaryElement (T.pack name) r1
-  | otherwise = case computeTextScript contextSize bin1 bin2 of
+  | otherwise =  case computeTextScript contextSize bin1 bin2 of
       [] -> NeutralElement (T.pack name) r1
       lst -> ModifyElement (T.pack name) r1 $ unpackDiff lst
          where unpackDiff = fmap (\(a, t) -> (a, fmap decodeUtf8Lazy t))
@@ -117,16 +117,16 @@ diffTree repository contextSize ignoreSet maxTime upper = diffObject upper "" ""
     (ll, rr) -> compareDirectoryContent flatName name ll rr
 
   diffObject flatname name elemName obj r = case obj of
-     ObjTree (Tree left) -> goTree flatname name left r
+     ObjTree (Tree left) -> goTree flatname name elemName left r
      ObjBlob (Blob c1) -> goObj flatname elemName c1 r
      _ -> throwE "Wrong git object kind"
 
-  goTree flatname name lefts r = do
+  goTree flatname name elemName lefts r = do
     rights <- liftIO $ fetchDirectoryInfo flatname
     let sortedLeft = sortBy (\(_,a,_) (_,b,_) -> compare a b) lefts
         sortedFolder = sortBy (\(_,a) (_,b) -> compare a b) rights
         after = go flatname name sortedLeft sortedFolder
-    TreeElement (T.pack name) r <$> after
+    TreeElement (T.pack elemName) r <$> after
             
   goObj flatname name c r = do
     file2 <- liftIO $ L.readFile flatname
