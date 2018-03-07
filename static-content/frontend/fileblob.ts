@@ -166,7 +166,7 @@ class FileBlob
         else
             btn_node.html("&#x25bc");
 
-        detail.animate({height: 'toggle'}, Project.state.apparition_duration);
+        detail.animate({height: 'toggle'}, Project.state.apparition_duration());
     };
 
     public fetch_details() {

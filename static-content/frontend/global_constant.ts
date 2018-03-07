@@ -38,14 +38,14 @@ function make_draggable_elems(node : Node | Element | JQuery) {
     $('.file_widget', node).draggable({ 
         helper: 'clone',
         appendTo: 'body',
-        start: function(event, ui) { $(this).css("z-index", 15); },
+        start: (event : any, ui : any) => { $(this).css("z-index", 15); },
         zIndex: 300
     });
 
     $('.branch_widget', node).draggable({
         appendTo: 'body',
         zIndex: 300,
-        start: function(event, ui) { $(this).css("z-index", 15); },
+        start: (event : any, ui : any) => { $(this).css("z-index", 15); },
         helper: 'clone'
     });
 }

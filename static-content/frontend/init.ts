@@ -5,7 +5,7 @@ function setup_global_drop()
     var zone_b = $('.global_compare_recipient_b');
 
     zone_a.droppable({
-        drop: function(evt, ui) {
+        drop: (evt : any, ui : any) => {
             zone_a.children().remove();
             zone_a.append($(ui.draggable).clone());
             $(ui.helper).remove();
@@ -14,7 +14,7 @@ function setup_global_drop()
     });
 
     zone_b.droppable({
-        drop: function(evt, ui) {
+        drop: (evt : any, ui : any) => {
             zone_b.children().remove();
             zone_b.append($(ui.draggable).clone());
             $(ui.helper).remove();

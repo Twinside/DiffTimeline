@@ -21,7 +21,7 @@ class FileAlign {
 			(function(n : number) {
 				var side_id = n;
 				$(number_columns[i]).click(function(event) {
-					var line = parseInt(event.originalEvent.target.textContent, 10) - 1;
+					var line = parseInt((<HTMLElement>event.originalEvent.target).textContent, 10) - 1;
 					callback(side_id, line);
 				});
 			})( i );
